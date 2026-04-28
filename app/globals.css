@@ -6,8 +6,7 @@
 @import "@fontsource/vollkorn/700.css";
 @import "tailwindcss";
 @plugin "daisyui" {
-	themes:
-		false;
+	themes: false;
 }
 
 :root,
@@ -16,10 +15,11 @@
 	--background: #e8e2de;
 	--surface: #f2efed;
 	--foreground: #04121a;
-	--primary: #fe7f2d;
+	--orange-primary: #fe7f2d;
 	--secondary: #233d4d;
-	--accent: #da8e5b;
+	--orange-light: #da8e5b;
 	--muted: #bab7b4;
+	--GreyWarm: #bab7b4;
 	--border: #d3cac4;
 	--soft-foreground: #4f5152;
 
@@ -27,22 +27,14 @@
 	--color-base-200: var(--background);
 	--color-base-300: var(--border);
 	--color-base-content: var(--foreground);
-	--color-primary: var(--primary);
-	--color-primary-content: var(--foreground);
+	--color-orange-primary: var(--orange-primary);
+	--color-orange-primary-content: var(--foreground);
 	--color-secondary: var(--secondary);
 	--color-secondary-content: #f2efed;
-	--color-accent: var(--accent);
+	--color-accent: var(--orange-light);
 	--color-accent-content: var(--foreground);
 	--color-neutral: var(--foreground);
-	--color-neutral-content: #f2efed;
-	--color-info: #233d4d;
-	--color-info-content: #f2efed;
-	--color-success: #6b8f71;
-	--color-success-content: #f2efed;
-	--color-warning: #da8e5b;
-	--color-warning-content: var(--foreground);
-	--color-error: #b85432;
-	--color-error-content: #fdf6f2;
+
 	--radius-box: 1.5rem;
 	--radius-field: 999px;
 	--radius-selector: 999px;
@@ -52,7 +44,7 @@
 	--color-background: var(--background);
 	--color-surface: var(--surface);
 	--color-foreground: var(--foreground);
-	--color-primary: var(--primary);
+	--color-orange-primary: var(--orange-primary);
 	--color-secondary: var(--secondary);
 	--color-accent: var(--accent);
 	--color-muted: var(--muted);

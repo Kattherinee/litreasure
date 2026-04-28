@@ -1,5 +1,5 @@
-import AppShellDemo from "@/components/app-shell-demo";
+import BookCardShowcase from "@/components/book-card-showcase";
 
 export default function Home() {
-  return <AppShellDemo />;
+  return <BookCardShowcase />;
 }

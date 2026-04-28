@@ -1,0 +1,23 @@
+[
+	{
+		"id": "royal-assassin",
+		"Author": "Робин Хобб",
+		"rating": 4,
+		"imageUrl": "https://covers.openlibrary.org/b/id/8231992-L.jpg",
+		"Name": "Королевский убийца"
+	},
+	{
+		"id": "assassins-apprentice",
+		"Author": "Робин Хобб",
+		"rating": 5,
+		"imageUrl": "https://covers.openlibrary.org/b/id/8231856-L.jpg",
+		"Name": "Ученик убийцы"
+	},
+	{
+		"id": "assassins-quest",
+		"Author": "Робин Хобб",
+		"rating": 4.5,
+		"imageUrl": "https://covers.openlibrary.org/b/id/8232003-L.jpg",
+		"Name": "Странствия убийцы"
+	}
+]
