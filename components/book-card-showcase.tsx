@@ -2,20 +2,29 @@
 
 import styled from "styled-components";
 
-import BookCard from "@/components/bookCard";
 import books from "@/components/book-card.mock.json";
+import { BookCard } from "@/shared/ui/BookCard";
+import { InputField } from "@/shared/ui/InputField";
 
 const BookCardShowcase = () => {
 	return (
 		<ShowcasePage>
 			<ShowcasePanel>
-				<ShowcaseGrid>
-					{books.map((book) => (
-						<ShowcaseItem key={book.id}>
-							<BookCard book={book} />
-						</ShowcaseItem>
-					))}
-				</ShowcaseGrid>
+				<ShowcaseContent>
+					<ShowcaseGrid>
+						{books.map((book) => (
+							<ShowcaseItem key={book.id}>
+								<BookCard book={book} />
+							</ShowcaseItem>
+						))}
+					</ShowcaseGrid>
+
+					<InputPreview aria-label="Состояния поля ввода">
+						<InputPreviewItem>
+							<InputField />
+						</InputPreviewItem>
+					</InputPreview>
+				</ShowcaseContent>
 			</ShowcasePanel>
 		</ShowcasePage>
 	);
@@ -38,9 +47,19 @@ const ShowcasePage = styled.main`
 const ShowcasePanel = styled.section`
 	margin: 0 auto;
 	display: flex;
-	max-width: 980px;
+	max-width: 1240px;
 	flex-direction: column;
 	gap: clamp(24px, 2.22vw, 32px);
+`;
+
+const ShowcaseContent = styled.div`
+	display: grid;
+	align-items: start;
+	gap: clamp(32px, 4vw, 64px);
+
+	@media (min-width: 1120px) {
+		grid-template-columns: minmax(0, 1fr) minmax(360px, 446px);
+	}
 `;
 
 const ShowcaseGrid = styled.div`
@@ -63,4 +82,18 @@ const ShowcaseItem = styled.div`
 	padding: clamp(16px, 1.39vw, 20px);
 	background: transparent;
 	box-shadow: none;
+`;
+
+const InputPreview = styled.div`
+	display: flex;
+	width: min(100%, 446px);
+	flex-direction: column;
+	gap: 8px;
+	padding: 8px 0;
+`;
+
+const InputPreviewItem = styled.label`
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
 `;

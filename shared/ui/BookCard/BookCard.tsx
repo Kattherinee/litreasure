@@ -3,7 +3,7 @@
 import Rating from "@mui/material/Rating";
 import styled from "styled-components";
 
-import PlusIcon from "@/components/plusIcon";
+import { PlusIcon } from "@/shared/ui/PlusIcon";
 
 export type BookCardData = {
 	id: string;
@@ -60,14 +60,6 @@ const BookCardWrapper = styled.article`
 	background: transparent;
 	box-shadow: none;
 	gap: 8px;
-	transition:
-		transform 220ms ease,
-		width 220ms ease;
-
-	&:hover {
-		width: auto;
-		transform: translateY(-2px);
-	}
 `;
 
 const BookCover = styled.div`
@@ -77,10 +69,6 @@ const BookCover = styled.div`
 	border: 1px solid var(--border);
 	border-radius: 4px;
 	transition: height 220ms ease;
-
-	${BookCardWrapper}:hover & {
-		height: 254px;
-	}
 `;
 
 const BookCoverImage = styled.img`
@@ -103,7 +91,7 @@ const BookTitle = styled.h2`
 	transition: color 220ms ease;
 
 	${BookCardWrapper}:hover & {
-		color: var(--orange-primary);
+		color: var(--orange-dark);
 	}
 `;
 
@@ -132,30 +120,39 @@ const BookRating = styled(Rating)`
 		color: #d1c5bc;
 	}
 `;
-
 const BookAddButton = styled.button`
 	display: inline-flex;
-	position: absolute;
-	bottom: -2px;
-	right: 4px;
 	align-items: center;
-	gap: 4px;
-	border: 0;
-	border-radius: 999px;
-	background: var(--GreyWarm);
-	padding: 6px;
-	color: var(--foreground);
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	border-radius: 8px;
+	background: transparent;
+	border: 1px solid var(--orange-dark);
 
-	font-weight: 400;
-	line-height: 1;
-	box-shadow: none;
+	padding: 0;
+	color: var(--orange-dark);
+	cursor: pointer;
+	transition:
+		background 0.2s ease,
+		border-color 0.2s ease,
+		color 0.2s ease,
+		transform 0.15s ease;
 
 	& svg {
-		width: 22px;
-		height: 22px;
+		width: 20px;
+		height: 20px;
+	}
+
+	& svg path {
+		fill: currentColor;
+		transition: fill 0.2s ease;
 	}
 
 	&:hover {
-		background: var(--orange-light);
+		background: var(--orange-primary);
+		border-color: var(--orange-primary);
+		color: #fff;
+		transform: translateY(-1px);
 	}
 `;

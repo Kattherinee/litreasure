@@ -4,61 +4,41 @@
 @import "@fontsource/vollkorn/400.css";
 @import "@fontsource/vollkorn/600.css";
 @import "@fontsource/vollkorn/700.css";
-@import "tailwindcss";
-@plugin "daisyui" {
-	themes: false;
-}
 
-:root,
-[data-theme="litreasure"] {
+:root {
 	color-scheme: light;
 	--background: #e8e2de;
 	--surface: #f2efed;
 	--foreground: #04121a;
 	--orange-primary: #fe7f2d;
+	--orange-dark: #d4641c;
 	--secondary: #233d4d;
-	--orange-light: #da8e5b;
+	--orange-light: #eda06c;
 	--muted: #bab7b4;
 	--GreyWarm: #bab7b4;
 	--border: #d3cac4;
 	--soft-foreground: #4f5152;
-
-	--color-base-100: var(--surface);
-	--color-base-200: var(--background);
-	--color-base-300: var(--border);
-	--color-base-content: var(--foreground);
-	--color-orange-primary: var(--orange-primary);
-	--color-orange-primary-content: var(--foreground);
-	--color-secondary: var(--secondary);
-	--color-secondary-content: #f2efed;
-	--color-accent: var(--orange-light);
-	--color-accent-content: var(--foreground);
-	--color-neutral: var(--foreground);
-
-	--radius-box: 1.5rem;
-	--radius-field: 999px;
-	--radius-selector: 999px;
-}
-
-@theme inline {
-	--color-background: var(--background);
-	--color-surface: var(--surface);
-	--color-foreground: var(--foreground);
-	--color-orange-primary: var(--orange-primary);
-	--color-secondary: var(--secondary);
-	--color-accent: var(--accent);
-	--color-muted: var(--muted);
-	--color-border: var(--border);
 	--font-sans: "Oxygen", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
 	--font-serif: "Vollkorn", Georgia, serif;
 	--font-mono: "JetBrains Mono", "Cascadia Code", Consolas, monospace;
 }
 
+* {
+	box-sizing: border-box;
+}
+
 html {
+	min-height: 100%;
 	background: var(--background);
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
 }
 
 body {
+	display: flex;
+	min-height: 100vh;
+	flex-direction: column;
+	margin: 0;
 	background: var(--background);
 	color: var(--foreground);
 	font-family: var(--font-sans);
