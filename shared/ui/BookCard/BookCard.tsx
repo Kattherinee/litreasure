@@ -86,9 +86,10 @@ const BookTitle = styled.h2`
 	font-family: var(--font-serif);
 	font-size: 18px;
 	font-weight: 500;
-	line-height: 1.25;
+	line-height: 22px;
 	color: var(--foreground);
 	transition: color 220ms ease;
+	margin-block: 0;
 
 	${BookCardWrapper}:hover & {
 		color: var(--orange-dark);
@@ -99,6 +100,7 @@ const BookAuthor = styled.p`
 	font-size: 14px;
 	line-height: 1.3334;
 	color: var(--foreground);
+	margin-block: 0;
 `;
 
 const BookFooter = styled.div`

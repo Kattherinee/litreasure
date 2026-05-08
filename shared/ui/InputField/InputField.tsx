@@ -3,6 +3,7 @@ import styled from "styled-components";
 
 export interface InputFieldProps extends InputHTMLAttributes<HTMLInputElement> {
 	disabled?: boolean;
+	"aria-label"?: string;
 }
 
 const InputField = ({
@@ -20,7 +21,7 @@ const StyledInput = styled.input`
 	min-height: 38px;
 	border: 1px solid transparent;
 	border-radius: 20px;
-	background: var(--GreyWarm);
+	background: #c9c4c0;
 	padding: 6px 14px;
 	color: #4f5152;
 	font: inherit;

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import Providers from "@/app/providers";
+import { Header } from "@/shared/ui/Header";
 
 import "./globals.css";
 
@@ -13,11 +14,14 @@ export default function RootLayout({
 	children,
 }: Readonly<{
 	children: React.ReactNode;
-	}>) {
+}>) {
 	return (
 		<html lang="en">
 			<body>
-				<Providers>{children}</Providers>
+				<Providers>
+					<Header />
+					{children}
+				</Providers>
 			</body>
 		</html>
 	);
