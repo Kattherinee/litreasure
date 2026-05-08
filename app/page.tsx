@@ -1,5 +1,5 @@
-import BookCardShowcase from "@/components/book-card-showcase";
+import HomePage from "@/components/pages/HomePage";
 
 export default function Home() {
-	return <BookCardShowcase />;
+	return <HomePage />;
 }

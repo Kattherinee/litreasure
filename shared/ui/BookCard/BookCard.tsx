@@ -1,6 +1,8 @@
 "use client";
 
 import Rating from "@mui/material/Rating";
+import { useRouter } from "next/navigation";
+import type { KeyboardEvent, MouseEvent } from "react";
 import styled from "styled-components";
 
 import { PlusIcon } from "@/shared/ui/PlusIcon";
@@ -19,9 +21,37 @@ type BookCardProps = {
 
 const BookCard = ({ book }: BookCardProps) => {
 	const { Author, Name, imageUrl, rating } = book;
+	const router = useRouter();
+
+	const openBookPage = () => {
+		router.push(`/books/${book.id}`);
+	};
+
+	const handleCardKeyDown = (event: KeyboardEvent<HTMLElement>) => {
+		if (event.key !== "Enter" && event.key !== " ") {
+			return;
+		}
+
+		event.preventDefault();
+		openBookPage();
+	};
+
+	const handleAddButtonClick = (event: MouseEvent<HTMLButtonElement>) => {
+		event.stopPropagation();
+	};
+
+	const handleAddButtonKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
+		event.stopPropagation();
+	};
 
 	return (
-		<BookCardWrapper aria-label={`${Name}, ${Author}`}>
+		<BookCardWrapper
+			aria-label={`${Name}, ${Author}`}
+			role="link"
+			tabIndex={0}
+			onClick={openBookPage}
+			onKeyDown={handleCardKeyDown}
+		>
 			<BookCover>
 				<BookCoverImage src={imageUrl} alt={`Обложка «${Name}»`} />
 			</BookCover>
@@ -40,7 +70,12 @@ const BookCard = ({ book }: BookCardProps) => {
 					aria-label={`Рейтинг ${rating} из 5`}
 				/>
 
-				<BookAddButton type="button" aria-label="Добавить в коллекцию">
+				<BookAddButton
+					type="button"
+					aria-label="Добавить в коллекцию"
+					onClick={handleAddButtonClick}
+					onKeyDown={handleAddButtonKeyDown}
+				>
 					<PlusIcon />
 				</BookAddButton>
 			</BookFooter>
@@ -51,29 +86,34 @@ const BookCard = ({ book }: BookCardProps) => {
 export default BookCard;
 
 const BookCardWrapper = styled.article`
+	position: relative;
 	display: flex;
 	width: auto;
-	cursor: pointer;
 	flex-direction: column;
-	position: relative;
-	color: var(--foreground);
+	gap: 0.5rem;
 	background: transparent;
 	box-shadow: none;
-	gap: 8px;
+	color: var(--foreground);
+	cursor: pointer;
+
+	&:focus-visible {
+		outline: 0.125rem solid var(--orange-dark);
+		outline-offset: 0.25rem;
+	}
 `;
 
 const BookCover = styled.div`
 	overflow: hidden;
-	height: 244px;
 	width: auto;
-	border: 1px solid var(--border);
-	border-radius: 4px;
+	height: 15.25rem;
+	border: 0.0625rem solid var(--border);
+	border-radius: 0.25rem;
 	transition: height 220ms ease;
 `;
 
 const BookCoverImage = styled.img`
-	height: 100%;
 	width: 100%;
+	height: 100%;
 	object-fit: cover;
 `;
 
@@ -83,24 +123,25 @@ const BookMeta = styled.div`
 `;
 
 const BookTitle = styled.h2`
-	font-family: var(--font-serif);
-	font-size: 18px;
-	font-weight: 500;
-	line-height: 22px;
-	color: var(--foreground);
-	transition: color 220ms ease;
 	margin-block: 0;
+	color: var(--foreground);
+	font-family: var(--font-serif);
+	font-size: 1.125rem;
+	font-weight: 500;
+	line-height: 1.375rem;
+	transition: color 220ms ease;
 
-	${BookCardWrapper}:hover & {
+	${BookCardWrapper}:hover &,
+	${BookCardWrapper}:focus-visible & {
 		color: var(--orange-dark);
 	}
 `;
 
 const BookAuthor = styled.p`
-	font-size: 14px;
-	line-height: 1.3334;
-	color: var(--foreground);
 	margin-block: 0;
+	color: var(--foreground);
+	font-size: 0.875rem;
+	line-height: 1.3334;
 `;
 
 const BookFooter = styled.div`
@@ -111,7 +152,7 @@ const BookFooter = styled.div`
 
 const BookRating = styled(Rating)`
 	.MuiRating-icon {
-		font-size: 20px;
+		font-size: 1.25rem;
 	}
 
 	.MuiRating-iconFilled {
@@ -122,16 +163,16 @@ const BookRating = styled(Rating)`
 		color: #d1c5bc;
 	}
 `;
+
 const BookAddButton = styled.button`
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	width: 28px;
-	height: 28px;
-	border-radius: 8px;
+	width: 1.75rem;
+	height: 1.75rem;
+	border: 0.0625rem solid var(--orange-dark);
+	border-radius: 0.5rem;
 	background: transparent;
-	border: 1px solid var(--orange-dark);
-
 	padding: 0;
 	color: var(--orange-dark);
 	cursor: pointer;
@@ -142,8 +183,8 @@ const BookAddButton = styled.button`
 		transform 0.15s ease;
 
 	& svg {
-		width: 20px;
-		height: 20px;
+		width: 1.25rem;
+		height: 1.25rem;
 	}
 
 	& svg path {
@@ -152,9 +193,9 @@ const BookAddButton = styled.button`
 	}
 
 	&:hover {
-		background: var(--orange-primary);
 		border-color: var(--orange-primary);
+		background: var(--orange-primary);
 		color: #fff;
-		transform: translateY(-1px);
+		transform: translateY(-0.0625rem);
 	}
 `;
