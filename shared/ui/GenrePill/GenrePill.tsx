@@ -1,0 +1,75 @@
+"use client";
+
+import Link from "next/link";
+import type { ComponentPropsWithoutRef, ReactNode } from "react";
+import styled from "styled-components";
+
+import { theme } from "@/shared/theme";
+
+export type GenrePillProps = Omit<
+	ComponentPropsWithoutRef<typeof Link>,
+	"as" | "children"
+> & {
+	children: ReactNode;
+	fontSize?: string;
+	height?: string;
+	paddingBlock?: string;
+	paddingInline?: string;
+};
+
+const GenrePill = ({
+	children,
+	fontSize = "1rem",
+	height = "2.25rem",
+	paddingBlock = "0.6rem",
+	paddingInline = "1.325rem",
+	...props
+}: GenrePillProps) => {
+	return (
+		<PillLink
+			$fontSize={fontSize}
+			$height={height}
+			$paddingBlock={paddingBlock}
+			$paddingInline={paddingInline}
+			{...props}
+		>
+			{children}
+		</PillLink>
+	);
+};
+
+export default GenrePill;
+
+const PillLink = styled(Link)<{
+	$fontSize: string;
+	$height: string;
+	$paddingBlock: string;
+	$paddingInline: string;
+}>`
+	display: inline-flex;
+	align-items: center;
+	min-height: ${({ $height }) => $height};
+	border-radius: 62.4375rem;
+	background: ${theme.alpha.surfaceRaised};
+	padding: ${({ $paddingBlock, $paddingInline }) =>
+		`${$paddingBlock} ${$paddingInline}`};
+	color: ${theme.colors.foreground};
+	font-family: ${theme.fonts.sans};
+	font-size: ${({ $fontSize }) => $fontSize};
+	font-weight: 400;
+	line-height: 1.2;
+	text-decoration: none;
+	white-space: nowrap;
+	transition:
+		background 180ms ease,
+		color 180ms ease,
+		transform 180ms ease;
+
+	&:hover,
+	&:focus-visible {
+		background: ${theme.colors.orangeLight};
+		color: ${theme.colors.invertedText};
+		outline: none;
+		transform: translateY(-0.0625rem);
+	}
+`;

@@ -2,14 +2,25 @@
 
 import styled from "styled-components";
 
-import books from "@/components/book-card.mock.json";
+import { useBooksQuery } from "@/shared/api/books";
+import { theme } from "@/shared/theme";
 import BookCarousel from "@/shared/ui/BookCarousel/BookCarousel";
 
 const BookCardShowcase = () => {
+	const { data: books = [], error, isError, isLoading } = useBooksQuery();
+
 	return (
 		<ShowcasePage>
 			<ShowcasePanel>
-				<BookCarousel books={books} />
+				{isLoading ? (
+					<StateMessage>Загружаем книги...</StateMessage>
+				) : isError ? (
+					<StateMessage>
+						Не удалось загрузить книги: {error.message}
+					</StateMessage>
+				) : (
+					<BookCarousel books={books} />
+				)}
 			</ShowcasePanel>
 		</ShowcasePage>
 	);
@@ -23,10 +34,14 @@ const ShowcasePage = styled.main`
 	background:
 		radial-gradient(
 			circle at top left,
-			rgb(254 127 45 / 0.18),
-			transparent 28%
+			${theme.alpha.orangeGlow},
+			${theme.colors.transparent} 28%
 		),
-		linear-gradient(180deg, #efe8e3 0%, var(--background) 100%);
+		linear-gradient(
+			180deg,
+			${theme.colors.backgroundTop} 0%,
+			${theme.colors.background} 100%
+		);
 	padding: clamp(48px, 5vw, 72px) clamp(24px, 2.78vw, 40px);
 `;
 
@@ -36,4 +51,11 @@ const ShowcasePanel = styled.section`
 	max-width: 1240px;
 	flex-direction: column;
 	gap: clamp(24px, 2.22vw, 32px);
+`;
+
+const StateMessage = styled.p`
+	margin: 0;
+	color: ${theme.colors.softForeground};
+	font-size: 1rem;
+	line-height: 1.5;
 `;

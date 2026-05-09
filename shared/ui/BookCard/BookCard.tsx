@@ -1,26 +1,21 @@
 "use client";
 
-import Rating from "@mui/material/Rating";
 import { useRouter } from "next/navigation";
 import type { KeyboardEvent, MouseEvent } from "react";
 import styled from "styled-components";
 
+import type { Book } from "@/shared/api/books";
+import { theme } from "@/shared/theme";
 import { PlusIcon } from "@/shared/ui/PlusIcon";
 
-export type BookCardData = {
-	id: string;
-	Author: string;
-	rating: number;
-	imageUrl: string;
-	Name: string;
-};
+export type BookCardData = Book;
 
 type BookCardProps = {
 	book: BookCardData;
 };
 
 const BookCard = ({ book }: BookCardProps) => {
-	const { Author, Name, imageUrl, rating } = book;
+	const { author, coverUrl, title } = book;
 	const router = useRouter();
 
 	const openBookPage = () => {
@@ -46,30 +41,17 @@ const BookCard = ({ book }: BookCardProps) => {
 
 	return (
 		<BookCardWrapper
-			aria-label={`${Name}, ${Author}`}
+			aria-label={`${title}, ${author}`}
 			role="link"
 			tabIndex={0}
 			onClick={openBookPage}
 			onKeyDown={handleCardKeyDown}
 		>
 			<BookCover>
-				<BookCoverImage src={imageUrl} alt={`Обложка «${Name}»`} />
-			</BookCover>
-
-			<BookMeta>
-				<BookTitle>{Name}</BookTitle>
-				<BookAuthor>{Author}</BookAuthor>
-			</BookMeta>
-
-			<BookFooter>
-				<BookRating
-					value={rating}
-					precision={0.5}
-					readOnly
-					size="small"
-					aria-label={`Рейтинг ${rating} из 5`}
+				<BookCoverImage
+					src={coverUrl ?? "/images/book-placeholder.svg"}
+					alt={`Обложка «${title}»`}
 				/>
-
 				<BookAddButton
 					type="button"
 					aria-label="Добавить в коллекцию"
@@ -78,7 +60,12 @@ const BookCard = ({ book }: BookCardProps) => {
 				>
 					<PlusIcon />
 				</BookAddButton>
-			</BookFooter>
+			</BookCover>
+
+			<BookMeta>
+				<BookTitle>{title}</BookTitle>
+				<BookAuthor>{author}</BookAuthor>
+			</BookMeta>
 		</BookCardWrapper>
 	);
 };
@@ -88,33 +75,41 @@ export default BookCard;
 const BookCardWrapper = styled.article`
 	position: relative;
 	display: flex;
-	width: auto;
+	width: min-content;
 	flex-direction: column;
 	gap: 0.5rem;
-	background: transparent;
+	background: ${theme.colors.transparent};
 	box-shadow: none;
-	color: var(--foreground);
+	color: ${theme.colors.foreground};
 	cursor: pointer;
 
 	&:focus-visible {
-		outline: 0.125rem solid var(--orange-dark);
+		outline: 0.125rem solid ${theme.colors.orangeDark};
 		outline-offset: 0.25rem;
 	}
 `;
 
 const BookCover = styled.div`
+	position: relative;
 	overflow: hidden;
-	width: auto;
+	width: fit-content;
 	height: 15.25rem;
-	border: 0.0625rem solid var(--border);
+	border: 0.0625rem solid ${theme.colors.border};
 	border-radius: 0.25rem;
 	transition: height 220ms ease;
+
+	${BookCardWrapper}:hover &,
+	${BookCardWrapper}:focus-visible & {
+		transform: scale(1.02);
+		transition: transform 300ms ease;
+	}
 `;
 
 const BookCoverImage = styled.img`
-	width: 100%;
+	display: block;
+	width: auto;
 	height: 100%;
-	object-fit: cover;
+	object-fit: contain;
 `;
 
 const BookMeta = styled.div`
@@ -124,62 +119,48 @@ const BookMeta = styled.div`
 
 const BookTitle = styled.h2`
 	margin-block: 0;
-	color: var(--foreground);
-	font-family: var(--font-serif);
-	font-size: 1.125rem;
+	color: ${theme.colors.foreground};
+	font-family: ${theme.fonts.serif};
+	font-size: 1.045rem;
 	font-weight: 500;
-	line-height: 1.375rem;
+	line-height: 1.55rem;
 	transition: color 220ms ease;
 
 	${BookCardWrapper}:hover &,
 	${BookCardWrapper}:focus-visible & {
-		color: var(--orange-dark);
+		color: ${theme.colors.orangeDark};
 	}
 `;
 
 const BookAuthor = styled.p`
 	margin-block: 0;
-	color: var(--foreground);
+	color: ${theme.colors.lightText};
 	font-size: 0.875rem;
 	line-height: 1.3334;
 `;
 
-const BookFooter = styled.div`
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-`;
-
-const BookRating = styled(Rating)`
-	.MuiRating-icon {
-		font-size: 1.25rem;
-	}
-
-	.MuiRating-iconFilled {
-		color: var(--orange-primary);
-	}
-
-	.MuiRating-iconEmpty {
-		color: #d1c5bc;
-	}
-`;
-
 const BookAddButton = styled.button`
+	position: absolute;
+	right: 0.5rem;
+	bottom: 0.5rem;
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	width: 1.75rem;
-	height: 1.75rem;
-	border: 0.0625rem solid var(--orange-dark);
-	border-radius: 0.5rem;
-	background: transparent;
+	width: 1.85rem;
+	height: 1.85rem;
+	border: 0.0625rem solid ${theme.alpha.coverActionBorder};
+	border-radius: 50%;
+	background: ${theme.alpha.coverActionBackground};
 	padding: 0;
-	color: var(--orange-dark);
+	color: ${theme.colors.invertedText};
 	cursor: pointer;
+	opacity: 0;
+	transform: translateY(0.25rem);
 	transition:
 		background 0.2s ease,
 		border-color 0.2s ease,
 		color 0.2s ease,
+		opacity 0.2s ease,
 		transform 0.15s ease;
 
 	& svg {
@@ -192,10 +173,19 @@ const BookAddButton = styled.button`
 		transition: fill 0.2s ease;
 	}
 
-	&:hover {
-		border-color: var(--orange-primary);
-		background: var(--orange-primary);
-		color: #fff;
-		transform: translateY(-0.0625rem);
+	&:hover,
+	&:focus-visible {
+		border-color: ${theme.colors.orangePrimary};
+		background: ${theme.colors.orangePrimary};
+		color: ${theme.colors.white};
+		opacity: 1;
+		outline: none;
+		transform: translateY(0);
+	}
+
+	${BookCardWrapper}:hover &,
+	${BookCardWrapper}:focus-within & {
+		opacity: 1;
+		transform: translateY(0);
 	}
 `;

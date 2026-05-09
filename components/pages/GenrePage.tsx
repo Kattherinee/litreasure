@@ -3,7 +3,8 @@
 import Link from "next/link";
 import styled from "styled-components";
 
-import books from "@/components/book-card.mock.json";
+import { useBooksQuery } from "@/shared/api/books";
+import { theme } from "@/shared/theme";
 import { BookCard } from "@/shared/ui/BookCard";
 
 const genreCopy: Record<string, { title: string; description: string }> = {
@@ -29,10 +30,12 @@ type GenrePageProps = {
 };
 
 const GenrePage = ({ slug }: GenrePageProps) => {
+	const { data: books = [], error, isError, isLoading } = useBooksQuery();
 	const genre = genreCopy[slug] ?? {
 		title: "Жанр",
 		description: "Подборка книг в выбранном жанре.",
 	};
+	const genreBooks = books.filter((book) => book.genres?.includes(slug));
 
 	return (
 		<Page>
@@ -41,13 +44,23 @@ const GenrePage = ({ slug }: GenrePageProps) => {
 				<Title>{genre.title}</Title>
 				<Lead>{genre.description}</Lead>
 
-				<BookGrid>
-					{books.map((book, index) => (
-						<BookItem key={`${book.id}-${index}`}>
-							<BookCard book={book} />
-						</BookItem>
-					))}
-				</BookGrid>
+				{isLoading ? (
+					<StateMessage>Загружаем книги...</StateMessage>
+				) : isError ? (
+					<StateMessage>
+						Не удалось загрузить книги: {error.message}
+					</StateMessage>
+				) : genreBooks.length === 0 ? (
+					<StateMessage>В этом жанре пока нет книг.</StateMessage>
+				) : (
+					<BookGrid>
+						{genreBooks.map((book) => (
+							<BookItem key={book.id}>
+								<BookCard book={book} />
+							</BookItem>
+						))}
+					</BookGrid>
+				)}
 			</Content>
 		</Page>
 	);
@@ -57,7 +70,7 @@ export default GenrePage;
 
 const Page = styled.main`
 	min-height: 100dvh;
-	background: var(--background);
+	background: ${theme.colors.background};
 	padding: clamp(3rem, 5vw, 4.5rem) clamp(1.5rem, 2.78vw, 2.5rem);
 `;
 
@@ -69,7 +82,7 @@ const Content = styled.section`
 const BackLink = styled(Link)`
 	display: inline-flex;
 	margin-bottom: 1.5rem;
-	color: var(--orange-dark);
+	color: ${theme.colors.orangeDark};
 	font-size: 0.9375rem;
 	text-decoration: none;
 
@@ -80,7 +93,7 @@ const BackLink = styled(Link)`
 
 const Title = styled.h1`
 	margin: 0;
-	font-family: var(--font-serif);
+	font-family: ${theme.fonts.serif};
 	font-size: clamp(2.75rem, 6vw, 5rem);
 	font-weight: 600;
 	line-height: 1;
@@ -89,9 +102,16 @@ const Title = styled.h1`
 const Lead = styled.p`
 	max-width: 40rem;
 	margin: 1rem 0 0;
-	color: var(--soft-foreground);
+	color: ${theme.colors.softForeground};
 	font-size: 1.125rem;
 	line-height: 1.55;
+`;
+
+const StateMessage = styled.p`
+	margin: 2.5rem 0 0;
+	color: ${theme.colors.softForeground};
+	font-size: 1rem;
+	line-height: 1.5;
 `;
 
 const BookGrid = styled.div`

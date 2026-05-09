@@ -1,6 +1,8 @@
 import type { InputHTMLAttributes } from "react";
 import styled from "styled-components";
 
+import { theme } from "@/shared/theme";
+
 export interface InputFieldProps extends InputHTMLAttributes<HTMLInputElement> {
 	disabled?: boolean;
 	"aria-label"?: string;
@@ -19,11 +21,11 @@ export default InputField;
 const StyledInput = styled.input`
 	width: 100%;
 	min-height: 38px;
-	border: 1px solid transparent;
+	border: 1px solid ${theme.colors.transparent};
 	border-radius: 20px;
-	background: #c9c4c0;
+	background: ${theme.colors.inputBackground};
 	padding: 6px 14px;
-	color: #4f5152;
+	color: ${theme.colors.softForeground};
 	font: inherit;
 	font-size: 16px;
 	line-height: 1.12;
@@ -40,24 +42,24 @@ const StyledInput = styled.input`
 	}
 
 	&:hover:not(:disabled) {
-		border-color: #b8b1ad;
-		background: #f2efed;
-		color: #4f5152;
+		border-color: ${theme.colors.inputHoverBorder};
+		background: ${theme.colors.surface};
+		color: ${theme.colors.softForeground};
 	}
 
 	&:focus,
 	&:focus-visible {
-		border-color: var(--orange-primary);
-		background: #f2efed;
-		box-shadow: 0 0 8px rgb(254 127 45 / 0.34);
-		color: var(--foreground);
+		border-color: ${theme.colors.orangePrimary};
+		background: ${theme.colors.surface};
+		box-shadow: 0 0 8px ${theme.alpha.orangeFocus};
+		color: ${theme.colors.foreground};
 	}
 
 	&:disabled {
-		border-color: #9f9f9f;
-		background: transparent;
+		border-color: ${theme.colors.inputDisabledBorder};
+		background: ${theme.colors.transparent};
 		box-shadow: none;
-		color: #8e8e8e;
+		color: ${theme.colors.inputDisabledText};
 		cursor: not-allowed;
 	}
 

@@ -3,43 +3,53 @@
 import Link from "next/link";
 import styled from "styled-components";
 
-import books from "@/components/book-card.mock.json";
-import type { BookCardData } from "@/shared/ui/BookCard";
+import { useBookQuery } from "@/shared/api/books";
+import { theme } from "@/shared/theme";
 
 type BookDetailsPageProps = {
 	slug: string;
 };
 
-const getBook = (slug: string): BookCardData =>
-	books.find((book) => book.id === slug) ?? books[0];
-
 const BookDetailsPage = ({ slug }: BookDetailsPageProps) => {
-	const book = getBook(slug);
+	const { data: book, error, isError, isLoading } = useBookQuery(slug);
 
 	return (
 		<Page>
 			<Content>
-				<BackLink href="/genres/fantasy">Назад к жанру</BackLink>
+				<BackLink href="/">На главную</BackLink>
 
-				<BookLayout>
-					<CoverWrap>
-						<Cover src={book.imageUrl} alt={`Обложка «${book.Name}»`} />
-					</CoverWrap>
+				{isLoading ? (
+					<StateMessage>Загружаем книгу...</StateMessage>
+				) : isError ? (
+					<StateMessage>
+						Не удалось загрузить книгу: {error.message}
+					</StateMessage>
+				) : !book ? (
+					<StateMessage>Книга не найдена.</StateMessage>
+				) : (
+					<BookLayout>
+						<CoverWrap>
+							<Cover
+								src={book.coverUrl ?? "/images/book-placeholder.svg"}
+								alt={`Обложка «${book.title}»`}
+							/>
+						</CoverWrap>
 
-					<BookInfo>
-						<Author>{book.Author}</Author>
-						<Title>{book.Name}</Title>
-						<Rating>Рейтинг {book.rating} из 5</Rating>
-						<Description>
-							Страница книги с основной информацией, рейтингом и местом для
-							будущего описания, отзывов и действий пользователя.
-						</Description>
-						<ActionRow>
-							<ActionButton type="button">Добавить в коллекцию</ActionButton>
-							<SecondaryLink href="/">Продолжить поиск</SecondaryLink>
-						</ActionRow>
-					</BookInfo>
-				</BookLayout>
+						<BookInfo>
+							<Author>{book.author}</Author>
+							<Title>{book.title}</Title>
+							{book.rating ? <Rating>Рейтинг {book.rating} из 5</Rating> : null}
+							<Description>
+								{book.description ??
+									"Описание для этой книги пока не добавлено."}
+							</Description>
+							<ActionRow>
+								<ActionButton type="button">Добавить в коллекцию</ActionButton>
+								<SecondaryLink href="/">Продолжить поиск</SecondaryLink>
+							</ActionRow>
+						</BookInfo>
+					</BookLayout>
+				)}
 			</Content>
 		</Page>
 	);
@@ -50,8 +60,12 @@ export default BookDetailsPage;
 const Page = styled.main`
 	min-height: 100dvh;
 	background:
-		linear-gradient(90deg, rgb(35 61 77 / 0.08), transparent 42%),
-		var(--background);
+		linear-gradient(
+			90deg,
+			${theme.alpha.blueWash},
+			${theme.colors.transparent} 42%
+		),
+		${theme.colors.background};
 	padding: clamp(3rem, 5vw, 4.5rem) clamp(1.5rem, 2.78vw, 2.5rem);
 `;
 
@@ -63,13 +77,20 @@ const Content = styled.section`
 const BackLink = styled(Link)`
 	display: inline-flex;
 	margin-bottom: 1.5rem;
-	color: var(--orange-dark);
+	color: ${theme.colors.orangeDark};
 	font-size: 0.9375rem;
 	text-decoration: none;
 
 	&:hover {
 		text-decoration: underline;
 	}
+`;
+
+const StateMessage = styled.p`
+	margin: 0;
+	color: ${theme.colors.softForeground};
+	font-size: 1rem;
+	line-height: 1.5;
 `;
 
 const BookLayout = styled.div`
@@ -86,9 +107,9 @@ const BookLayout = styled.div`
 const CoverWrap = styled.div`
 	overflow: hidden;
 	width: min(100%, 22rem);
-	border: 0.0625rem solid var(--border);
+	border: 0.0625rem solid ${theme.colors.border};
 	border-radius: 0.5rem;
-	background: var(--surface);
+	background: ${theme.colors.surface};
 `;
 
 const Cover = styled.img`
@@ -104,7 +125,7 @@ const BookInfo = styled.div`
 
 const Author = styled.p`
 	margin: 0 0 0.75rem;
-	color: var(--orange-dark);
+	color: ${theme.colors.orangeDark};
 	font-size: 1rem;
 	font-weight: 700;
 `;
@@ -112,7 +133,7 @@ const Author = styled.p`
 const Title = styled.h1`
 	max-width: 42rem;
 	margin: 0;
-	font-family: var(--font-serif);
+	font-family: ${theme.fonts.serif};
 	font-size: clamp(2.75rem, 6vw, 5rem);
 	font-weight: 600;
 	line-height: 1;
@@ -120,7 +141,7 @@ const Title = styled.h1`
 
 const Rating = styled.p`
 	margin: 1.25rem 0 0;
-	color: var(--foreground);
+	color: ${theme.colors.foreground};
 	font-size: 1rem;
 	font-weight: 700;
 `;
@@ -128,7 +149,7 @@ const Rating = styled.p`
 const Description = styled.p`
 	max-width: 36rem;
 	margin: 1.25rem 0 0;
-	color: var(--soft-foreground);
+	color: ${theme.colors.softForeground};
 	font-size: 1.125rem;
 	line-height: 1.55;
 `;
@@ -143,9 +164,9 @@ const ActionRow = styled.div`
 const ActionButton = styled.button`
 	border: 0;
 	border-radius: 62.4375rem;
-	background: var(--blue-primary);
+	background: ${theme.colors.bluePrimary};
 	padding: 0.875rem 1.25rem;
-	color: var(--lightText);
+	color: ${theme.colors.invertedText};
 	cursor: pointer;
 	font: inherit;
 	font-weight: 700;
@@ -154,7 +175,7 @@ const ActionButton = styled.button`
 const SecondaryLink = styled(Link)`
 	display: inline-flex;
 	align-items: center;
-	color: var(--orange-dark);
+	color: ${theme.colors.orangeDark};
 	font-weight: 700;
 	text-decoration: none;
 

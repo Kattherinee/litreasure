@@ -5,28 +5,41 @@ import styled, { css } from "styled-components";
 
 import { theme } from "@/shared/theme";
 
-export type ButtonProps = Omit<MuiButtonProps, "disableElevation">;
+type ButtonStyle = "default" | "oxygenPill";
 
-const Button = ({ variant = "contained", ...props }: ButtonProps) => (
-	<StyledButton disableElevation variant={variant} {...props} />
+export type ButtonProps = Omit<MuiButtonProps, "disableElevation"> & {
+	buttonStyle?: ButtonStyle;
+};
+
+const Button = ({
+	buttonStyle = "default",
+	variant = "contained",
+	...props
+}: ButtonProps) => (
+	<StyledButton
+		$buttonStyle={buttonStyle}
+		disableElevation
+		variant={variant}
+		{...props}
+	/>
 );
 
 export default Button;
 
 const containedStyles = css`
-	background: ${theme.colors.background};
-	border-color: ${theme.colors.background};
+	background: ${theme.colors.invertedText};
+	border-color: ${theme.colors.invertedText};
 	color: ${theme.colors.foreground};
 
 	&:hover {
 		background: ${theme.colors.orangeLight};
 		border-color: ${theme.colors.orangeLight};
-		color: ${theme.colors.lightText};
+		color: ${theme.colors.invertedText};
 	}
 `;
 
 const outlinedStyles = css`
-	background: transparent;
+	background: ${theme.colors.transparent};
 	border-color: ${theme.colors.lightText};
 	color: ${theme.colors.lightText};
 
@@ -38,47 +51,73 @@ const outlinedStyles = css`
 `;
 
 const textStyles = css`
-	background: transparent;
-	border-color: transparent;
-	color: ${theme.colors.lightText};
+	background: ${theme.colors.transparent};
+	border-color: ${theme.colors.transparent};
+	color: ${theme.colors.invertedText};
 
 	&:hover {
-		background: transparent;
-		border-color: transparent;
+		background: ${theme.colors.transparent};
+		border-color: ${theme.colors.transparent};
 		color: ${theme.colors.orangeLight};
 	}
 `;
 
-const StyledButton = styled(MuiButton)<ButtonProps>`
-	border: 1px solid transparent;
-	border-radius: 50px;
+const oxygenPillStyles = css`
+	min-width: 0;
+	background: ${theme.colors.invertedText};
+	border-color: ${theme.colors.invertedText};
+	padding: 0.5rem 1rem;
+	color: ${theme.colors.softForeground};
+	font-family: ${theme.fonts.sans};
+	font-size: 0.875rem;
+	font-weight: 400;
+	line-height: 1.25rem;
 
-	font-family: var(--font-serif);
-	font-size: 16px;
-	font-weight: 500;
-	line-height: 20px;
-	text-align: center;
-	text-transform: none;
-	transition:
-		background-color 180ms ease,
-		border-color 180ms ease,
-		color 180ms ease;
-
-	&.Mui-disabled {
-		border-color: ${theme.colors.muted};
-		background: transparent;
-		color: ${theme.colors.muted};
+	&:hover {
+		background: ${theme.colors.orangeLight};
+		border-color: ${theme.colors.orangeLight};
+		color: ${theme.colors.invertedText};
 	}
+`;
 
-	${({ variant = "contained" }) => {
-		if (variant === "outlined") {
-			return outlinedStyles;
+const StyledButton = styled(MuiButton)<{
+	$buttonStyle: ButtonStyle;
+	variant?: ButtonProps["variant"];
+}>`
+	&& {
+		border: 1px solid ${theme.colors.transparent};
+		border-radius: 50px;
+
+		font-family: ${theme.fonts.serif};
+		font-size: 16px;
+		font-weight: 500;
+		line-height: 20px;
+		text-align: center;
+		text-transform: none;
+		transition:
+			background-color 180ms ease,
+			border-color 180ms ease,
+			color 180ms ease;
+
+		&.Mui-disabled {
+			border-color: ${theme.colors.muted};
+			background: ${theme.colors.transparent};
+			color: ${theme.colors.muted};
 		}
 
-		if (variant === "text") {
-			return textStyles;
-		}
+		${({ variant = "contained" }) => {
+			if (variant === "outlined") {
+				return outlinedStyles;
+			}
 
-		return containedStyles;
-	}}
+			if (variant === "text") {
+				return textStyles;
+			}
+
+			return containedStyles;
+		}}
+
+		${({ $buttonStyle }) =>
+			$buttonStyle === "oxygenPill" ? oxygenPillStyles : null}
+	}
 `;

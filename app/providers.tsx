@@ -7,6 +7,8 @@ import {
 } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
 
+import GlobalStyle from "@/shared/theme/GlobalStyle";
+
 const queryClientConfig: QueryClientConfig = {
   defaultOptions: {
     queries: {
@@ -27,6 +29,9 @@ export default function Providers({ children }: { children: ReactNode }) {
   );
 
   return (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    <QueryClientProvider client={queryClient}>
+      <GlobalStyle />
+      {children}
+    </QueryClientProvider>
   );
 }

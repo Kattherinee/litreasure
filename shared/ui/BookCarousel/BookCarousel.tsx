@@ -5,6 +5,7 @@ import type { EmblaCarouselType } from "embla-carousel";
 import useEmblaCarousel from "embla-carousel-react";
 import styled from "styled-components";
 
+import { theme } from "@/shared/theme";
 import { BookCard, type BookCardData } from "@/shared/ui/BookCard";
 
 const WHEEL_SENSITIVITY = -0.91;
@@ -12,11 +13,19 @@ const EMBLA_WHEEL_DURATION = 15;
 const EMBLA_WHEEL_FRICTION = 0.68;
 const SCROLL_EDGE_THRESHOLD = 0.002;
 
-type BookCarouselProps = {
-	books: BookCardData[];
+type BookCarouselControls = {
+	canScrollNext: boolean;
+	canScrollPrev: boolean;
+	scrollNext: () => void;
+	scrollPrev: () => void;
 };
 
-const BookCarousel = ({ books }: BookCarouselProps) => {
+type BookCarouselProps = {
+	books: BookCardData[];
+	onControlsChange?: (controls: BookCarouselControls) => void;
+};
+
+const BookCarousel = ({ books, onControlsChange }: BookCarouselProps) => {
 	const [emblaRef, emblaApi] = useEmblaCarousel({
 		align: "start",
 		containScroll: "keepSnaps",
@@ -124,6 +133,16 @@ const BookCarousel = ({ books }: BookCarouselProps) => {
 		};
 	}, [emblaApi, updateControls]);
 
+	useEffect(() => {
+		onControlsChange?.({ canScrollNext, canScrollPrev, scrollNext, scrollPrev });
+	}, [
+		canScrollNext,
+		canScrollPrev,
+		onControlsChange,
+		scrollNext,
+		scrollPrev,
+	]);
+
 	if (books.length === 0) {
 		return null;
 	}
@@ -141,24 +160,26 @@ const BookCarousel = ({ books }: BookCarouselProps) => {
 				</Container>
 			</Viewport>
 
-			<Controls>
-				<ControlButton
-					aria-label="Предыдущие книги"
-					disabled={!canScrollPrev}
-					type="button"
-					onClick={scrollPrev}
-				>
-					‹
-				</ControlButton>
-				<ControlButton
-					aria-label="Следующие книги"
-					disabled={!canScrollNext}
-					type="button"
-					onClick={scrollNext}
-				>
-					›
-				</ControlButton>
-			</Controls>
+			{onControlsChange ? null : (
+				<Controls>
+					<ControlButton
+						aria-label="Предыдущие книги"
+						disabled={!canScrollPrev}
+						type="button"
+						onClick={scrollPrev}
+					>
+						‹
+					</ControlButton>
+					<ControlButton
+						aria-label="Следующие книги"
+						disabled={!canScrollNext}
+						type="button"
+						onClick={scrollNext}
+					>
+						›
+					</ControlButton>
+				</Controls>
+			)}
 		</Carousel>
 	);
 };
@@ -168,12 +189,12 @@ export default BookCarousel;
 const Carousel = styled.section`
 	--page-gutter: clamp(1.5rem, 2.78vw, 2.5rem);
 	--content-width: 77.5rem;
-	--book-card-width: clamp(10rem, 13.125vw, 11.8125rem);
 	--content-side-space: max(
 		var(--page-gutter),
 		calc((100vw - var(--content-width)) / 2)
 	);
 
+	position: relative;
 	width: 100%;
 `;
 
@@ -186,21 +207,21 @@ const Viewport = styled.div`
 `;
 
 const Container = styled.div`
-	--slide-gap: clamp(1.25rem, 2vw, 1.75rem);
+	--slide-gap: clamp(0.775rem, 1vw, 1.25rem);
 
 	display: flex;
+	align-items: flex-start;
 	gap: var(--slide-gap);
+	height: auto;
 	padding-left: var(--content-side-space);
 	touch-action: pan-y pinch-zoom;
 `;
 
 const Slide = styled.div`
-	flex: 0 0 var(--book-card-width);
+	flex: 0 0 auto;
+	align-self: flex-start;
+	height: fit-content;
 	min-width: 0;
-
-	@media (max-width: 40rem) {
-		flex-basis: min(72vw, var(--book-card-width));
-	}
 `;
 
 const EndSpace = styled.div`
@@ -214,7 +235,7 @@ const Controls = styled.div`
 	display: flex;
 	justify-content: flex-end;
 	gap: 0.625rem;
-	margin-top: clamp(1.25rem, 2vw, 1.75rem);
+	margin-top: 1rem;
 `;
 
 const ControlButton = styled.button`
@@ -223,12 +244,12 @@ const ControlButton = styled.button`
 	justify-content: center;
 	width: 1.875rem;
 	height: 1.875rem;
-	border: 0.0625rem solid var(--orange-dark);
+	border: 0.0625rem solid ${theme.colors.orangeDark};
 	border-radius: 62.4375rem;
-	background: transparent;
-	color: var(--orange-dark);
+	background: ${theme.colors.transparent};
+	color: ${theme.colors.orangeDark};
 	cursor: pointer;
-	font-family: var(--font-serif);
+	font-family: ${theme.fonts.serif};
 	font-size: 2rem;
 	line-height: 1;
 	transition:
@@ -239,9 +260,9 @@ const ControlButton = styled.button`
 		transform 180ms ease;
 
 	&:not(:disabled):hover {
-		background: var(--orange-primary);
-		border-color: var(--orange-primary);
-		color: var(--lightText);
+		background: ${theme.colors.orangePrimary};
+		border-color: ${theme.colors.orangePrimary};
+		color: ${theme.colors.lightText};
 		transform: translateY(-0.0625rem);
 	}
 

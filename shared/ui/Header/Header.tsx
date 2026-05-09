@@ -42,7 +42,7 @@ const Header = () => {
 		return (
 			<header
 				aria-hidden="true"
-				style={{ height: 100, background: "var(--blue-primary)" }}
+				style={{ height: 100, background: theme.colors.bluePrimary }}
 			/>
 		);
 	}
@@ -126,30 +126,34 @@ const Header = () => {
 export default Header;
 
 const HeaderBar = styled(AppBar)`
-	background: var(--blue-primary);
-	color: var(--lightText);
-	overflow: visible;
+	&& {
+		background: ${theme.colors.bluePrimary};
+		color: ${theme.colors.invertedText};
+		overflow: visible;
+	}
 `;
 
 const HeaderToolbar = styled(Toolbar)`
-	position: relative;
-	z-index: 2;
-	height: 64px;
-	display: flex;
-	align-items: center;
-	gap: 40px;
-	padding: 0 60px;
+	&& {
+		position: relative;
+		z-index: 2;
+		display: flex;
+		height: 4rem;
+		align-items: center;
+		gap: 2.5rem;
+		padding: 0 3.75rem;
 
-	@media (max-width: 900px) {
-		gap: 16px;
-	}
+		@media (max-width: 56.25rem) {
+			gap: 1rem;
+		}
 
-	@media (max-width: 640px) {
-		min-height: 74px;
-		flex-wrap: wrap;
-		align-content: center;
-		gap: 12px;
-		padding-block: 12px;
+		@media (max-width: 40rem) {
+			min-height: 4.625rem;
+			flex-wrap: wrap;
+			align-content: center;
+			gap: 0.75rem;
+			padding-block: 0.75rem;
+		}
 	}
 `;
 
@@ -160,13 +164,15 @@ const LogoMenuContainer = styled.div`
 `;
 
 const MenuButton = styled(IconButton)`
-	width: 44px;
-	height: 44px;
-	display: inline-flex;
-	flex-shrink: 0;
-	flex-direction: column;
-	gap: 5px;
-	color: ${theme.colors.lightText};
+	&& {
+		display: inline-flex;
+		width: 2.75rem;
+		height: 2.75rem;
+		flex-shrink: 0;
+		flex-direction: column;
+		gap: 0.3125rem;
+		color: ${theme.colors.lightText};
+	}
 `;
 
 const BurgerLine = styled.span`
@@ -198,7 +204,7 @@ const LogoMark = styled.span`
 
 const BrandText = styled.div`
 	padding-top: 4px;
-	font-family: var(--font-serif);
+	font-family: ${theme.fonts.serif};
 	font-size: 20px;
 	font-weight: 600;
 	line-height: 32px;
@@ -216,11 +222,13 @@ const DesktopNav = styled.nav`
 `;
 
 const NavButton = styled(MuiButton)`
-	min-width: auto;
-	padding: 12px 12px 16px;
-	color: var(--lightText);
-	font: inherit;
-	text-transform: none;
+	&& {
+		min-width: auto;
+		padding: 0.75rem 0.75rem 1rem;
+		color: ${theme.colors.invertedText};
+		font: inherit;
+		text-transform: none;
+	}
 `;
 
 const SearchWrap = styled.label`
@@ -245,7 +253,7 @@ const SearchIcon = styled.span`
 	height: 14px;
 	border: 2px solid currentColor;
 	border-radius: 50%;
-	color: var(--soft-foreground);
+	color: ${theme.colors.softForeground};
 	pointer-events: none;
 	transform: translateY(50%);
 
@@ -291,8 +299,8 @@ const OverflowMenu = styled.nav<{ $isOpen: boolean }>`
 	width: min(300px, 90vw);
 	height: fit-content;
 	border-radius: 0 0 16px 16px;
-	background: var(--blue-primary);
-	box-shadow: 0 0 10px rgb(0 0 0 / 0.2);
+	background: ${theme.colors.bluePrimary};
+	box-shadow: 0 0 10px ${theme.alpha.shadow};
 	opacity: ${({ $isOpen }) => ($isOpen ? 1 : 0)};
 	padding: 80px 24px 24px;
 	pointer-events: ${({ $isOpen }) => ($isOpen ? "auto" : "none")};
@@ -319,11 +327,11 @@ const OverflowList = styled.div`
 const OverflowMenuItem = styled.button<{ $isActive?: boolean }>`
 	width: 100%;
 	border: 0;
-	background: transparent;
+	background: ${theme.colors.transparent};
 	padding: 0;
 	color: ${({ $isActive }) =>
-		$isActive ? "var(--orange-light)" : "var(--background)"};
-	font-family: var(--font-sans);
+		$isActive ? theme.colors.orangeLight : theme.colors.background};
+	font-family: ${theme.fonts.sans};
 	font-size: 18px;
 	font-weight: 400;
 	line-height: 22px;
@@ -333,7 +341,7 @@ const OverflowMenuItem = styled.button<{ $isActive?: boolean }>`
 
 	&:hover,
 	&:focus-visible {
-		color: var(--orange-light);
+		color: ${theme.colors.orangeLight};
 		outline: none;
 	}
 `;
