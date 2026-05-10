@@ -2,47 +2,12 @@
 
 import styled from "styled-components";
 
-import { useBooksQuery } from "@/shared/api/books";
-import type { Book } from "@/shared/api/books";
 import { theme } from "@/shared/theme";
 import { BookOfTheWeekSlider } from "@/shared/ui/BookOfTheWeekSlider";
 import { BookSliderSection } from "@/shared/ui/BookSliderSection";
 import { GenreCarousel } from "@/shared/ui/GenreCarousel";
-import type { GenreCarouselItem } from "@/shared/ui/GenreCarousel";
-
-const genrePills: GenreCarouselItem[] = [
-	{ slug: "fantasy", title: "Фэнтези" },
-	{ slug: "fantastic", title: "Фантастика" },
-	{ slug: "romance", title: "Романтика" },
-	{ slug: "contemporary-prose", title: "Современная проза" },
-	{ slug: "classics", title: "Классическая литература" },
-	{ slug: "young-adult", title: "Young adult" },
-	{ slug: "detective", title: "Детективы" },
-	{ slug: "non-fiction", title: "Нон-фикшн" },
-	{ slug: "adventure", title: "Приключения" },
-	{ slug: "history", title: "История" },
-];
-
-const byGenre = (books: Book[], genre: string) =>
-	books.filter((book) => book.genres?.includes(genre));
 
 const HomePage = () => {
-	const { data: books = [], error, isError, isLoading } = useBooksQuery();
-	const fantasyBooks = byGenre(books, "fantasy");
-	const classicsBooks = byGenre(books, "classics");
-	const bookSections = [
-		{
-			title: "Популярное",
-			href: "/genres/fantasy",
-			books: fantasyBooks.length > 0 ? fantasyBooks : books,
-		},
-		{
-			title: "Классика для полки",
-			href: "/genres/classics",
-			books: classicsBooks.length > 0 ? classicsBooks : [...books].reverse(),
-		},
-	];
-
 	return (
 		<Page>
 			<CatalogHero>
@@ -58,33 +23,16 @@ const HomePage = () => {
 				</CatalogHeroInner>
 			</CatalogHero>
 
-			<GenreCarousel genres={genrePills} />
+			<GenreCarousel />
 
-			<Feed>
-				{isLoading ? (
-					<StateMessage>Загружаем книги...</StateMessage>
-				) : isError ? (
-					<StateMessage>
-						Не удалось загрузить книги: {error.message}
-					</StateMessage>
-				) : books.length === 0 ? (
-					<StateMessage>Пока нет книг для отображения.</StateMessage>
-				) : (
-					<>
-						<BookSliderSection
-							title={bookSections[0].title}
-							href={bookSections[0].href}
-							books={bookSections[0].books}
-						/>
-						<BookOfTheWeekSlider />
-						<BookSliderSection
-							title={bookSections[1].title}
-							href={bookSections[1].href}
-							books={bookSections[1].books}
-						/>
-					</>
-				)}
-			</Feed>
+			<BookSliderSection title="Популярное" sort="popular" limit={20} />
+			<BookOfTheWeekSlider />
+			<BookSliderSection
+				title="Fantasy"
+				sort="newest"
+				genre="fantasy"
+				limit={20}
+			/>
 		</Page>
 	);
 };
@@ -171,19 +119,4 @@ const HeroText = styled.p`
 	font-weight: 400;
 	line-height: 1.55;
 	opacity: 0.82;
-`;
-
-const Feed = styled.div`
-	display: grid;
-	gap: clamp(3rem, 5vw, 4.75rem);
-	margin-top: clamp(2.25rem, 3.5vw, 3rem);
-`;
-
-const StateMessage = styled.p`
-	width: min(calc(100% - 3rem), 77.5rem);
-	margin: 0 auto;
-	color: ${theme.colors.softForeground};
-	font-family: ${theme.fonts.sans};
-	font-size: 1rem;
-	line-height: 1.5;
 `;

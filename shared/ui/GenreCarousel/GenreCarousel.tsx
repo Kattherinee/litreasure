@@ -6,23 +6,10 @@ import useEmblaCarousel from "embla-carousel-react";
 import styled from "styled-components";
 
 import { GenrePill } from "@/shared/ui/GenrePill";
+import { useGenresQuery } from "@/shared/api/genres";
 
-export type GenreCarouselItem = {
-	slug: string;
-	title: string;
-};
-
-type GenreCarouselProps = {
-	genres: GenreCarouselItem[];
-};
-
-const LOOP_COPIES = 4;
-
-const GenreCarousel = ({ genres }: GenreCarouselProps) => {
-	const loopedGenres = Array.from({ length: LOOP_COPIES }, (_, copyIndex) =>
-		genres.map((genre) => ({ ...genre, key: `${genre.slug}-${copyIndex}` })),
-	).flat();
-
+const GenreCarousel = () => {
+	const { data: genres = [] } = useGenresQuery();
 	const [emblaRef, emblaApi] = useEmblaCarousel(
 		{
 			align: "start",
@@ -52,11 +39,9 @@ const GenreCarousel = ({ genres }: GenreCarouselProps) => {
 		<Carousel aria-label="Жанры">
 			<Viewport ref={emblaRef}>
 				<Container>
-					{loopedGenres.map((genre) => (
-						<Slide key={genre.key}>
-							<GenrePill href={`/genres/${genre.slug}`}>
-								{genre.title}
-							</GenrePill>
+					{genres.map((genre) => (
+						<Slide key={genre.id}>
+							<GenrePill href={`/genres/${genre.slug}`}>{genre.name}</GenrePill>
 						</Slide>
 					))}
 				</Container>

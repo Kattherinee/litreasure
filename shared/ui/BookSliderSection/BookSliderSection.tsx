@@ -3,10 +3,11 @@
 import { useState } from "react";
 import styled from "styled-components";
 
+import type { BookSort } from "@/shared/api/books";
+import { useBookCardsQuery } from "@/shared/api/books";
 import { theme } from "@/shared/theme";
 import { Button } from "@/shared/ui/Button";
 import BookCarousel from "@/shared/ui/BookCarousel/BookCarousel";
-import type { BookCardData } from "@/shared/ui/BookCard";
 
 type CarouselControls = {
 	canScrollNext: boolean;
@@ -16,21 +17,51 @@ type CarouselControls = {
 };
 
 type BookSliderSectionProps = {
-	books: BookCardData[];
-	href: string;
+	genre?: string;
+	limit?: number;
+	sort?: BookSort;
 	title: string;
 };
 
-const BookSliderSection = ({ books, href, title }: BookSliderSectionProps) => {
+const getSectionHref = ({
+	genre,
+	sort,
+}: Pick<BookSliderSectionProps, "genre" | "sort">) => {
+	if (genre) {
+		const query = sort ? `?sort=${sort}` : "";
+
+		return `/genres/${genre}${query}`;
+	}
+
+	if (sort) {
+		return `/collections/${sort}`;
+	}
+
+	return "/collections/newest";
+};
+
+const BookSliderSection = ({
+	sort,
+	genre,
+	limit,
+	title,
+}: BookSliderSectionProps) => {
 	const [carouselControls, setCarouselControls] =
 		useState<CarouselControls | null>(null);
+	const {
+		data: books = [],
+		error,
+		isError,
+		isLoading,
+	} = useBookCardsQuery({ sort, genre, limit });
+	const sectionHref = getSectionHref({ genre, sort });
 
 	return (
 		<Section>
 			<SectionHeader>
 				<SectionHeading>
 					<SectionTitle>{title}</SectionTitle>
-					<ShowMoreButton buttonStyle="oxygenPill" href={href}>
+					<ShowMoreButton buttonStyle="oxygenPill" href={sectionHref}>
 						Посмотреть все
 					</ShowMoreButton>
 				</SectionHeading>
@@ -55,23 +86,33 @@ const BookSliderSection = ({ books, href, title }: BookSliderSectionProps) => {
 				</Controls>
 			</SectionHeader>
 
-			<BookCarousel
-				books={books}
-				onControlsChange={(controls) => {
-					setCarouselControls((currentControls) => {
-						if (
-							currentControls?.canScrollNext === controls.canScrollNext &&
-							currentControls?.canScrollPrev === controls.canScrollPrev &&
-							currentControls?.scrollNext === controls.scrollNext &&
-							currentControls?.scrollPrev === controls.scrollPrev
-						) {
-							return currentControls;
-						}
+			{isLoading ? (
+				<StateMessage>Загружаем книги...</StateMessage>
+			) : isError ? (
+				<StateMessage>
+					Не удалось загрузить книги: {error.message}
+				</StateMessage>
+			) : books.length === 0 ? (
+				<StateMessage>Пока нет книг для отображения.</StateMessage>
+			) : (
+				<BookCarousel
+					books={books}
+					onControlsChange={(controls) => {
+						setCarouselControls((currentControls) => {
+							if (
+								currentControls?.canScrollNext === controls.canScrollNext &&
+								currentControls?.canScrollPrev === controls.canScrollPrev &&
+								currentControls?.scrollNext === controls.scrollNext &&
+								currentControls?.scrollPrev === controls.scrollPrev
+							) {
+								return currentControls;
+							}
 
-						return controls;
-					});
-				}}
-			/>
+							return controls;
+						});
+					}}
+				/>
+			)}
 		</Section>
 	);
 };
@@ -154,4 +195,11 @@ const ControlButton = styled.button`
 		cursor: default;
 		opacity: 0.38;
 	}
+`;
+
+const StateMessage = styled.p`
+	margin: 0;
+	color: ${theme.colors.softForeground};
+	font-size: 1rem;
+	line-height: 1.5;
 `;

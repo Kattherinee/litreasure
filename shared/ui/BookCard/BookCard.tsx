@@ -75,7 +75,7 @@ export default BookCard;
 const BookCardWrapper = styled.article`
 	position: relative;
 	display: flex;
-	width: min-content;
+	width: min(100%, 12rem);
 	flex-direction: column;
 	gap: 0.5rem;
 	background: ${theme.colors.transparent};
@@ -93,6 +93,7 @@ const BookCover = styled.div`
 	position: relative;
 	overflow: hidden;
 	width: fit-content;
+	max-width: 100%;
 	height: 15.25rem;
 	border: 0.0625rem solid ${theme.colors.border};
 	border-radius: 0.25rem;
@@ -108,6 +109,7 @@ const BookCover = styled.div`
 const BookCoverImage = styled.img`
 	display: block;
 	width: auto;
+	max-width: 100%;
 	height: 100%;
 	object-fit: contain;
 `;
@@ -125,6 +127,7 @@ const BookTitle = styled.h2`
 	font-weight: 500;
 	line-height: 1.55rem;
 	transition: color 220ms ease;
+	overflow-wrap: anywhere;
 
 	${BookCardWrapper}:hover &,
 	${BookCardWrapper}:focus-visible & {
@@ -137,6 +140,7 @@ const BookAuthor = styled.p`
 	color: ${theme.colors.lightText};
 	font-size: 0.875rem;
 	line-height: 1.3334;
+	overflow-wrap: anywhere;
 `;
 
 const BookAddButton = styled.button`

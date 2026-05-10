@@ -25,17 +25,24 @@ export type CreateBookPayload = {
 	rating?: number;
 };
 
+export type BookSort = "newest" | "popular" | "rating";
+
+export interface IBookCardsParams {
+	limit?: number;
+	genre?: string;
+	sort?: BookSort;
+}
+
 export type UpdateBookPayload = Partial<CreateBookPayload>;
 
-const API_BASE_URL =
-	process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
 export const booksQueryKeys = {
 	all: ["books"] as const,
 	detail: (id: string) => ["books", id] as const,
 };
 
-const request = async <T>(
+export const request = async <T>(
 	path: string,
 	options: RequestInit = {},
 ): Promise<T> => {
@@ -66,6 +73,17 @@ const normalizeBook = (book: Book): Book => ({
 
 export const getBooks = async () => {
 	const books = await request<Book[]>("/books");
+
+	return books.map(normalizeBook);
+};
+export const getBookCards = async ({
+	params,
+}: {
+	params: IBookCardsParams;
+}) => {
+	const books = await request<Book[]>(
+		`/books/cards?genre=${params.genre ?? ""}${params.limit ? `&limit=${params.limit}` : ""}&sort=${params.sort ?? ""}`,
+	);
 
 	return books.map(normalizeBook);
 };
@@ -110,6 +128,12 @@ export const useBookQuery = (id: string) =>
 		enabled: Boolean(id),
 		queryFn: () => getBook(id),
 		queryKey: booksQueryKeys.detail(id),
+	});
+
+export const useBookCardsQuery = (params: IBookCardsParams) =>
+	useQuery({
+		queryFn: () => getBookCards({ params }),
+		queryKey: [...booksQueryKeys.all, "cards", params],
 	});
 
 export const useCreateBookMutation = () => {

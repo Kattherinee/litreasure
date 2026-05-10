@@ -8,25 +8,34 @@ import { useBookCardsQuery } from "@/shared/api/books";
 import { theme } from "@/shared/theme";
 import { BookCard } from "@/shared/ui/BookCard";
 
-type GenrePageProps = {
+type CollectionPageProps = {
 	slug: string;
-	sort?: BookSort;
 };
 
-const GenrePage = ({ slug, sort }: GenrePageProps) => {
+const collectionTitle: Record<BookSort, string> = {
+	newest: "Новинки",
+	popular: "Популярное",
+	rating: "Лучшие по рейтингу",
+};
+
+const isBookSort = (slug: string): slug is BookSort =>
+	slug === "newest" || slug === "popular" || slug === "rating";
+
+const CollectionPage = ({ slug }: CollectionPageProps) => {
+	const sort = isBookSort(slug) ? slug : "newest";
 	const {
 		data: books = [],
 		error,
 		isError,
 		isLoading,
-	} = useBookCardsQuery({ genre: slug, sort });
+	} = useBookCardsQuery({ sort });
 
 	return (
 		<Page>
 			<Content>
 				<BackLink href="/">На главную</BackLink>
-				<Title>{slug}</Title>
-				<Lead>Подборка книг в жанре {slug}.</Lead>
+				<Title>{collectionTitle[sort]}</Title>
+				<Lead>Подборка книг по сортировке {sort}.</Lead>
 
 				{isLoading ? (
 					<StateMessage>Загружаем книги...</StateMessage>
@@ -35,7 +44,7 @@ const GenrePage = ({ slug, sort }: GenrePageProps) => {
 						Не удалось загрузить книги: {error.message}
 					</StateMessage>
 				) : books.length === 0 ? (
-					<StateMessage>В этом жанре пока нет книг.</StateMessage>
+					<StateMessage>В этой подборке пока нет книг.</StateMessage>
 				) : (
 					<BookGrid>
 						{books.map((book) => (
@@ -50,7 +59,7 @@ const GenrePage = ({ slug, sort }: GenrePageProps) => {
 	);
 };
 
-export default GenrePage;
+export default CollectionPage;
 
 const Page = styled.main`
 	min-height: 100dvh;
