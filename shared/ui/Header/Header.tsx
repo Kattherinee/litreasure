@@ -9,13 +9,13 @@ import { useState, useSyncExternalStore } from "react";
 import styled from "styled-components";
 
 import { LogoIcon } from "@/public/icons/logo";
-import { Button } from "@/shared/ui/Button";
-import { InputField } from "@/shared/ui/InputField";
 import { theme } from "@/shared/theme";
+import { BookSearch } from "@/shared/ui/BookSearch";
+import { Button } from "@/shared/ui/Button";
 
 const navItems = ["Жанры", "Книжные полки", "Книжный трекинг"];
 const overflowItems = [
-	"Рейтинги ?",
+	"Рейтинги",
 	"Жанры",
 	"Авторы",
 	"Подборки",
@@ -105,14 +105,7 @@ const Header = () => {
 					))}
 				</DesktopNav>
 
-				<SearchWrap>
-					<SearchIcon aria-hidden="true" />
-					<HeaderSearch
-						type="search"
-						placeholder="Название, автор"
-						aria-label="Поиск книг"
-					/>
-				</SearchWrap>
+				<BookSearch />
 
 				<AuthActions>
 					<AuthButton variant="text">Регистрация</AuthButton>
@@ -229,50 +222,6 @@ const NavButton = styled(MuiButton)`
 		font: inherit;
 		text-transform: none;
 	}
-`;
-
-const SearchWrap = styled.label`
-	position: relative;
-	display: flex;
-	width: min(270px, 30vw);
-	margin-left: auto;
-	align-items: center;
-
-	@media (max-width: 720px) {
-		order: 5;
-		width: 100%;
-		margin-left: 0;
-	}
-`;
-
-const SearchIcon = styled.span`
-	position: absolute;
-	left: 14px;
-	bottom: 55%;
-	width: 14px;
-	height: 14px;
-	border: 2px solid currentColor;
-	border-radius: 50%;
-	color: ${theme.colors.softForeground};
-	pointer-events: none;
-	transform: translateY(50%);
-
-	&::after {
-		position: absolute;
-		right: -6px;
-		bottom: -4px;
-		width: 8px;
-		height: 2px;
-		border-radius: 999px;
-		background: currentColor;
-		content: "";
-		transform: rotate(45deg);
-	}
-`;
-
-const HeaderSearch = styled(InputField)`
-	min-height: 34px;
-	padding-left: 42px;
 `;
 
 const AuthActions = styled(Box)`

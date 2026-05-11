@@ -6,7 +6,11 @@ import useEmblaCarousel from "embla-carousel-react";
 import styled from "styled-components";
 
 import { theme } from "@/shared/theme";
-import { BookCard, type BookCardData } from "@/shared/ui/BookCard";
+import {
+	BookCard,
+	type BookCardData,
+	type BookCardSize,
+} from "@/shared/ui/BookCard";
 
 const WHEEL_SENSITIVITY = -0.91;
 const EMBLA_WHEEL_DURATION = 15;
@@ -21,11 +25,20 @@ type BookCarouselControls = {
 };
 
 type BookCarouselProps = {
+	activeBookId?: string;
+	bleed?: boolean;
 	books: BookCardData[];
 	onControlsChange?: (controls: BookCarouselControls) => void;
+	size?: BookCardSize;
 };
 
-const BookCarousel = ({ books, onControlsChange }: BookCarouselProps) => {
+const BookCarousel = ({
+	activeBookId,
+	bleed = true,
+	books,
+	onControlsChange,
+	size = "default",
+}: BookCarouselProps) => {
 	const [emblaRef, emblaApi] = useEmblaCarousel({
 		align: "start",
 		containScroll: "keepSnaps",
@@ -149,14 +162,18 @@ const BookCarousel = ({ books, onControlsChange }: BookCarouselProps) => {
 
 	return (
 		<Carousel aria-label="Карусель книг">
-			<Viewport ref={setViewportRef}>
-				<Container>
+			<Viewport $bleed={bleed} ref={setViewportRef}>
+				<Container $bleed={bleed}>
 					{books.map((book, index) => (
 						<Slide key={`${book.id}-${index}`}>
-							<BookCard book={book} />
+							<BookCard
+								book={book}
+								isActive={book.id === activeBookId}
+								size={size}
+							/>
 						</Slide>
 					))}
-					<EndSpace aria-hidden="true" />
+					{bleed ? <EndSpace aria-hidden="true" /> : null}
 				</Container>
 			</Viewport>
 
@@ -198,28 +215,32 @@ const Carousel = styled.section`
 	width: 100%;
 `;
 
-const Viewport = styled.div`
-	width: 100vw;
-	margin-left: calc(var(--content-side-space) * -1);
+const Viewport = styled.div<{ $bleed: boolean }>`
+	width: ${({ $bleed }) => ($bleed ? "100vw" : "100%")};
+	margin-left: ${({ $bleed }) =>
+		$bleed ? "calc(var(--content-side-space) * -1)" : "0"};
 	overflow: hidden;
 	overscroll-behavior: contain;
 	padding-block: 0.125rem;
 `;
 
-const Container = styled.div`
+const Container = styled.div<{ $bleed: boolean }>`
 	--slide-gap: clamp(0.775rem, 1vw, 1.25rem);
 
 	display: flex;
 	align-items: flex-start;
 	gap: var(--slide-gap);
 	height: auto;
-	padding-left: var(--content-side-space);
+	padding-left: ${({ $bleed }) =>
+		$bleed ? "var(--content-side-space)" : "0.35rem"};
+	padding-block: ${({ $bleed }) => ($bleed ? "0" : "0.35rem")};
 	touch-action: pan-y pinch-zoom;
 `;
 
 const Slide = styled.div`
 	flex: 0 0 auto;
 	align-self: flex-start;
+	width: fit-content;
 	height: fit-content;
 	min-width: 0;
 `;

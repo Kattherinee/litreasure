@@ -17,8 +17,8 @@ const HomePage = () => {
 						<PageTitle>Книжная лента</PageTitle>
 					</HeroCopy>
 					<HeroText>
-						Подборки, жанры и карточки книг, которые удобно просматривать и
-						сохранять в свою коллекцию.
+						«Читатель проживает тысячу жизней до того, как умрет. Тот, кто
+						никогда не читает, — только одну» — Джордж Мартин.
 					</HeroText>
 				</CatalogHeroInner>
 			</CatalogHero>
@@ -27,6 +27,12 @@ const HomePage = () => {
 
 			<BookSliderSection title="Популярное" sort="popular" limit={20} />
 			<BookOfTheWeekSlider />
+			<BookSliderSection
+				title="Young Adult Fiction"
+				sort="newest"
+				genre="young_adult_fiction"
+				limit={20}
+			/>
 			<BookSliderSection
 				title="Fantasy"
 				sort="newest"
@@ -39,7 +45,7 @@ const HomePage = () => {
 
 export default HomePage;
 
-const Page = styled.main`
+const Page = styled.div`
 	min-height: 100dvh;
 	overflow-x: clip;
 	background:

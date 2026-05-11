@@ -28,7 +28,7 @@ const BookCardShowcase = () => {
 
 export default BookCardShowcase;
 
-const ShowcasePage = styled.main`
+const ShowcasePage = styled.div`
 	min-height: 100dvh;
 	overflow-x: clip;
 	background:

@@ -6,23 +6,33 @@ import styled, { css } from "styled-components";
 import { theme } from "@/shared/theme";
 
 type ButtonStyle = "default" | "oxygenPill";
+type ButtonVariant = "contained" | "outlined" | "text" | "containedInverted";
 
-export type ButtonProps = Omit<MuiButtonProps, "disableElevation"> & {
+export type ButtonProps = Omit<
+	MuiButtonProps,
+	"disableElevation" | "variant"
+> & {
 	buttonStyle?: ButtonStyle;
+	variant?: ButtonVariant;
 };
 
 const Button = ({
 	buttonStyle = "default",
 	variant = "contained",
 	...props
-}: ButtonProps) => (
-	<StyledButton
-		$buttonStyle={buttonStyle}
-		disableElevation
-		variant={variant}
-		{...props}
-	/>
-);
+}: ButtonProps) => {
+	const muiVariant = variant === "containedInverted" ? "contained" : variant;
+
+	return (
+		<StyledButton
+			$buttonStyle={buttonStyle}
+			$variant={variant}
+			disableElevation
+			variant={muiVariant}
+			{...props}
+		/>
+	);
+};
 
 export default Button;
 
@@ -35,6 +45,18 @@ const containedStyles = css`
 		background: ${theme.colors.orangeLight};
 		border-color: ${theme.colors.orangeLight};
 		color: ${theme.colors.invertedText};
+	}
+`;
+
+const containedInvertedStyles = css`
+	background: ${theme.colors.orangeLight};
+	border-color: ${theme.colors.orangeLight};
+	color: ${theme.colors.invertedText};
+
+	&:hover {
+		background: ${theme.colors.invertedText};
+		border-color: ${theme.colors.invertedText};
+		color: ${theme.colors.foreground};
 	}
 `;
 
@@ -82,7 +104,7 @@ const oxygenPillStyles = css`
 
 const StyledButton = styled(MuiButton)<{
 	$buttonStyle: ButtonStyle;
-	variant?: ButtonProps["variant"];
+	$variant: ButtonVariant;
 }>`
 	&& {
 		border: 1px solid ${theme.colors.transparent};
@@ -105,13 +127,16 @@ const StyledButton = styled(MuiButton)<{
 			color: ${theme.colors.muted};
 		}
 
-		${({ variant = "contained" }) => {
-			if (variant === "outlined") {
+		${({ $variant }) => {
+			if ($variant === "outlined") {
 				return outlinedStyles;
 			}
 
-			if (variant === "text") {
+			if ($variant === "text") {
 				return textStyles;
+			}
+			if ($variant === "containedInverted") {
+				return containedInvertedStyles;
 			}
 
 			return containedStyles;

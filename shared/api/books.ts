@@ -8,11 +8,70 @@ export type Book = {
 	author: string;
 	description?: string;
 	coverUrl?: string;
+	pagesCount?: number;
 	genres: string[];
+	setting: string[];
 	publishedYear?: number;
+	firstPublishDate?: string;
+	publisher?: string;
 	rating?: number;
+	ratingAvg?: number;
+	ratingsCount?: number;
+	ratingsByStars: number[];
+	language?: string;
+	openLibraryWorkKey?: string;
+	orderInSeries?: number;
+	relationType?: BookSeriesRelationType;
+	seriesLabel?: string;
+	authors: string[];
+	series?: {
+		id?: string;
+		title?: string;
+		openLibrarySeriesKey?: string;
+		seriesId: string;
+		orderInSeries?: number;
+		relationType?: BookSeriesRelationType;
+		seriesLabel?: string;
+		books?: Array<{
+			id: string;
+			title: string;
+			author?: string;
+			coverUrl?: string;
+			orderInSeries?: number;
+			relationType?: BookSeriesRelationType;
+			seriesLabel?: string;
+		}>;
+	};
 	createdAt: string;
 	updatedAt: string;
+};
+
+export type BookSeriesRelationType =
+	| "collection"
+	| "main"
+	| "omnibus"
+	| "spin_off"
+	| "unknown";
+
+type RawBook = Omit<
+	Book,
+	| "author"
+	| "authors"
+	| "genres"
+	| "ratingsByStars"
+	| "relationType"
+	| "series"
+	| "seriesLabel"
+	| "setting"
+> & {
+	author?: unknown;
+	authors?: unknown;
+	genres?: unknown;
+	ratingsByStars?: unknown;
+	relationType?: unknown;
+	series?: unknown;
+	seriesLabel?: unknown;
+	setting?: unknown;
 };
 
 export type CreateBookPayload = {
@@ -30,6 +89,7 @@ export type BookSort = "newest" | "popular" | "rating";
 export interface IBookCardsParams {
 	limit?: number;
 	genre?: string;
+	search?: string;
 	sort?: BookSort;
 }
 
@@ -66,13 +126,223 @@ export const request = async <T>(
 	return response.json() as Promise<T>;
 };
 
-const normalizeBook = (book: Book): Book => ({
+const normalizeGenre = (genre: unknown) => {
+	if (typeof genre === "string") {
+		return genre;
+	}
+
+	if (genre && typeof genre === "object") {
+		const genreObject = genre as { name?: unknown; slug?: unknown };
+
+		if (typeof genreObject.slug === "string") {
+			return genreObject.slug;
+		}
+
+		if (typeof genreObject.name === "string") {
+			return genreObject.name;
+		}
+	}
+
+	return null;
+};
+
+const normalizeNamedValue = (value: unknown) => {
+	if (typeof value === "string") {
+		return value;
+	}
+
+	if (value && typeof value === "object") {
+		const valueObject = value as { name?: unknown; slug?: unknown; title?: unknown };
+
+		if (typeof valueObject.name === "string") {
+			return valueObject.name;
+		}
+
+		if (typeof valueObject.title === "string") {
+			return valueObject.title;
+		}
+
+		if (typeof valueObject.slug === "string") {
+			return valueObject.slug;
+		}
+	}
+
+	return null;
+};
+
+const normalizeSeriesId = (seriesId: unknown) => {
+	if (typeof seriesId === "string") {
+		return seriesId;
+	}
+
+	if (seriesId && typeof seriesId === "object") {
+		const seriesObject = seriesId as { id?: unknown; name?: unknown; title?: unknown };
+
+		if (typeof seriesObject.id === "string") {
+			return seriesObject.id;
+		}
+
+		if (typeof seriesObject.name === "string") {
+			return seriesObject.name;
+		}
+
+		if (typeof seriesObject.title === "string") {
+			return seriesObject.title;
+		}
+	}
+
+	return "";
+};
+
+const normalizeSeriesRelationType = (
+	relationType: unknown,
+): BookSeriesRelationType | undefined => {
+	if (
+		relationType === "collection" ||
+		relationType === "main" ||
+		relationType === "omnibus" ||
+		relationType === "spin_off" ||
+		relationType === "unknown"
+	) {
+		return relationType;
+	}
+
+	return undefined;
+};
+
+const normalizeSeries = (series: unknown): Book["series"] => {
+	if (!series || typeof series !== "object") {
+		return undefined;
+	}
+
+	const seriesObject = series as {
+		books?: unknown;
+		id?: unknown;
+		openLibrarySeriesKey?: unknown;
+		orderInSeries?: unknown;
+		relationType?: unknown;
+		seriesId?: unknown;
+		seriesLabel?: unknown;
+		title?: unknown;
+	};
+	const seriesId = normalizeSeriesId(seriesObject.seriesId ?? seriesObject.id);
+	const books = Array.isArray(seriesObject.books)
+		? seriesObject.books.flatMap((book) => {
+				if (!book || typeof book !== "object") {
+					return [];
+				}
+
+				const seriesBook = book as {
+					author?: unknown;
+					coverUrl?: unknown;
+					id?: unknown;
+					orderInSeries?: unknown;
+					relationType?: unknown;
+					seriesLabel?: unknown;
+					title?: unknown;
+				};
+
+				if (
+					typeof seriesBook.id !== "string" ||
+					typeof seriesBook.title !== "string"
+				) {
+					return [];
+				}
+
+				return [
+					{
+						id: seriesBook.id,
+						title: seriesBook.title,
+						author:
+							typeof seriesBook.author === "string"
+								? seriesBook.author
+								: undefined,
+						coverUrl:
+							typeof seriesBook.coverUrl === "string"
+								? seriesBook.coverUrl
+								: undefined,
+						orderInSeries:
+							typeof seriesBook.orderInSeries === "number"
+								? seriesBook.orderInSeries
+								: undefined,
+						relationType: normalizeSeriesRelationType(
+							seriesBook.relationType,
+						),
+						seriesLabel:
+							typeof seriesBook.seriesLabel === "string"
+								? seriesBook.seriesLabel
+								: undefined,
+					},
+				];
+			})
+		: undefined;
+
+	return {
+		id: typeof seriesObject.id === "string" ? seriesObject.id : seriesId,
+		openLibrarySeriesKey:
+			typeof seriesObject.openLibrarySeriesKey === "string"
+				? seriesObject.openLibrarySeriesKey
+				: undefined,
+		seriesId,
+		title:
+			typeof seriesObject.title === "string" ? seriesObject.title : undefined,
+		books,
+		orderInSeries:
+			typeof seriesObject.orderInSeries === "number"
+				? seriesObject.orderInSeries
+				: undefined,
+		relationType: normalizeSeriesRelationType(seriesObject.relationType),
+		seriesLabel:
+			typeof seriesObject.seriesLabel === "string"
+				? seriesObject.seriesLabel
+				: undefined,
+	};
+};
+
+const normalizeBook = (book: RawBook): Book => ({
 	...book,
-	genres: Array.isArray(book.genres) ? book.genres : [],
+	author:
+		typeof book.author === "string"
+			? book.author
+			: Array.isArray(book.authors)
+				? (book.authors.map(normalizeNamedValue).find(Boolean) ?? "")
+				: "",
+	authors: Array.isArray(book.authors)
+		? book.authors.flatMap((author) => {
+				const normalizedAuthor = normalizeNamedValue(author);
+
+				return normalizedAuthor ? [normalizedAuthor] : [];
+			})
+		: typeof book.author === "string"
+			? [book.author]
+			: [],
+	genres: Array.isArray(book.genres)
+		? book.genres.flatMap((genre) => {
+				const normalizedGenre = normalizeGenre(genre);
+
+				return normalizedGenre ? [normalizedGenre] : [];
+			})
+		: [],
+	ratingsByStars: Array.isArray(book.ratingsByStars)
+		? book.ratingsByStars.filter(
+				(ratingValue): ratingValue is number => typeof ratingValue === "number",
+			)
+		: [],
+	relationType: normalizeSeriesRelationType(book.relationType),
+	series: normalizeSeries(book.series),
+	seriesLabel:
+		typeof book.seriesLabel === "string" ? book.seriesLabel : undefined,
+	setting: Array.isArray(book.setting)
+		? book.setting.flatMap((setting) => {
+				const normalizedSetting = normalizeNamedValue(setting);
+
+				return normalizedSetting ? [normalizedSetting] : [];
+			})
+		: [],
 });
 
 export const getBooks = async () => {
-	const books = await request<Book[]>("/books");
+	const books = await request<RawBook[]>("/books");
 
 	return books.map(normalizeBook);
 };
@@ -81,21 +351,40 @@ export const getBookCards = async ({
 }: {
 	params: IBookCardsParams;
 }) => {
-	const books = await request<Book[]>(
-		`/books/cards?genre=${params.genre ?? ""}${params.limit ? `&limit=${params.limit}` : ""}&sort=${params.sort ?? ""}`,
+	const searchParams = new URLSearchParams();
+
+	if (params.genre) {
+		searchParams.set("genre", params.genre);
+	}
+
+	if (params.limit) {
+		searchParams.set("limit", String(params.limit));
+	}
+
+	if (params.search) {
+		searchParams.set("search", params.search);
+	}
+
+	if (params.sort) {
+		searchParams.set("sort", params.sort);
+	}
+
+	const query = searchParams.toString();
+	const books = await request<RawBook[]>(
+		query ? `/books/cards?${query}` : "/books/cards",
 	);
 
 	return books.map(normalizeBook);
 };
 
 export const getBook = async (id: string) => {
-	const book = await request<Book>(`/books/${id}`);
+	const book = await request<RawBook>(`/books/${id}`);
 
 	return normalizeBook(book);
 };
 
 export const createBook = async (payload: CreateBookPayload) => {
-	const book = await request<Book>("/books", {
+	const book = await request<RawBook>("/books", {
 		body: JSON.stringify(payload),
 		method: "POST",
 	});
@@ -104,7 +393,7 @@ export const createBook = async (payload: CreateBookPayload) => {
 };
 
 export const updateBook = async (id: string, payload: UpdateBookPayload) => {
-	const book = await request<Book>(`/books/${id}`, {
+	const book = await request<RawBook>(`/books/${id}`, {
 		body: JSON.stringify(payload),
 		method: "PATCH",
 	});
@@ -130,8 +419,12 @@ export const useBookQuery = (id: string) =>
 		queryKey: booksQueryKeys.detail(id),
 	});
 
-export const useBookCardsQuery = (params: IBookCardsParams) =>
+export const useBookCardsQuery = (
+	params: IBookCardsParams,
+	options?: { enabled?: boolean },
+) =>
 	useQuery({
+		enabled: options?.enabled,
 		queryFn: () => getBookCards({ params }),
 		queryKey: [...booksQueryKeys.all, "cards", params],
 	});

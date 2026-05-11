@@ -61,7 +61,7 @@ const CollectionPage = ({ slug }: CollectionPageProps) => {
 
 export default CollectionPage;
 
-const Page = styled.main`
+const Page = styled.div`
 	min-height: 100dvh;
 	background: ${theme.colors.background};
 	padding: clamp(3rem, 5vw, 4.5rem) clamp(1.5rem, 2.78vw, 2.5rem);
