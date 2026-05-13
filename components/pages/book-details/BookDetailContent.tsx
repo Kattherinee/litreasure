@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import StarBorderIcon from "@mui/icons-material/StarBorder";
 import StarIcon from "@mui/icons-material/Star";
 import styled from "styled-components";
@@ -7,6 +8,7 @@ import styled from "styled-components";
 import type { Book } from "@/shared/api/books";
 import { theme } from "@/shared/theme";
 import GenrePill from "@/shared/ui/GenrePill/GenrePill";
+import { CoverPlaceholder } from "@/shared/ui/Skeleton";
 
 import BookDetailHero from "./BookDetailHero";
 import BookDetailTabs from "./BookDetailTabs";
@@ -29,6 +31,8 @@ const BookDetailContent = ({ book }: BookDetailContentProps) => {
 	const coverSrc = book.coverUrl?.trim()
 		? book.coverUrl
 		: "/images/book-placeholder.svg";
+	const [loadedCoverSrc, setLoadedCoverSrc] = useState("");
+	const isCoverLoaded = loadedCoverSrc === coverSrc;
 	const normalizedRating = book.ratingAvg ?? book.rating ?? 0;
 	const activeStars = Math.round(normalizedRating);
 	const formattedRating = normalizedRating.toFixed(1).replace(".0", "");
@@ -42,7 +46,13 @@ const BookDetailContent = ({ book }: BookDetailContentProps) => {
 			<ContentGrid>
 				<LeftColumn>
 					<CoverWrap>
-						<CoverImage src={coverSrc} alt={`Обложка «${book.title}»`} />
+						{isCoverLoaded ? null : <CoverPlaceholder aria-hidden="true" />}
+						<CoverImage
+							$isLoaded={isCoverLoaded}
+							src={coverSrc}
+							alt={`Обложка «${book.title}»`}
+							onLoad={() => setLoadedCoverSrc(coverSrc)}
+						/>
 					</CoverWrap>
 
 					<AsideRating>
@@ -218,8 +228,10 @@ const LeftColumn = styled.aside`
 `;
 
 const CoverWrap = styled.div`
+	position: relative;
 	overflow: hidden;
-	width: fit-content;
+	width: min(var(--detail-cover-max-width), 100%);
+	min-height: var(--detail-cover-max-height);
 	border-radius: 0.5rem;
 	background: ${theme.colors.surface};
 	box-shadow: 0 0 0.9375rem rgb(0 0 0 / 0.45);
@@ -229,13 +241,15 @@ const CoverWrap = styled.div`
 	}
 `;
 
-const CoverImage = styled.img`
+const CoverImage = styled.img<{ $isLoaded: boolean }>`
 	display: block;
 	width: 100%;
 	height: auto;
 	max-width: var(--detail-cover-max-width);
 	max-height: var(--detail-cover-max-height);
 	object-fit: cover;
+	opacity: ${({ $isLoaded }) => ($isLoaded ? 1 : 0)};
+	transition: opacity 220ms ease;
 `;
 
 const GenreRow = styled.div`

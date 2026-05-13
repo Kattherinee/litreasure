@@ -7,9 +7,10 @@ import styled from "styled-components";
 
 import { GenrePill } from "@/shared/ui/GenrePill";
 import { useGenresQuery } from "@/shared/api/genres";
+import { GenrePillSkeleton } from "@/shared/ui/Skeleton";
 
 const GenreCarousel = () => {
-	const { data: genres = [] } = useGenresQuery();
+	const { data: genres = [], isLoading } = useGenresQuery();
 	const [emblaRef, emblaApi] = useEmblaCarousel(
 		{
 			align: "start",
@@ -31,7 +32,7 @@ const GenreCarousel = () => {
 		emblaApi?.plugins().autoplay?.play();
 	}, [emblaApi]);
 
-	if (genres.length === 0) {
+	if (!isLoading && genres.length === 0) {
 		return null;
 	}
 
@@ -39,11 +40,17 @@ const GenreCarousel = () => {
 		<Carousel aria-label="Жанры">
 			<Viewport ref={emblaRef}>
 				<Container>
-					{genres.map((genre) => (
-						<Slide key={genre.id}>
-							<GenrePill href={`/genres/${genre.slug}`}>{genre.name}</GenrePill>
-						</Slide>
-					))}
+					{isLoading
+						? Array.from({ length: 12 }, (_, index) => (
+								<Slide key={index}>
+									<GenrePillSkeleton />
+								</Slide>
+							))
+						: genres.map((genre) => (
+							<Slide key={genre.id}>
+								<GenrePill href={`/genres/${genre.slug}`}>{genre.name}</GenrePill>
+							</Slide>
+						))}
 				</Container>
 			</Viewport>
 		</Carousel>

@@ -8,6 +8,7 @@ import { useBookCardsQuery } from "@/shared/api/books";
 import { theme } from "@/shared/theme";
 import { Button } from "@/shared/ui/Button";
 import BookCarousel from "@/shared/ui/BookCarousel/BookCarousel";
+import { BookCardSkeleton } from "@/shared/ui/Skeleton";
 
 type CarouselControls = {
 	canScrollNext: boolean;
@@ -87,7 +88,11 @@ const BookSliderSection = ({
 			</SectionHeader>
 
 			{isLoading ? (
-				<StateMessage>Загружаем книги...</StateMessage>
+				<SkeletonCarousel aria-label="Загружаем книги">
+					{Array.from({ length: 8 }, (_, index) => (
+						<BookCardSkeleton key={index} />
+					))}
+				</SkeletonCarousel>
 			) : isError ? (
 				<StateMessage>
 					Не удалось загрузить книги: {error.message}
@@ -195,6 +200,12 @@ const ControlButton = styled.button`
 		cursor: default;
 		opacity: 0.38;
 	}
+`;
+
+const SkeletonCarousel = styled.div`
+	display: flex;
+	gap: clamp(0.775rem, 1vw, 1.25rem);
+	overflow: hidden;
 `;
 
 const StateMessage = styled.p`

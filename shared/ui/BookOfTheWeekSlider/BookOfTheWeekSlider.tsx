@@ -9,6 +9,7 @@ import useEmblaCarousel from "embla-carousel-react";
 import styled from "styled-components";
 
 import { theme } from "@/shared/theme";
+import { CoverPlaceholder } from "@/shared/ui/Skeleton";
 
 type WeekBook = {
 	id: string;
@@ -95,7 +96,10 @@ const BookOfTheWeekSlider = () => {
 				<Container>
 					{weekBooks.map((book) => (
 						<Slide key={book.id}>
-							<BookCover src={book.imageUrl} alt={`Обложка «${book.title}»`} />
+							<WeekCoverImage
+								src={book.imageUrl}
+								alt={`Обложка «${book.title}»`}
+							/>
 							<BookInfo>
 								<BookTitle>{book.title}</BookTitle>
 								<BookDescription>{book.description}</BookDescription>
@@ -132,6 +136,22 @@ const BookOfTheWeekSlider = () => {
 
 export default BookOfTheWeekSlider;
 
+const WeekCoverImage = ({ alt, src }: { alt: string; src: string }) => {
+	const [isLoaded, setIsLoaded] = useState(false);
+
+	return (
+		<BookCoverWrap>
+			{isLoaded ? null : <CoverPlaceholder aria-hidden="true" />}
+			<BookCover
+				$isLoaded={isLoaded}
+				src={src}
+				alt={alt}
+				onLoad={() => setIsLoaded(true)}
+			/>
+		</BookCoverWrap>
+	);
+};
+
 const Slider = styled.section`
 	position: relative;
 	width: 100vw;
@@ -162,11 +182,21 @@ const Slide = styled.article`
 	padding: 2.5rem 8rem;
 `;
 
-const BookCover = styled.img`
+const BookCoverWrap = styled.div`
+	position: relative;
+	overflow: hidden;
+	width: 10rem;
+	height: 15.75rem;
+	border-radius: 0.45rem;
+`;
+
+const BookCover = styled.img<{ $isLoaded: boolean }>`
 	display: block;
 	width: 10rem;
 	height: 15.75rem;
 	object-fit: cover;
+	opacity: ${({ $isLoaded }) => ($isLoaded ? 1 : 0)};
+	transition: opacity 220ms ease;
 `;
 
 const BookInfo = styled.div`

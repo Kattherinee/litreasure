@@ -8,6 +8,7 @@ import styled from "styled-components";
 import type { BookSeriesRelationType } from "@/shared/api/books";
 import { theme } from "@/shared/theme";
 import { PlusIcon } from "@/shared/ui/PlusIcon";
+import { CoverPlaceholder } from "@/shared/ui/Skeleton";
 
 export type BookCardData = {
 	id: string;
@@ -47,7 +48,9 @@ const BookCard = ({
 	});
 	const coverSrc = coverUrl?.trim() ? coverUrl : "/images/book-placeholder.svg";
 	const [coverWidth, setCoverWidth] = useState<number | null>(null);
+	const [loadedCoverSrc, setLoadedCoverSrc] = useState("");
 	const router = useRouter();
+	const isCoverLoaded = loadedCoverSrc === coverSrc;
 
 	const openBookPage = () => {
 		router.push(`/books/${book.id}`, { scroll: true });
@@ -80,6 +83,7 @@ const BookCard = ({
 		setCoverWidth(
 			(image.naturalWidth / image.naturalHeight) * image.clientHeight,
 		);
+		setLoadedCoverSrc(coverSrc);
 	};
 
 	return (
@@ -95,10 +99,12 @@ const BookCard = ({
 			onKeyDown={handleCardKeyDown}
 		>
 			<BookCover $size={size}>
+				{isCoverLoaded ? null : <CoverPlaceholder aria-hidden="true" />}
 				{seriesBadgeLabel ? (
 					<SeriesBadge>{seriesBadgeLabel}</SeriesBadge>
 				) : null}
 				<BookCoverImage
+					$isLoaded={isCoverLoaded}
 					src={coverSrc}
 					alt={`Обложка «${title}»`}
 					onLoad={handleCoverLoad}
@@ -175,6 +181,7 @@ const BookCover = styled.div<{ $size: BookCardSize }>`
 	position: relative;
 	overflow: hidden;
 	width: fit-content;
+	min-width: ${({ $size }) => ($size === "compact" ? "7.5rem" : "10rem")};
 	max-width: 100%;
 	height: ${({ $size }) => ($size === "compact" ? "11.5rem" : "15.25rem")};
 
@@ -194,13 +201,15 @@ const BookCover = styled.div<{ $size: BookCardSize }>`
 	}
 `;
 
-const BookCoverImage = styled.img`
+const BookCoverImage = styled.img<{ $isLoaded: boolean }>`
 	display: block;
 	width: auto;
 	max-width: 100%;
 	height: 100%;
 	object-fit: contain;
 	border-radius: 0.7rem;
+	opacity: ${({ $isLoaded }) => ($isLoaded ? 1 : 0)};
+	transition: opacity 220ms ease;
 `;
 
 const BookMeta = styled.div`

@@ -7,6 +7,7 @@ import type { BookSort } from "@/shared/api/books";
 import { useBookCardsQuery } from "@/shared/api/books";
 import { theme } from "@/shared/theme";
 import { BookCard } from "@/shared/ui/BookCard";
+import { BookCardSkeleton } from "@/shared/ui/Skeleton";
 
 type GenrePageProps = {
 	slug: string;
@@ -29,7 +30,13 @@ const GenrePage = ({ slug, sort }: GenrePageProps) => {
 				<Lead>Подборка книг в жанре {slug}.</Lead>
 
 				{isLoading ? (
-					<StateMessage>Загружаем книги...</StateMessage>
+					<BookGrid aria-label="Загружаем книги">
+						{Array.from({ length: 12 }, (_, index) => (
+							<BookItem key={index}>
+								<BookCardSkeleton />
+							</BookItem>
+						))}
+					</BookGrid>
 				) : isError ? (
 					<StateMessage>
 						Не удалось загрузить книги: {error.message}
