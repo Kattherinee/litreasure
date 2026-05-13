@@ -22,7 +22,10 @@ export type Book = {
 	openLibraryWorkKey?: string;
 	orderInSeries?: number;
 	relationType?: BookSeriesRelationType;
+	searchMatches?: BookSearchMatch[];
 	seriesLabel?: string;
+	seriesRelationType?: BookSeriesRelationType;
+	seriesTitle?: string;
 	authors: string[];
 	series?: {
 		id?: string;
@@ -44,6 +47,11 @@ export type Book = {
 	};
 	createdAt: string;
 	updatedAt: string;
+};
+
+export type BookSearchMatch = {
+	field: string;
+	value: string;
 };
 
 export type BookSeriesRelationType =
@@ -69,8 +77,11 @@ type RawBook = Omit<
 	genres?: unknown;
 	ratingsByStars?: unknown;
 	relationType?: unknown;
+	searchMatches?: unknown;
 	series?: unknown;
 	seriesLabel?: unknown;
+	seriesRelationType?: unknown;
+	seriesTitle?: unknown;
 	setting?: unknown;
 };
 
@@ -85,11 +96,19 @@ export type CreateBookPayload = {
 };
 
 export type BookSort = "newest" | "popular" | "rating";
+export type BookSearchScope =
+	| "authors"
+	| "books"
+	| "collections"
+	| "genres"
+	| "publishers"
+	| "series";
 
 export interface IBookCardsParams {
 	limit?: number;
 	genre?: string;
 	search?: string;
+	searchScope?: BookSearchScope;
 	sort?: BookSort;
 }
 
@@ -210,6 +229,34 @@ const normalizeSeriesRelationType = (
 	return undefined;
 };
 
+const normalizeSearchMatches = (searchMatches: unknown): BookSearchMatch[] => {
+	if (!Array.isArray(searchMatches)) {
+		return [];
+	}
+
+	return searchMatches.flatMap((match) => {
+		if (!match || typeof match !== "object") {
+			return [];
+		}
+
+		const searchMatch = match as { field?: unknown; value?: unknown };
+
+		if (
+			typeof searchMatch.field !== "string" ||
+			typeof searchMatch.value !== "string"
+		) {
+			return [];
+		}
+
+		return [
+			{
+				field: searchMatch.field,
+				value: searchMatch.value,
+			},
+		];
+	});
+};
+
 const normalizeSeries = (series: unknown): Book["series"] => {
 	if (!series || typeof series !== "object") {
 		return undefined;
@@ -328,10 +375,35 @@ const normalizeBook = (book: RawBook): Book => ({
 				(ratingValue): ratingValue is number => typeof ratingValue === "number",
 			)
 		: [],
-	relationType: normalizeSeriesRelationType(book.relationType),
-	series: normalizeSeries(book.series),
+	relationType: normalizeSeriesRelationType(
+		book.relationType ?? book.seriesRelationType,
+	),
+	searchMatches: normalizeSearchMatches(book.searchMatches),
+	series:
+		normalizeSeries(book.series) ??
+		(typeof book.seriesTitle === "string" ||
+		typeof book.orderInSeries === "number" ||
+		typeof book.seriesRelationType === "string"
+			? {
+					seriesId: "",
+					title:
+						typeof book.seriesTitle === "string" ? book.seriesTitle : undefined,
+					orderInSeries:
+						typeof book.orderInSeries === "number"
+							? book.orderInSeries
+							: undefined,
+					relationType: normalizeSeriesRelationType(book.seriesRelationType),
+					seriesLabel:
+						typeof book.seriesLabel === "string"
+							? book.seriesLabel
+							: undefined,
+				}
+			: undefined),
 	seriesLabel:
 		typeof book.seriesLabel === "string" ? book.seriesLabel : undefined,
+	seriesRelationType: normalizeSeriesRelationType(book.seriesRelationType),
+	seriesTitle:
+		typeof book.seriesTitle === "string" ? book.seriesTitle : undefined,
 	setting: Array.isArray(book.setting)
 		? book.setting.flatMap((setting) => {
 				const normalizedSetting = normalizeNamedValue(setting);
@@ -363,6 +435,10 @@ export const getBookCards = async ({
 
 	if (params.search) {
 		searchParams.set("search", params.search);
+	}
+
+	if (params.searchScope) {
+		searchParams.set("searchScope", params.searchScope);
 	}
 
 	if (params.sort) {

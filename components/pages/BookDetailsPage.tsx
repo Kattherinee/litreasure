@@ -57,7 +57,7 @@ const BookDetailsPage = ({ slug }: BookDetailsPageProps) => {
 export default BookDetailsPage;
 
 const Page = styled.div`
-	--book-detail-width: 68.75rem;
+	--book-detail-width: 76.75rem;
 
 	min-height: 100dvh;
 	overflow-x: hidden;
@@ -66,7 +66,7 @@ const Page = styled.div`
 `;
 
 const StateMessage = styled.p`
-	width: min(calc(100% - 3rem), 77.5rem);
+	width: min(calc(100% - 3rem), var(--book-detail-width));
 	margin: 0 auto;
 	padding-top: 5rem;
 	color: ${theme.colors.softForeground};

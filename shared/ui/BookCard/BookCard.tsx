@@ -184,6 +184,9 @@ const BookCover = styled.div<{ $size: BookCardSize }>`
 		box-shadow 220ms ease,
 		height 220ms ease,
 		transform 300ms ease;
+	${BookCardWrapper}[aria-current="page"] & {
+		border: 0.175rem solid ${theme.colors.orangeDark};
+	}
 
 	${BookCardWrapper}:hover &,
 	${BookCardWrapper}:focus-visible & {
@@ -198,9 +201,6 @@ const BookCoverImage = styled.img`
 	height: 100%;
 	object-fit: contain;
 	border-radius: 0.7rem;
-	${BookCardWrapper}[aria-current="page"] & {
-		border: 0.175rem solid ${theme.colors.orangeDark};
-	}
 `;
 
 const BookMeta = styled.div`

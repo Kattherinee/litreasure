@@ -42,7 +42,7 @@ const StyledInput = styled.input`
 	}
 
 	&:hover:not(:disabled) {
-		border-color: ${theme.colors.inputHoverBorder};
+		border-color: ${theme.colors.orangePrimary};
 		background: ${theme.colors.surface};
 		color: ${theme.colors.softForeground};
 	}
@@ -51,14 +51,14 @@ const StyledInput = styled.input`
 	&:focus-visible {
 		border-color: ${theme.colors.orangePrimary};
 		background: ${theme.colors.surface};
-		box-shadow: 0 0 8px ${theme.alpha.orangeFocus};
+
 		color: ${theme.colors.foreground};
 	}
 
 	&:disabled {
 		border-color: ${theme.colors.inputDisabledBorder};
 		background: ${theme.colors.transparent};
-		box-shadow: none;
+
 		color: ${theme.colors.inputDisabledText};
 		cursor: not-allowed;
 	}

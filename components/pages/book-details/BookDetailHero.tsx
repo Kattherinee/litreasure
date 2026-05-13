@@ -79,9 +79,9 @@ const getSeriesTag = (book: Book) => {
 const HeaderBlock = styled.section`
 	display: flex;
 	height: var(--detail-backdrop-height);
+	min-width: 0;
 	flex-direction: column;
 	padding-top: var(--detail-cover-offset);
-	padding-bottom: 2rem;
 
 	@media (max-width: 47.9375rem) {
 		align-items: center;
@@ -118,16 +118,18 @@ const SeriesTag = styled.div`
 
 const Title = styled.h1`
 	display: -webkit-box;
+	max-width: 100%;
 	overflow: hidden;
 	-webkit-box-orient: vertical;
 	-webkit-line-clamp: 2;
-	margin: 0.8rem 0 0;
+	margin: 1.1rem 0 0;
 
 	color: ${theme.colors.invertedText};
 	font-family: ${theme.fonts.serif};
 	font-size: 2.35rem;
 	font-weight: 500;
 	line-height: 1.12;
+	overflow-wrap: anywhere;
 
 	@media (max-width: 74.9375rem) {
 		font-size: 1.72rem;
@@ -139,6 +141,7 @@ const Title = styled.h1`
 `;
 
 const Author = styled.p`
+	max-width: 100%;
 	margin: 1rem 0 0;
 	color: ${theme.colors.orangeLight};
 	font-family: ${theme.fonts.sans};
@@ -146,6 +149,9 @@ const Author = styled.p`
 	line-height: 1.4;
 	margin-block: 0;
 	margin-top: 0.55rem;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 
 	@media (max-width: 74.9375rem) {
 		font-size: 0.95rem;

@@ -128,6 +128,8 @@ export default BookDetailTabs;
 
 const TabsBlock = styled.section`
 	margin-top: 1.6rem;
+	min-width: 0;
+	overflow: hidden;
 `;
 
 const Tabs = styled.div`
@@ -147,12 +149,12 @@ const TabButton = styled.button<{ $isActive: boolean }>`
 	align-items: baseline;
 	border: 0;
 	background: ${theme.colors.transparent};
-	padding: 0 0 0.7rem;
+	padding: 0 0 0.5rem;
 	color: ${({ $isActive }) =>
 		$isActive ? theme.colors.black : theme.colors.lightText};
 	cursor: pointer;
 	font-family: ${theme.fonts.serif};
-	font-size: 1.325rem;
+	font-size: 1.225rem;
 	font-weight: 500;
 	line-height: 1.35;
 	transition: color 180ms ease;
@@ -162,7 +164,7 @@ const TabButton = styled.button<{ $isActive: boolean }>`
 		right: 0;
 		bottom: 0;
 		left: 0;
-		height: 0.1875rem;
+		height: 0.1375rem;
 		background: ${({ $isActive }) =>
 			$isActive ? theme.colors.orangeDark : theme.colors.transparent};
 		content: "";
@@ -184,29 +186,31 @@ const Counter = styled.span`
 `;
 
 const TabPanel = styled.div`
+	min-width: 0;
 	min-height: 8rem;
 `;
 
 const DescriptionWrap = styled.div`
 	position: relative;
-	max-width: 54.125rem;
+	max-width: 100%;
 `;
 
 const Description = styled.p<{ $isExpanded: boolean }>`
-	max-width: 54.125rem;
+	max-width: 100%;
 	margin: 1.2rem 0 0;
 	color: ${theme.colors.black};
 	font-family: ${theme.fonts.sans};
 	font-size: 1.05rem;
 	line-height: 1.7;
 	overflow: hidden;
+	overflow-wrap: anywhere;
 	${({ $isExpanded }) =>
 		$isExpanded
 			? ""
 			: `
 				display: -webkit-box;
 				-webkit-box-orient: vertical;
-				-webkit-line-clamp: 5;
+				-webkit-line-clamp: 4;
 			`}
 
 	@media (max-width: 56rem) {
@@ -223,12 +227,12 @@ const DescriptionToggle = styled.button<{ $isExpanded: boolean }>`
 	background: linear-gradient(
 		90deg,
 		rgb(232 226 222 / 0),
-		${theme.colors.background} 1.1rem,
+		${theme.colors.background} 3.1rem,
 		${theme.colors.background}
 	);
 	margin-top: ${({ $isExpanded }) => ($isExpanded ? "0.5rem" : "0")};
 	margin-left: ${({ $isExpanded }) => ($isExpanded ? "auto" : "0")};
-	padding: 0 0 0 1.7rem;
+	padding: 0 0 0 3.7rem;
 	color: ${theme.colors.orangeDark};
 	cursor: pointer;
 	font-family: ${theme.fonts.sans};
