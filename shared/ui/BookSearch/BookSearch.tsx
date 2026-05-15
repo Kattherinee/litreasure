@@ -59,7 +59,7 @@ const BookSearch = () => {
 	const [recentSearches, setRecentSearches] = useState<string[]>(
 		getStoredRecentSearches,
 	);
-	const [activeTab, setActiveTab] = useState<SearchTab>("books");
+	const [activeTabs, setActiveTabs] = useState<SearchTab[]>([]);
 	const [isOpen, setIsOpen] = useState(false);
 	const normalizedSearchValue = searchValue.trim();
 	const shouldSearch = normalizedSearchValue.length >= MIN_SEARCH_LENGTH;
@@ -71,8 +71,12 @@ const BookSearch = () => {
 		{ enabled: shouldSearch },
 	);
 	const filteredSearchResults = useMemo(
-		() => filterSearchResultsByTab(searchResults, activeTab),
-		[activeTab, searchResults],
+		() => filterSearchResultsByTabs(searchResults, activeTabs),
+		[activeTabs, searchResults],
+	);
+	const resultCountsByTab = useMemo(
+		() => getResultCountsByTab(searchResults),
+		[searchResults],
 	);
 
 	const closeSearch = () => setIsOpen(false);
@@ -103,6 +107,13 @@ const BookSearch = () => {
 	};
 
 	const clearSearch = () => setSearchValue("");
+	const toggleSearchTab = (tab: SearchTab) => {
+		setActiveTabs((currentTabs) =>
+			currentTabs.includes(tab)
+				? currentTabs.filter((currentTab) => currentTab !== tab)
+				: [...currentTabs, tab],
+		);
+	};
 
 	useEffect(() => {
 		if (!isOpen) {
@@ -166,18 +177,29 @@ const BookSearch = () => {
 
 						<Tabs role="tablist" aria-label="Фильтры поиска">
 							{searchTabs.map((tab) => {
-								const isActive = activeTab === tab.id;
+								const isActive = activeTabs.includes(tab.id);
+								const resultCount = resultCountsByTab[tab.id] ?? 0;
+								const showResultState = shouldSearch && !isFetching;
 
 								return (
 									<TabButton
 										key={tab.id}
-										aria-selected={isActive}
+										aria-pressed={isActive}
+										$hasResults={resultCount > 0}
 										$isActive={isActive}
-										role="tab"
+										$showResultState={showResultState}
 										type="button"
-										onClick={() => setActiveTab(tab.id)}
+										onClick={() => toggleSearchTab(tab.id)}
 									>
 										{tab.label}
+										{showResultState ? (
+											<TabCount
+												$hasResults={resultCount > 0}
+												$isActive={isActive}
+											>
+												{resultCount}
+											</TabCount>
+										) : null}
 									</TabButton>
 								);
 							})}
@@ -316,32 +338,51 @@ const HighlightedText = ({
 	);
 };
 
-const filterSearchResultsByTab = (books: Book[], activeTab: SearchTab) => {
+const filterSearchResultsByTabs = (books: Book[], activeTabs: SearchTab[]) => {
+	if (activeTabs.length === 0) {
+		return books;
+	}
+
+	return books.filter((book) =>
+		activeTabs.some((activeTab) => doesBookMatchTab(book, activeTab)),
+	);
+};
+
+const getResultCountsByTab = (books: Book[]) =>
+	searchTabs.reduce(
+		(counts, tab) => ({
+			...counts,
+			[tab.id]: books.filter((book) => doesBookMatchTab(book, tab.id)).length,
+		}),
+		{} as Record<SearchTab, number>,
+	);
+
+const doesBookMatchTab = (book: Book, activeTab: SearchTab) => {
 	if (activeTab === "books") {
-		return books.filter((book) => isBookResult(book));
+		return isBookResult(book);
 	}
 
 	if (activeTab === "authors") {
-		return books.filter((book) => hasSearchMatch(book, ["author", "authors"]));
+		return hasSearchMatch(book, ["author", "authors"]);
 	}
 
 	if (activeTab === "series") {
-		return books.filter((book) => isSeriesResult(book));
+		return isSeriesResult(book);
 	}
 
 	if (activeTab === "genres") {
-		return books.filter((book) => hasSearchMatch(book, ["genre", "genres"]));
+		return hasSearchMatch(book, ["genre", "genres"]);
 	}
 
 	if (activeTab === "collections") {
-		return books.filter((book) => isCollectionResult(book));
+		return isCollectionResult(book);
 	}
 
 	if (activeTab === "publishers") {
-		return books.filter((book) => hasSearchMatch(book, ["publisher", "publishers"]));
+		return hasSearchMatch(book, ["publisher", "publishers"]);
 	}
 
-	return books;
+	return true;
 };
 
 const hasSearchMatch = (book: Book, fields: string[]) =>
@@ -479,6 +520,10 @@ const SearchIcon = styled.span`
 const SearchInput = styled(InputField)`
 	min-height: 34px;
 	padding-left: 42px;
+
+	&::-webkit-search-cancel-button {
+		display: none;
+	}
 `;
 
 const ModalLayer = styled.div`
@@ -538,6 +583,10 @@ const PanelSearchInput = styled(InputField)`
 	&:focus,
 	&:focus-visible {
 		background: ${theme.colors.surface};
+	}
+
+	&::-webkit-search-cancel-button {
+		display: none;
 	}
 `;
 
@@ -600,21 +649,34 @@ const Tabs = styled.div`
 	}
 `;
 
-const TabButton = styled.button<{ $isActive: boolean }>`
+const TabButton = styled.button<{
+	$hasResults: boolean;
+	$isActive: boolean;
+	$showResultState: boolean;
+}>`
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
+	gap: 0.45rem;
 	flex: 0 0 auto;
 	min-height: 2rem;
 	border: 0.0625rem solid
-		${({ $isActive }) =>
-			$isActive ? theme.colors.orangeLight : theme.colors.transparent};
+		${({ $hasResults, $isActive, $showResultState }) =>
+			$isActive
+				? theme.colors.orangeLight
+				: $showResultState && $hasResults
+					? "rgb(218 142 91 / 0.45)"
+					: theme.colors.transparent};
 	border-radius: 62.4375rem;
 	background: ${({ $isActive }) =>
 		$isActive ? theme.colors.orangeLight : theme.colors.surface};
 	padding: 0.45rem 0.95rem;
-	color: ${({ $isActive }) =>
-		$isActive ? theme.colors.invertedText : theme.colors.foreground};
+	color: ${({ $hasResults, $isActive, $showResultState }) =>
+		$isActive
+			? theme.colors.invertedText
+			: $showResultState && !$hasResults
+				? theme.colors.muted
+				: theme.colors.foreground};
 	cursor: pointer;
 	font-family: ${theme.fonts.sans};
 	font-size: 0.9rem;
@@ -630,6 +692,30 @@ const TabButton = styled.button<{ $isActive: boolean }>`
 		border-color: ${theme.colors.orangeLight};
 		outline: none;
 	}
+`;
+
+const TabCount = styled.span<{ $hasResults: boolean; $isActive: boolean }>`
+	display: inline-flex;
+	min-width: 1.25rem;
+	height: 1.25rem;
+	align-items: center;
+	justify-content: center;
+	border-radius: 999px;
+	background: ${({ $hasResults, $isActive }) =>
+		$isActive
+			? "rgb(242 239 237 / 0.9)"
+			: $hasResults
+				? "rgb(218 142 91 / 0.16)"
+				: "rgb(186 183 180 / 0.18)"};
+	color: ${({ $hasResults, $isActive }) =>
+		$isActive
+			? theme.colors.orangeDark
+			: $hasResults
+				? theme.colors.orangeDark
+				: theme.colors.muted};
+	font-size: 0.72rem;
+	font-weight: 700;
+	line-height: 1;
 `;
 
 const ResultsArea = styled.div`

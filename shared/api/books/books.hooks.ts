@@ -25,8 +25,12 @@ export const booksQueryKeys = {
 export const useBooksQuery = () =>
 	useQuery({ queryFn: getBooks, queryKey: booksQueryKeys.all });
 
-export const useBookCardsQuery = (params: IBookCardsParams) =>
+export const useBookCardsQuery = (
+	params: IBookCardsParams,
+	options?: { enabled?: boolean },
+) =>
 	useQuery({
+		enabled: options?.enabled,
 		queryFn: () => getBookCards({ params }),
 		queryKey: booksQueryKeys.cards(params),
 	});
