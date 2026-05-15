@@ -5,6 +5,7 @@ import Autoplay from "embla-carousel-autoplay";
 import useEmblaCarousel from "embla-carousel-react";
 import styled from "styled-components";
 
+import { theme } from "@/shared/theme";
 import { GenrePill } from "@/shared/ui/GenrePill";
 import { useGenresQuery } from "@/shared/api/genres";
 import { GenrePillSkeleton } from "@/shared/ui/Skeleton";
@@ -60,6 +61,13 @@ const GenreCarousel = () => {
 export default GenreCarousel;
 
 const Carousel = styled.nav`
+	--page-gutter: ${theme.layout.contentGutter};
+	--content-width: ${theme.layout.contentMaxWidth};
+	--content-side-space: max(
+		var(--page-gutter),
+		calc((100vw - var(--content-width)) / 2)
+	);
+
 	width: 100vw;
 	margin-top: 1.85rem;
 	margin-left: calc(50% - 50vw);
@@ -75,7 +83,7 @@ const Viewport = styled.div`
 const Container = styled.div`
 	display: flex;
 	gap: 0.5rem;
-	padding-inline: 1.5rem;
+	padding-inline: var(--content-side-space);
 	touch-action: pan-y pinch-zoom;
 `;
 

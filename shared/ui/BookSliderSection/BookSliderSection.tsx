@@ -125,7 +125,10 @@ const BookSliderSection = ({
 export default BookSliderSection;
 
 const Section = styled.section`
-	width: min(calc(100% - 3rem), 77.5rem);
+	width: min(
+		calc(100% - (${theme.layout.contentGutter} * 2)),
+		${theme.layout.contentMaxWidth}
+	);
 	margin: 4rem auto 0;
 	height: fit-content;
 `;

@@ -153,6 +153,13 @@ const WeekCoverImage = ({ alt, src }: { alt: string; src: string }) => {
 };
 
 const Slider = styled.section`
+	--page-gutter: ${theme.layout.contentGutter};
+	--content-width: ${theme.layout.contentMaxWidth};
+	--content-side-space: max(
+		var(--page-gutter),
+		calc((100vw - var(--content-width)) / 2)
+	);
+
 	position: relative;
 	width: 100vw;
 	height: 20.8125rem;
@@ -177,9 +184,9 @@ const Slide = styled.article`
 	flex: 0 0 100%;
 	align-items: center;
 	justify-content: center;
-	gap: 3.375rem;
+	gap: clamp(2rem, 5vw, 3.375rem);
 	min-width: 0;
-	padding: 2.5rem 8rem;
+	padding: 2.5rem var(--content-side-space);
 `;
 
 const BookCoverWrap = styled.div`
@@ -243,7 +250,10 @@ const BookTag = styled.p`
 const ArrowButton = styled.button<{ $side?: "right" }>`
 	position: absolute;
 	top: 50%;
-	${({ $side }) => ($side === "right" ? "right: 6.25rem;" : "left: 6.25rem;")}
+	${({ $side }) =>
+		$side === "right"
+			? "right: var(--content-side-space);"
+			: "left: var(--content-side-space);"}
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;

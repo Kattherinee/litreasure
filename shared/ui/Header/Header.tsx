@@ -3,8 +3,8 @@
 import AppBar from "@mui/material/AppBar";
 import Box from "@mui/material/Box";
 import MuiButton from "@mui/material/Button";
-import IconButton from "@mui/material/IconButton";
 import Toolbar from "@mui/material/Toolbar";
+import { usePathname } from "next/navigation";
 import { useState, useSyncExternalStore } from "react";
 import styled from "styled-components";
 
@@ -16,40 +16,56 @@ import { theme } from "@/shared/theme";
 import { BookSearch } from "@/shared/ui/BookSearch";
 import { Button } from "@/shared/ui/Button";
 
-const navItems = ["Жанры", "Книжные полки", "Книжный трекинг"];
-const overflowItems = [
-	"Рейтинги",
-	"Жанры",
-	"Авторы",
-	"Подборки",
-	"Книжный вызов",
-];
+const navItems = ["Жанры", "Авторы", "Подборки", "Книжный трекинг"];
+
+const profileItems = ["Профиль", "Мои сокровища", "Книжный вызов"];
 
 const emptySubscribe = () => () => undefined;
 const getClientSnapshot = () => true;
 const getServerSnapshot = () => false;
 
 const Header = () => {
+	const pathname = usePathname();
 	const isMounted = useSyncExternalStore(
 		emptySubscribe,
 		getClientSnapshot,
 		getServerSnapshot,
 	);
-	const [isMenuOpen, setIsMenuOpen] = useState(false);
-	const [authModalMode, setAuthModalMode] = useState<AuthModalMode | null>(null);
+
+	const [authModalMode, setAuthModalMode] = useState<AuthModalMode | null>(
+		null,
+	);
+	const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+	const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
 	const session = useAuthStore((state) => state.session);
 	const logout = useAuthStore((state) => state.logout);
 	const user = session?.user;
 	const displayName = user?.name || user?.username || user?.email;
 	const avatarUrl = getAvatarAssetUrl(user?.avatarUrl);
+	const isWelcomePage = pathname === "/welcome";
 
-	const closeMenu = () => setIsMenuOpen(false);
-	const openMenu = () => setIsMenuOpen(true);
-	const toggleMenu = () => setIsMenuOpen((current) => !current);
+	const closeProfileMenu = () => setIsProfileMenuOpen(false);
+
+	const toggleProfileMenu = () => setIsProfileMenuOpen((current) => !current);
 	const openAuthModal = (mode: AuthModalMode) => {
 		setAuthModalMode(mode);
-		closeMenu();
+
+		closeProfileMenu();
 	};
+	const openLogoutConfirm = () => {
+		setIsLogoutConfirmOpen(true);
+
+		closeProfileMenu();
+	};
+	const closeLogoutConfirm = () => setIsLogoutConfirmOpen(false);
+	const confirmLogout = () => {
+		logout();
+		closeLogoutConfirm();
+	};
+
+	if (isWelcomePage) {
+		return null;
+	}
 
 	if (!isMounted) {
 		return (
@@ -62,29 +78,8 @@ const Header = () => {
 
 	return (
 		<>
-		<HeaderBar position="sticky" elevation={0}>
-			<HeaderToolbar>
-				<LogoMenuContainer
-					onBlur={(event) => {
-						if (!event.currentTarget.contains(event.relatedTarget)) {
-							closeMenu();
-						}
-					}}
-					onFocus={openMenu}
-					onMouseEnter={openMenu}
-					onMouseLeave={closeMenu}
-				>
-					<MenuButton
-						aria-label="Открыть дополнительное меню"
-						aria-expanded={isMenuOpen}
-						aria-controls="overflow-navigation"
-						onClick={toggleMenu}
-					>
-						<BurgerLine />
-						<BurgerLine />
-						<BurgerLine />
-					</MenuButton>
-
+			<HeaderBar position="sticky" elevation={0}>
+				<HeaderToolbar>
 					<BrandLink href="/" aria-label="Litreasure home">
 						<LogoMark>
 							<LogoIcon />
@@ -92,76 +87,120 @@ const Header = () => {
 						<BrandText>litreasure</BrandText>
 					</BrandLink>
 
-					<OverflowMenu
-						id="overflow-navigation"
-						aria-hidden={!isMenuOpen}
-						$isOpen={isMenuOpen}
-						aria-label="Дополнительное меню"
-					>
-						<OverflowList>
-							{overflowItems.map((item) => (
-								<OverflowMenuItem
-									key={item}
+					<DesktopNav id="main-navigation" aria-label="Main navigation">
+						{navItems.map((item) => (
+							<NavButton key={item}>{item}</NavButton>
+						))}
+					</DesktopNav>
+
+					<BookSearch />
+
+					<AuthActions>
+						{user ? (
+							<ProfileMenuContainer
+								onBlur={(event) => {
+									if (!event.currentTarget.contains(event.relatedTarget)) {
+										closeProfileMenu();
+									}
+								}}
+							>
+								<UserChip
+									aria-controls="profile-navigation"
+									aria-expanded={isProfileMenuOpen}
+									title={displayName}
 									type="button"
-									$isActive={item === "Авторы"}
-									onClick={closeMenu}
+									onClick={toggleProfileMenu}
 								>
-									{item}
-								</OverflowMenuItem>
-							))}
-						</OverflowList>
-					</OverflowMenu>
-				</LogoMenuContainer>
-
-				<DesktopNav id="main-navigation" aria-label="Main navigation">
-					{navItems.map((item) => (
-						<NavButton key={item}>{item}</NavButton>
-					))}
-				</DesktopNav>
-
-				<BookSearch />
-
-				<AuthActions>
-					{user ? (
-						<>
-							<UserChip title={displayName}>
-								<Avatar $avatarUrl={avatarUrl}>
-									{avatarUrl ? null : getInitials(displayName)}
-								</Avatar>
-								<UserName>{displayName}</UserName>
-							</UserChip>
-							<AuthButton variant="text" onClick={logout}>
+									<Avatar $avatarUrl={avatarUrl}>
+										{avatarUrl ? null : getInitials(displayName)}
+									</Avatar>
+									<UserName>{displayName}</UserName>
+								</UserChip>
+								<ProfileMenu
+									id="profile-navigation"
+									aria-hidden={!isProfileMenuOpen}
+									$isOpen={isProfileMenuOpen}
+									aria-label="Меню профиля"
+								>
+									{profileItems.map((item) => (
+										<ProfileMenuItem
+											key={item}
+											type="button"
+											onClick={closeProfileMenu}
+										>
+											{item}
+											{item === "Профиль" ? (
+												<ProfileMenuHint>Редактирование</ProfileMenuHint>
+											) : null}
+										</ProfileMenuItem>
+									))}
+									<ProfileMenuDivider />
+									<ProfileLogoutItem type="button" onClick={openLogoutConfirm}>
+										Выйти
+									</ProfileLogoutItem>
+								</ProfileMenu>
+							</ProfileMenuContainer>
+						) : (
+							<>
+								<AuthButton
+									type="button"
+									variant="text"
+									onClick={() => openAuthModal("register")}
+								>
+									Регистрация
+								</AuthButton>
+								<AuthButton
+									type="button"
+									variant="contained"
+									onClick={() => openAuthModal("login")}
+								>
+									Вход
+								</AuthButton>
+							</>
+						)}
+					</AuthActions>
+				</HeaderToolbar>
+			</HeaderBar>
+			{authModalMode ? (
+				<AuthModal
+					mode={authModalMode}
+					onClose={() => setAuthModalMode(null)}
+					onModeChange={setAuthModalMode}
+				/>
+			) : null}
+			{isLogoutConfirmOpen ? (
+				<ConfirmOverlay role="presentation" onMouseDown={closeLogoutConfirm}>
+					<ConfirmDialog
+						aria-modal="true"
+						role="dialog"
+						aria-labelledby="logout-confirm-title"
+						onMouseDown={(event) => event.stopPropagation()}
+					>
+						<ConfirmTitle id="logout-confirm-title">
+							Выйти из профиля?
+						</ConfirmTitle>
+						<ConfirmText>
+							Вы сможете вернуться в аккаунт после повторного входа.
+						</ConfirmText>
+						<ConfirmActions>
+							<ConfirmSecondaryButton
+								type="button"
+								variant="outlined"
+								onClick={closeLogoutConfirm}
+							>
+								Отмена
+							</ConfirmSecondaryButton>
+							<ConfirmPrimaryButton
+								type="button"
+								variant="containedInverted"
+								onClick={confirmLogout}
+							>
 								Выйти
-							</AuthButton>
-						</>
-					) : (
-						<>
-							<AuthButton
-								type="button"
-								variant="text"
-								onClick={() => openAuthModal("register")}
-							>
-								Регистрация
-							</AuthButton>
-							<AuthButton
-								type="button"
-								variant="contained"
-								onClick={() => openAuthModal("login")}
-							>
-								Вход
-							</AuthButton>
-						</>
-					)}
-				</AuthActions>
-			</HeaderToolbar>
-		</HeaderBar>
-		{authModalMode ? (
-			<AuthModal
-				mode={authModalMode}
-				onClose={() => setAuthModalMode(null)}
-				onModeChange={setAuthModalMode}
-			/>
-		) : null}
+							</ConfirmPrimaryButton>
+						</ConfirmActions>
+					</ConfirmDialog>
+				</ConfirmOverlay>
+			) : null}
 		</>
 	);
 };
@@ -196,8 +235,13 @@ const HeaderToolbar = styled(Toolbar)`
 		display: flex;
 		height: 4rem;
 		align-items: center;
-		gap: 2.5rem;
-		padding: 0 3.75rem;
+		gap: clamp(1.25rem, 3vw, 2.5rem);
+		width: min(
+			calc(100% - (${theme.layout.contentGutter} * 2)),
+			${theme.layout.contentMaxWidth}
+		);
+		margin: 0 auto;
+		padding: 0;
 
 		@media (max-width: 56.25rem) {
 			gap: 1rem;
@@ -208,58 +252,37 @@ const HeaderToolbar = styled(Toolbar)`
 			flex-wrap: wrap;
 			align-content: center;
 			gap: 0.75rem;
-			padding-block: 0.75rem;
+			padding: 0.75rem 0;
 		}
 	}
-`;
-
-const LogoMenuContainer = styled.div`
-	display: flex;
-	align-items: center;
-	gap: 16px;
-`;
-
-const MenuButton = styled(IconButton)`
-	&& {
-		display: inline-flex;
-		width: 2.75rem;
-		height: 2.75rem;
-		flex-shrink: 0;
-		flex-direction: column;
-		gap: 0.3125rem;
-		color: ${theme.colors.lightText};
-	}
-`;
-
-const BurgerLine = styled.span`
-	width: 20px;
-	height: 2px;
-	border-radius: 999px;
-	background: ${theme.colors.greyWarm};
 `;
 
 const BrandLink = styled.a`
 	display: flex;
 	align-items: center;
 	flex-shrink: 0;
-	gap: 12px;
+	gap: 0.85rem;
 	color: inherit;
 	text-decoration: none;
 `;
 
 const LogoMark = styled.span`
 	display: inline-flex;
+	width: 3rem;
+	height: 3rem;
+	flex: 0 0 3rem;
 	align-items: center;
 	justify-content: center;
 
 	& svg {
-		width: 68px;
-		height: 68px;
+		width: 100%;
+		height: 100%;
+		display: block;
 	}
 `;
 
 const BrandText = styled.div`
-	padding-top: 4px;
+	padding-top: 0.125rem;
 	font-family: ${theme.fonts.serif};
 	font-size: 20px;
 	font-weight: 600;
@@ -288,6 +311,7 @@ const NavButton = styled(MuiButton)`
 `;
 
 const AuthActions = styled(Box)`
+	position: relative;
 	display: flex;
 	align-items: center;
 	gap: 12px;
@@ -303,18 +327,33 @@ const AuthActions = styled(Box)`
 
 const AuthButton = styled(Button)``;
 
-const UserChip = styled.div`
+const ProfileMenuContainer = styled.div`
+	position: relative;
+`;
+
+const UserChip = styled.button`
 	display: inline-flex;
 	align-items: center;
 	min-width: 0;
 	gap: 0.5rem;
+	border: 0;
+	border-radius: 999px;
+	background: transparent;
+	padding: 0.25rem 0.85rem 0.25rem 0.45rem;
 	color: ${theme.colors.invertedText};
+	cursor: pointer;
+
+	&:hover,
+	&:focus-visible {
+		background: rgb(242 239 237 / 0.12);
+		outline: none;
+	}
 `;
 
 const Avatar = styled.span<{ $avatarUrl?: string }>`
 	display: inline-flex;
-	width: 2rem;
-	height: 2rem;
+	width: 2.7rem;
+	height: 2.7rem;
 	flex: 0 0 auto;
 	align-items: center;
 	justify-content: center;
@@ -336,67 +375,125 @@ const UserName = styled.span`
 	max-width: 8rem;
 	overflow: hidden;
 	color: ${theme.colors.invertedText};
-	font-size: 0.875rem;
+	font-size: 1.175rem;
 	line-height: 1.2;
 	text-overflow: ellipsis;
 	white-space: nowrap;
+	font-family: ${theme.fonts.serif};
 
 	@media (max-width: 66rem) {
 		display: none;
 	}
 `;
 
-const OverflowMenu = styled.nav<{ $isOpen: boolean }>`
+const ProfileMenu = styled.div<{ $isOpen: boolean }>`
 	position: absolute;
-	z-index: -1;
-	top: 0;
-	left: clamp(16px, 4vw, 48px);
-	width: min(300px, 90vw);
-	height: fit-content;
-	border-radius: 0 0 16px 16px;
-	background: ${theme.colors.bluePrimary};
-	box-shadow: 0 0 10px ${theme.alpha.shadow};
+	z-index: 4;
+	top: calc(100% + 0.75rem);
+	right: 0;
+	width: 14rem;
+	border: 0.0625rem solid rgb(238 179 141 / 0.65);
+	border-radius: 0.875rem;
+	background: #e8e2de;
+	box-shadow: 0 1rem 2.5rem rgb(4 18 26 / 0.18);
 	opacity: ${({ $isOpen }) => ($isOpen ? 1 : 0)};
-	padding: 80px 24px 24px;
+	padding: 0.45rem;
 	pointer-events: ${({ $isOpen }) => ($isOpen ? "auto" : "none")};
-	transform: translateY(${({ $isOpen }) => ($isOpen ? "0" : "-16px")});
+	transform: translateY(${({ $isOpen }) => ($isOpen ? "0" : "-0.4rem")});
 	transition:
-		opacity 180ms ease,
-		transform 220ms ease;
-
-	@media (max-width: 520px) {
-		left: 0;
-		width: 100%;
-		min-height: 420px;
-		padding-inline: 32px;
-	}
+		opacity 160ms ease,
+		transform 180ms ease;
 `;
 
-const OverflowList = styled.div`
+const ProfileMenuItem = styled.button`
 	display: flex;
+	width: 100%;
 	flex-direction: column;
 	align-items: flex-start;
-	gap: 24px;
-`;
-
-const OverflowMenuItem = styled.button<{ $isActive?: boolean }>`
-	width: 100%;
 	border: 0;
-	background: ${theme.colors.transparent};
-	padding: 0;
-	color: ${({ $isActive }) =>
-		$isActive ? theme.colors.orangeLight : theme.colors.background};
-	font-family: ${theme.fonts.sans};
-	font-size: 18px;
-	font-weight: 400;
-	line-height: 22px;
+	border-radius: 0.625rem;
+	background: transparent;
+	padding: 0.65rem 0.75rem;
+	color: #233d4d;
+	font: inherit;
+	font-size: 0.95rem;
+	font-weight: 600;
 	text-align: left;
 	cursor: pointer;
-	transition: color 180ms ease;
 
 	&:hover,
 	&:focus-visible {
-		color: ${theme.colors.orangeLight};
+		background: rgb(218 142 91 / 0.12);
+		color: #d4641c;
 		outline: none;
 	}
 `;
+
+const ProfileMenuHint = styled.span`
+	margin-top: 0.15rem;
+	color: ${theme.colors.softForeground};
+	font-size: 0.75rem;
+	font-weight: 400;
+	line-height: 1.2;
+`;
+
+const ProfileMenuDivider = styled.div`
+	height: 0.0625rem;
+	margin: 0.35rem 0.25rem;
+	background: rgb(186 183 180 / 0.5);
+`;
+
+const ProfileLogoutItem = styled(ProfileMenuItem)`
+	color: #d4641c;
+
+	&:hover,
+	&:focus-visible {
+		background: rgb(212 100 28 / 0.12);
+		color: #b64f12;
+	}
+`;
+
+const ConfirmOverlay = styled.div`
+	position: fixed;
+	z-index: 60;
+	inset: 0;
+	display: grid;
+	place-items: center;
+	background: rgb(4 18 26 / 0.48);
+	padding: 1rem;
+`;
+
+const ConfirmDialog = styled.section`
+	width: min(100%, 24rem);
+	border: 0.0625rem solid #eeb38d;
+	border-radius: 1rem;
+	background: #e8e2de;
+	padding: 1.5rem;
+	box-shadow: 0 1.25rem 3rem rgb(4 18 26 / 0.16);
+`;
+
+const ConfirmTitle = styled.h2`
+	margin: 0;
+	color: #04121a;
+	font-family: ${theme.fonts.serif};
+	font-size: 1.5rem;
+	font-weight: 600;
+	line-height: 1.2;
+`;
+
+const ConfirmText = styled.p`
+	margin: 0.75rem 0 1.25rem;
+	color: ${theme.colors.softForeground};
+	font-size: 0.95rem;
+	line-height: 1.45;
+`;
+
+const ConfirmActions = styled.div`
+	display: flex;
+	justify-content: flex-end;
+	gap: 0.75rem;
+`;
+
+const ConfirmSecondaryButton = styled(Button)``;
+
+const ConfirmPrimaryButton = styled(Button)``;

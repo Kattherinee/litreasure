@@ -39,6 +39,10 @@ export const theme = {
 		serif: '"Vollkorn", Georgia, serif',
 		mono: '"JetBrains Mono", "Cascadia Code", Consolas, monospace',
 	},
+	layout: {
+		contentMaxWidth: "85.5rem",
+		contentGutter: "clamp(1rem, 4vw, 3.75rem)",
+	},
 	rubberSize: {
 		desktop: "1199px",
 		tablet: "767px",

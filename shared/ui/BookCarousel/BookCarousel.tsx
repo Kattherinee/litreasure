@@ -204,8 +204,8 @@ const BookCarousel = ({
 export default BookCarousel;
 
 const Carousel = styled.section`
-	--page-gutter: clamp(1.5rem, 2.78vw, 2.5rem);
-	--content-width: 77.5rem;
+	--page-gutter: ${theme.layout.contentGutter};
+	--content-width: ${theme.layout.contentMaxWidth};
 	--content-side-space: max(
 		var(--page-gutter),
 		calc((100vw - var(--content-width)) / 2)

@@ -80,10 +80,17 @@ const CatalogHeroInner = styled.div`
 	display: grid;
 	grid-template-columns: minmax(0, 1fr) minmax(18rem, 26rem);
 	align-items: center;
-	gap: clamp(2rem, 4vw, 4rem);
-	width: min(calc(100% - 3rem), 77.5rem);
+	gap: clamp(2rem, 5vw, 4rem);
+	width: min(
+		calc(100% - (${theme.layout.contentGutter} * 2)),
+		${theme.layout.contentMaxWidth}
+	);
 	margin: 0 auto;
 	padding: clamp(2.25rem, 4.5vw, 4rem) 0 clamp(2.5rem, 4.5vw, 3.5rem);
+
+	@media (max-width: 64rem) {
+		gap: 2rem;
+	}
 
 	@media (max-width: 48rem) {
 		grid-template-columns: 1fr;

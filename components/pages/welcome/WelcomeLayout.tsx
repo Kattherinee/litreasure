@@ -47,7 +47,7 @@ const Page = styled.div<{ $step: WelcomeStep }>`
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	height: calc(100dvh - 4rem);
+	height: 100dvh;
 	overflow: hidden;
 	background: ${theme.colors.background};
 
