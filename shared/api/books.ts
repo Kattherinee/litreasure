@@ -115,6 +115,7 @@ export interface IBookCardsParams {
 export type UpdateBookPayload = Partial<CreateBookPayload>;
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+const AUTH_STORAGE_KEY = "litreasure-auth";
 
 export const booksQueryKeys = {
 	all: ["books"] as const,
@@ -125,10 +126,12 @@ export const request = async <T>(
 	path: string,
 	options: RequestInit = {},
 ): Promise<T> => {
+	const token = getStoredAccessToken();
 	const response = await fetch(`${API_BASE_URL}${path}`, {
 		...options,
 		headers: {
 			"Content-Type": "application/json",
+			...(token ? { Authorization: `Bearer ${token}` } : {}),
 			...options.headers,
 		},
 	});
@@ -143,6 +146,29 @@ export const request = async <T>(
 	}
 
 	return response.json() as Promise<T>;
+};
+
+const getStoredAccessToken = () => {
+	if (typeof window === "undefined") {
+		return null;
+	}
+
+	try {
+		const rawAuth = window.localStorage.getItem(AUTH_STORAGE_KEY);
+
+		if (!rawAuth) {
+			return null;
+		}
+
+		const parsedAuth = JSON.parse(rawAuth) as {
+			state?: { session?: { accessToken?: unknown } };
+		};
+		const token = parsedAuth.state?.session?.accessToken;
+
+		return typeof token === "string" && token.trim() ? token : null;
+	} catch {
+		return null;
+	}
 };
 
 const normalizeGenre = (genre: unknown) => {

@@ -8,7 +8,10 @@ import Toolbar from "@mui/material/Toolbar";
 import { useState, useSyncExternalStore } from "react";
 import styled from "styled-components";
 
+import AuthModal, { type AuthModalMode } from "@/components/pages/AuthModal";
 import { LogoIcon } from "@/public/icons/logo";
+import { getAvatarAssetUrl } from "@/shared/api/avatarsRepository";
+import { useAuthStore } from "@/shared/store/auth-store";
 import { theme } from "@/shared/theme";
 import { BookSearch } from "@/shared/ui/BookSearch";
 import { Button } from "@/shared/ui/Button";
@@ -33,10 +36,20 @@ const Header = () => {
 		getServerSnapshot,
 	);
 	const [isMenuOpen, setIsMenuOpen] = useState(false);
+	const [authModalMode, setAuthModalMode] = useState<AuthModalMode | null>(null);
+	const session = useAuthStore((state) => state.session);
+	const logout = useAuthStore((state) => state.logout);
+	const user = session?.user;
+	const displayName = user?.name || user?.username || user?.email;
+	const avatarUrl = getAvatarAssetUrl(user?.avatarUrl);
 
 	const closeMenu = () => setIsMenuOpen(false);
 	const openMenu = () => setIsMenuOpen(true);
 	const toggleMenu = () => setIsMenuOpen((current) => !current);
+	const openAuthModal = (mode: AuthModalMode) => {
+		setAuthModalMode(mode);
+		closeMenu();
+	};
 
 	if (!isMounted) {
 		return (
@@ -48,6 +61,7 @@ const Header = () => {
 	}
 
 	return (
+		<>
 		<HeaderBar position="sticky" elevation={0}>
 			<HeaderToolbar>
 				<LogoMenuContainer
@@ -108,15 +122,64 @@ const Header = () => {
 				<BookSearch />
 
 				<AuthActions>
-					<AuthButton variant="text">Регистрация</AuthButton>
-					<AuthButton variant="contained">Вход</AuthButton>
+					{user ? (
+						<>
+							<UserChip title={displayName}>
+								<Avatar $avatarUrl={avatarUrl}>
+									{avatarUrl ? null : getInitials(displayName)}
+								</Avatar>
+								<UserName>{displayName}</UserName>
+							</UserChip>
+							<AuthButton variant="text" onClick={logout}>
+								Выйти
+							</AuthButton>
+						</>
+					) : (
+						<>
+							<AuthButton
+								type="button"
+								variant="text"
+								onClick={() => openAuthModal("register")}
+							>
+								Регистрация
+							</AuthButton>
+							<AuthButton
+								type="button"
+								variant="contained"
+								onClick={() => openAuthModal("login")}
+							>
+								Вход
+							</AuthButton>
+						</>
+					)}
 				</AuthActions>
 			</HeaderToolbar>
 		</HeaderBar>
+		{authModalMode ? (
+			<AuthModal
+				mode={authModalMode}
+				onClose={() => setAuthModalMode(null)}
+				onModeChange={setAuthModalMode}
+			/>
+		) : null}
+		</>
 	);
 };
 
 export default Header;
+
+const getInitials = (value?: string) => {
+	if (!value) {
+		return "L";
+	}
+
+	return value
+		.split(/[\s._-]+/)
+		.filter(Boolean)
+		.slice(0, 2)
+		.map((part) => part.charAt(0).toUpperCase())
+		.join("");
+};
 
 const HeaderBar = styled(AppBar)`
 	&& {
@@ -239,6 +302,49 @@ const AuthActions = styled(Box)`
 `;
 
 const AuthButton = styled(Button)``;
+
+const UserChip = styled.div`
+	display: inline-flex;
+	align-items: center;
+	min-width: 0;
+	gap: 0.5rem;
+	color: ${theme.colors.invertedText};
+`;
+
+const Avatar = styled.span<{ $avatarUrl?: string }>`
+	display: inline-flex;
+	width: 2rem;
+	height: 2rem;
+	flex: 0 0 auto;
+	align-items: center;
+	justify-content: center;
+	border: 0.0625rem solid rgb(242 239 237 / 0.36);
+	border-radius: 50%;
+	background: ${({ $avatarUrl }) =>
+		$avatarUrl
+			? `url("${$avatarUrl}") center / cover no-repeat`
+			: theme.colors.orangeLight};
+	color: ${theme.colors.bluePrimary};
+	font-family: ${theme.fonts.sans};
+	font-size: 0.8rem;
+	font-weight: 700;
+	line-height: 1;
+`;
+
+const UserName = styled.span`
+	display: inline-block;
+	max-width: 8rem;
+	overflow: hidden;
+	color: ${theme.colors.invertedText};
+	font-size: 0.875rem;
+	line-height: 1.2;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+
+	@media (max-width: 66rem) {
+		display: none;
+	}
+`;
 
 const OverflowMenu = styled.nav<{ $isOpen: boolean }>`
 	position: absolute;

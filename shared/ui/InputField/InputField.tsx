@@ -1,71 +1,61 @@
 import type { InputHTMLAttributes } from "react";
 import styled from "styled-components";
 
-import { theme } from "@/shared/theme";
-
 export interface InputFieldProps extends InputHTMLAttributes<HTMLInputElement> {
 	disabled?: boolean;
 	"aria-label"?: string;
+	$height?: string;
+	$width?: string;
 }
 
-const InputField = ({
-	disabled = false,
-	placeholder = "Поле ввода",
-	...props
-}: InputFieldProps) => (
-	<StyledInput {...props} disabled={disabled} placeholder={placeholder} />
+const InputField = ({ disabled = false, ...props }: InputFieldProps) => (
+	<StyledInput {...props} disabled={disabled} />
 );
 
 export default InputField;
 
-const StyledInput = styled.input`
-	width: 100%;
-	min-height: 38px;
-	border: 1px solid ${theme.colors.transparent};
-	border-radius: 20px;
-	background: ${theme.colors.inputBackground};
-	padding: 6px 14px;
-	color: ${theme.colors.softForeground};
+const StyledInput = styled.input<{ $height?: string; $width?: string }>`
+	width: ${({ $width }) => $width ?? "100%"};
+	min-height: ${({ $height }) => $height ?? "2.375rem"};
+	border: 0.0625rem solid #bab7b4;
+	border-radius: 1rem;
+	background: #ddd6d2;
+	padding: 0.375rem 0.875rem;
+	color: #04121a;
 	font: inherit;
-	font-size: 16px;
+	font-size: 1rem;
 	line-height: 1.12;
 	outline: none;
 	transition:
 		background-color 180ms ease,
 		border-color 180ms ease,
-		box-shadow 180ms ease,
 		color 180ms ease;
 
 	&::placeholder {
-		color: currentColor;
+		color: #9a9390;
 		opacity: 1;
 	}
 
 	&:hover:not(:disabled) {
-		border-color: ${theme.colors.orangePrimary};
-		background: ${theme.colors.surface};
-		color: ${theme.colors.softForeground};
+		border-color: #da8e5b;
+		background: #ddd6d2;
 	}
 
 	&:focus,
 	&:focus-visible {
-		border-color: ${theme.colors.orangePrimary};
-		background: ${theme.colors.surface};
-
-		color: ${theme.colors.foreground};
+		border-color: #da8e5b;
+		background: #ddd6d2;
+		color: #04121a;
 	}
 
 	&:disabled {
-		border-color: ${theme.colors.inputDisabledBorder};
-		background: ${theme.colors.transparent};
-
-		color: ${theme.colors.inputDisabledText};
+		border-color: #bab7b4;
+		background: transparent;
+		color: #8e8e8e;
 		cursor: not-allowed;
 	}
 
 	@media (max-width: 640px) {
-		min-height: 48px;
-		border-radius: 18px;
-		font-size: 20px;
+		min-height: ${({ $height }) => $height ?? "3rem"};
 	}
 `;
