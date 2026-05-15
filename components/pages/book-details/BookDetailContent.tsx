@@ -3,15 +3,18 @@
 import { useState } from "react";
 import StarBorderIcon from "@mui/icons-material/StarBorder";
 import StarIcon from "@mui/icons-material/Star";
+import Rating from "@mui/material/Rating";
 import styled from "styled-components";
 
+import AuthModal, { type AuthModalMode } from "@/components/pages/AuthModal";
 import type { Book } from "@/shared/api/books";
+import { useAuthStore } from "@/shared/store/auth-store";
 import { theme } from "@/shared/theme";
 import GenrePill from "@/shared/ui/GenrePill/GenrePill";
 import { CoverPlaceholder } from "@/shared/ui/Skeleton";
 
 import BookDetailHero from "./BookDetailHero";
-import BookDetailTabs from "./BookDetailTabs";
+import BookDetailTabs, { type TabId } from "./BookDetailTabs";
 import BookSeriesBlock from "./BookSeriesBlock";
 
 type BookDetailContentProps = {
@@ -25,6 +28,27 @@ const formatGenreLabel = (genre: string) =>
 		.map((part) => part.charAt(0).toUpperCase() + part.slice(1))
 		.join(" ");
 
+const getBookFacts = (book: Book) => {
+	const meta: { label: string; value: string }[] = [];
+
+	if (book.publishedYear) {
+		meta.push({ label: "Год", value: String(book.publishedYear) });
+	}
+
+	if (book.pagesCount) {
+		meta.push({
+			label: "Страниц",
+			value: book.pagesCount.toLocaleString("ru-RU"),
+		});
+	}
+
+	if (book.publisher) {
+		meta.push({ label: "Издатель", value: book.publisher });
+	}
+
+	return meta;
+};
+
 const ratingLabels = [5, 4, 3, 2, 1];
 
 const BookDetailContent = ({ book }: BookDetailContentProps) => {
@@ -34,10 +58,31 @@ const BookDetailContent = ({ book }: BookDetailContentProps) => {
 	const [loadedCoverSrc, setLoadedCoverSrc] = useState("");
 	const isCoverLoaded = loadedCoverSrc === coverSrc;
 	const normalizedRating = book.ratingAvg ?? book.rating ?? 0;
-	const activeStars = Math.round(normalizedRating);
 	const formattedRating = normalizedRating.toFixed(1).replace(".0", "");
-	const hasRatingBars = book.ratingsByStars.length > 0;
+	const hasRatingBars = book.ratingsByStars.some((value) => value > 0);
 	const maxRatingLine = Math.max(...book.ratingsByStars, 1);
+	const bookMeta = getBookFacts(book).filter(
+		(item) => item.value.trim().toLowerCase() !== "unknown",
+	);
+	const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+	const [authModalMode, setAuthModalMode] = useState<AuthModalMode | null>(null);
+	const [quickRating, setQuickRating] = useState(0);
+	const [quickRatingStatus, setQuickRatingStatus] = useState("");
+	const [activeTab, setActiveTab] = useState<TabId>("description");
+
+	const handleQuickRatingSubmit = () => {
+		if (!quickRating) {
+			setQuickRatingStatus("Выберите оценку.");
+			return;
+		}
+
+		if (!isAuthenticated) {
+			setAuthModalMode("login");
+			return;
+		}
+
+		setQuickRatingStatus("Оценка готова к отправке. Позже подключим метод API.");
+	};
 
 	return (
 		<ContentWrap>
@@ -59,15 +104,12 @@ const BookDetailContent = ({ book }: BookDetailContentProps) => {
 						<RatingTop>
 							<RatingScore>{formattedRating}</RatingScore>
 							<RatingMeta>
-								<Stars aria-label={`Rating ${formattedRating} of 5`}>
-									{Array.from({ length: 5 }, (_, index) =>
-										index < activeStars ? (
-											<StarIcon key={index} aria-hidden="true" />
-										) : (
-											<StarBorderIcon key={index} aria-hidden="true" />
-										),
-									)}
-								</Stars>
+								<Stars
+									name="book-average-rating"
+									precision={0.5}
+									readOnly
+									value={normalizedRating}
+								/>
 								{book.ratingsCount ? (
 									<Votes>
 										{book.ratingsCount.toLocaleString("en-US")} votes
@@ -95,31 +137,114 @@ const BookDetailContent = ({ book }: BookDetailContentProps) => {
 								})}
 							</RatingBars>
 						) : null}
+
+						<QuickRatingBlock>
+							<QuickMuiRating
+								name="quick-book-rating"
+								value={quickRating}
+								onChange={(_, value) => {
+									setQuickRating(value ?? 0);
+									setQuickRatingStatus("");
+								}}
+							/>
+							<QuickRatingTitle>Твоя оценка</QuickRatingTitle>
+							<QuickRatingStars aria-label="Быстрая оценка книги">
+								{[1, 2, 3, 4, 5].map((value) => {
+									const isActive = value <= quickRating;
+
+									return (
+										<QuickRatingStar
+											key={value}
+											aria-label={`${value} из 5`}
+											type="button"
+											onClick={() => {
+												setQuickRating(value);
+												setQuickRatingStatus("");
+											}}
+										>
+											{isActive ? (
+												<StarIcon aria-hidden="true" />
+											) : (
+												<StarBorderIcon aria-hidden="true" />
+											)}
+										</QuickRatingStar>
+									);
+								})}
+							</QuickRatingStars>
+							<QuickRatingButton type="button" onClick={handleQuickRatingSubmit}>
+								Оценить
+							</QuickRatingButton>
+							<QuickReviewLink
+								type="button"
+								onClick={() => setActiveTab("reviews")}
+							>
+								Написать отзыв
+							</QuickReviewLink>
+							{quickRatingStatus ? (
+								<QuickRatingStatus role="status">
+									{quickRatingStatus}
+								</QuickRatingStatus>
+							) : null}
+						</QuickRatingBlock>
 					</AsideRating>
 				</LeftColumn>
 
 				<RightColumn>
 					<BookDetailHero book={book} />
-					<BookDetailTabs book={book} />
-					{book.genres.length > 0 ? (
-						<GenreRow>
-							{book.genres.map((genre) => (
-								<GenrePill
-									key={genre}
-									href={`/genres/${genre}`}
-									fontSize="0.875rem"
-									height="2rem"
-									paddingBlock="0.45rem"
-									paddingInline="1rem"
-								>
-									{formatGenreLabel(genre)}
-								</GenrePill>
-							))}
-						</GenreRow>
+					<BookDetailTabs
+						activeTab={activeTab}
+						book={book}
+						onActiveTabChange={setActiveTab}
+					/>
+					{bookMeta.length > 0 || book.genres.length > 0 ? (
+						<BookFactsGrid>
+							{bookMeta.length > 0 ? (
+								<BookFactsSection aria-label="Информация о книге">
+									<BookFactsTitle>Информация о книге</BookFactsTitle>
+									<BookInfoBlock>
+										{bookMeta.map((item) => (
+											<BookInfoChip key={item.label}>
+												<BookInfoLabel>{item.label}</BookInfoLabel>
+												<BookInfoValue>{item.value}</BookInfoValue>
+											</BookInfoChip>
+										))}
+									</BookInfoBlock>
+								</BookFactsSection>
+							) : null}
+							{book.genres.length > 0 ? (
+								<BookFactsSection aria-label="Жанры книги">
+									<BookFactsTitle>Жанры</BookFactsTitle>
+									<GenresBlock>
+										<GenreRow>
+											{book.genres.map((genre) => (
+												<HighlightedGenrePill
+													key={genre}
+													href={`/genres/${genre}`}
+													fontSize="0.875rem"
+													height="2rem"
+													paddingBlock="0.45rem"
+													paddingInline="1rem"
+												>
+													{formatGenreLabel(genre)}
+												</HighlightedGenrePill>
+											))}
+										</GenreRow>
+									</GenresBlock>
+								</BookFactsSection>
+							) : null}
+						</BookFactsGrid>
 					) : null}
 					<BookSeriesBlock book={book} />
 				</RightColumn>
 			</ContentGrid>
+			{authModalMode ? (
+				<AuthModal
+					mode={authModalMode}
+					redirectOnSuccess={false}
+					onClose={() => setAuthModalMode(null)}
+					onModeChange={setAuthModalMode}
+				/>
+			) : null}
 		</ContentWrap>
 	);
 };
@@ -136,7 +261,7 @@ const ContentWrap = styled.section`
 	overflow: hidden;
 
 	@media (max-width: 74.9375rem) {
-		--detail-cover-offset: rem;
+		--detail-cover-offset: 4rem;
 		--detail-cover-max-height: 19.5rem;
 		--detail-cover-max-width: 14.5rem;
 	}
@@ -219,8 +344,8 @@ const ContentGrid = styled.div`
 `;
 
 const LeftColumn = styled.aside`
-	padding-top: var(--detail-cover-offset);
 	width: fit-content;
+	padding-top: var(--detail-cover-offset);
 
 	@media (max-width: 47.9375rem) {
 		margin: 0 auto;
@@ -252,21 +377,104 @@ const CoverImage = styled.img<{ $isLoaded: boolean }>`
 	transition: opacity 220ms ease;
 `;
 
+const BookFactsGrid = styled.div`
+	display: grid;
+	align-items: start;
+	gap: 1.25rem;
+	margin-top: 1.8rem;
+	grid-template-columns: minmax(0, 1.4fr) minmax(11rem, 0.7fr);
+
+	@media (max-width: 56rem) {
+		grid-template-columns: 1fr;
+	}
+`;
+
+const BookFactsSection = styled.section`
+	min-width: 0;
+`;
+
+const BookFactsTitle = styled.h2`
+	margin: 0 0 0.65rem;
+	color: ${theme.colors.foreground};
+	font-family: ${theme.fonts.serif};
+	font-size: 1.15rem;
+	font-weight: 500;
+	line-height: 1.15;
+`;
+
+const BookInfoBlock = styled.div`
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.55rem;
+	font-family: ${theme.fonts.sans};
+	line-height: 1.35;
+`;
+
+const BookInfoChip = styled.span`
+	display: inline-flex;
+	align-items: center;
+	max-width: 100%;
+	min-height: 2rem;
+	gap: 0.42rem;
+	border: 0.0625rem solid rgb(255 255 255 / 0.24);
+	border-radius: 62.4375rem;
+	background: rgb(174 176 178 / 0.82);
+	padding: 0.34rem 0.72rem;
+	box-shadow: 0 0.25rem 0.85rem rgb(4 18 26 / 0.05);
+`;
+
+const BookInfoLabel = styled.span`
+	color: rgb(255 255 255 / 0.7);
+	font-size: 0.7rem;
+	font-weight: 800;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+`;
+
+const BookInfoValue = styled.span`
+	min-width: 0;
+	overflow: hidden;
+	color: ${theme.colors.white};
+	font-size: 0.9rem;
+	font-weight: 800;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+`;
+
+const GenresBlock = styled.div`
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.65rem 0.8rem;
+	font-family: ${theme.fonts.sans};
+`;
+
 const GenreRow = styled.div`
 	display: flex;
 	flex-wrap: wrap;
 	gap: 0.75rem;
-	margin-top: 2rem;
+`;
 
-	@media (max-width: 47.9375rem) {
-		justify-content: center;
+const HighlightedGenrePill = styled(GenrePill)`
+	&& {
+		border-color: rgb(218 142 91 / 0.25);
+		background: rgb(242 239 237 / 0.86);
+		color: ${theme.colors.orangeDark};
+		font-weight: 700;
+		box-shadow: 0 0.25rem 0.85rem rgb(4 18 26 / 0.04);
+
+		&:hover,
+		&:focus-visible {
+			background: ${theme.colors.orangeLight};
+			color: ${theme.colors.invertedText};
+		}
 	}
 `;
 
 const AsideRating = styled.section`
 	width: 100%;
 	margin-top: 1rem;
-
 	padding: 1rem;
 	color: ${theme.colors.foreground};
 
@@ -296,7 +504,7 @@ const RatingMeta = styled.div`
 	gap: 0.25rem;
 `;
 
-const Stars = styled.div`
+const Stars = styled(Rating)`
 	display: flex;
 	gap: 0.05rem;
 	color: ${theme.colors.orangePrimary};
@@ -313,6 +521,119 @@ const Votes = styled.p`
 	font-family: ${theme.fonts.sans};
 	font-size: 0.78rem;
 	line-height: 1.2;
+`;
+
+const QuickRatingBlock = styled.div`
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+	gap: 0.45rem;
+	margin-top: 1rem;
+	border-top: 0.0625rem solid rgb(242 239 237 / 0.72);
+	padding-top: 0.95rem;
+`;
+
+const QuickRatingTitle = styled.h3`
+	margin: 0;
+	color: ${theme.colors.foreground};
+	font-family: ${theme.fonts.serif};
+	font-size: 1.05rem;
+	font-weight: 600;
+	line-height: 1.2;
+`;
+
+const QuickMuiRating = styled(Rating)`
+	color: ${theme.colors.orangePrimary};
+
+	& .MuiRating-icon {
+		width: 1.8rem;
+		height: 1.8rem;
+	}
+
+	& .MuiSvgIcon-root {
+		width: 1.2rem;
+		height: 1.2rem;
+	}
+`;
+
+const QuickRatingStars = styled.div`
+	display: none;
+	gap: 0.05rem;
+`;
+
+const QuickRatingStar = styled.button`
+	display: inline-grid;
+	width: 1.8rem;
+	height: 1.8rem;
+	place-items: center;
+	border: 0;
+	background: transparent;
+	padding: 0;
+	color: ${theme.colors.orangePrimary};
+	cursor: pointer;
+
+	& svg {
+		width: 1.15rem;
+		height: 1.15rem;
+	}
+
+	&:hover,
+	&:focus-visible {
+		color: ${theme.colors.orangeDark};
+		outline: none;
+	}
+`;
+
+const QuickRatingButton = styled.button`
+	align-self: flex-start;
+	border: 0;
+	border-radius: 62.4375rem;
+	background: ${theme.colors.surface};
+	padding: 0.45rem 0.9rem;
+	color: ${theme.colors.orangeDark};
+	cursor: pointer;
+	font-family: ${theme.fonts.serif};
+	font-size: 0.95rem;
+	font-weight: 700;
+	line-height: 1.2;
+	transition:
+		background 180ms ease,
+		color 180ms ease;
+
+	&:hover,
+	&:focus-visible {
+		background: ${theme.colors.orangeLight};
+		color: ${theme.colors.invertedText};
+		outline: none;
+	}
+`;
+
+const QuickReviewLink = styled.button`
+	align-self: flex-start;
+	border: 0;
+	background: transparent;
+	padding: 0;
+	color: ${theme.colors.softForeground};
+	cursor: pointer;
+	font-family: ${theme.fonts.sans};
+	font-size: 0.82rem;
+	line-height: 1.35;
+	text-decoration: underline;
+	text-underline-offset: 0.18rem;
+
+	&:hover,
+	&:focus-visible {
+		color: ${theme.colors.orangeDark};
+		outline: none;
+	}
+`;
+
+const QuickRatingStatus = styled.p`
+	margin: 0;
+	color: ${theme.colors.orangeDark};
+	font-family: ${theme.fonts.sans};
+	font-size: 0.78rem;
+	line-height: 1.35;
 `;
 
 const RatingBars = styled.div`

@@ -20,6 +20,7 @@ type AuthModalProps = {
 	mode: AuthModalMode;
 	onClose: () => void;
 	onModeChange?: (mode: AuthModalMode) => void;
+	redirectOnSuccess?: boolean;
 };
 
 type RegisterForm = LoginPayload & {
@@ -32,7 +33,12 @@ const initialForm: RegisterForm = {
 	confirmPassword: "",
 };
 
-const AuthModal = ({ mode, onClose, onModeChange }: AuthModalProps) => {
+const AuthModal = ({
+	mode,
+	onClose,
+	onModeChange,
+	redirectOnSuccess = true,
+}: AuthModalProps) => {
 	const router = useRouter();
 	const setSession = useAuthStore((state) => state.setSession);
 	const loginMutation = useLoginMutation();
@@ -87,7 +93,9 @@ const AuthModal = ({ mode, onClose, onModeChange }: AuthModalProps) => {
 
 				setSession(session);
 				onClose();
-				router.push("/welcome");
+				if (redirectOnSuccess) {
+					router.push("/welcome");
+				}
 				return;
 			}
 
@@ -98,7 +106,9 @@ const AuthModal = ({ mode, onClose, onModeChange }: AuthModalProps) => {
 
 			setSession(session);
 			onClose();
-			router.push("/");
+			if (redirectOnSuccess) {
+				router.push("/");
+			}
 		} catch (error) {
 			setFormError(
 				error instanceof Error

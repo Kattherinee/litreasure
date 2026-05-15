@@ -97,7 +97,7 @@ const SeriesTag = styled.div`
 	align-items: center;
 	width: fit-content;
 	max-width: 100%;
-
+	overflow: hidden;
 	border: 0.0625rem solid rgb(242 239 237 / 0.22);
 	border-radius: 62.4375rem;
 	background: rgb(242 239 237 / 0.12);
@@ -107,7 +107,6 @@ const SeriesTag = styled.div`
 	font-size: 0.82rem;
 	font-weight: 600;
 	line-height: 1;
-	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
 
@@ -123,7 +122,6 @@ const Title = styled.h1`
 	-webkit-box-orient: vertical;
 	-webkit-line-clamp: 2;
 	margin: 1.1rem 0 0;
-
 	color: ${theme.colors.invertedText};
 	font-family: ${theme.fonts.serif};
 	font-size: 2.35rem;
@@ -142,14 +140,12 @@ const Title = styled.h1`
 
 const Author = styled.p`
 	max-width: 100%;
-	margin: 1rem 0 0;
+	overflow: hidden;
+	margin: 0.55rem 0 0;
 	color: ${theme.colors.orangeLight};
 	font-family: ${theme.fonts.sans};
 	font-size: 1.125rem;
 	line-height: 1.4;
-	margin-block: 0;
-	margin-top: 0.55rem;
-	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
 
@@ -166,7 +162,6 @@ const ActionRow = styled.div`
 	display: flex;
 	align-items: center;
 	gap: 1rem;
-
 	padding-top: 1.4rem;
 
 	@media (max-width: 74.9375rem) {
@@ -185,12 +180,12 @@ const ActionRow = styled.div`
 
 const ActionButton = styled(Button)`
 	&& {
-		padding: 0.58rem 1.25rem;
-		font-size: 1.1rem;
-		gap: 0.45rem;
 		margin-top: 0.1rem;
 		background: ${theme.colors.darkerOrangeLight};
 		border-color: ${theme.colors.darkerOrangeLight};
+		padding: 0.58rem 1.25rem;
+		font-size: 1.1rem;
+		gap: 0.45rem;
 
 		@media (max-width: 74.9375rem) {
 			padding: 0.5rem 1.05rem;

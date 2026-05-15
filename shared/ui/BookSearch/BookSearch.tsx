@@ -518,8 +518,10 @@ const SearchIcon = styled.span`
 `;
 
 const SearchInput = styled(InputField)`
-	min-height: 34px;
+	min-height: 38px;
+	padding-block: 0.45rem;
 	padding-left: 42px;
+	line-height: 1.35;
 
 	&::-webkit-search-cancel-button {
 		display: none;
@@ -571,14 +573,16 @@ const PanelSearchIcon = styled(SearchIcon)`
 `;
 
 const PanelSearchInput = styled(InputField)`
-	min-height: 3rem;
+	min-height: 3.25rem;
 	border-color: ${theme.colors.orangeLight};
 	border-radius: 1.05rem;
 	background: rgb(242 239 237 / 0.88);
+	padding-block: 0.55rem;
 	padding-right: 3rem;
 	padding-left: 3rem;
 
 	font-size: 1rem;
+	line-height: 1.35;
 
 	&:focus,
 	&:focus-visible {
