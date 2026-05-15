@@ -1,3 +1,5 @@
+import styled from "styled-components";
+
 import { InputField } from "@/shared/ui/InputField";
 
 import {
@@ -11,6 +13,7 @@ import {
 interface ProfileStepProps {
 	name: string;
 	username: string;
+	hasUsernameError: boolean;
 	onNameChange: (value: string) => void;
 	onUsernameChange: (value: string) => void;
 }
@@ -18,17 +21,18 @@ interface ProfileStepProps {
 export const ProfileStep = ({
 	name,
 	username,
+	hasUsernameError,
 	onNameChange,
 	onUsernameChange,
 }: ProfileStepProps) => (
 	<StepBody>
 		<StepTitle>Как к тебе обращаться?</StepTitle>
 		<StepDescription>
-			Твоё имя и username — твоя визитка в Litreasure.
+			Твой username — уникальное имя в Litreasure.
 		</StepDescription>
 		<FieldGroup>
 			<FieldLabel htmlFor="welcome-name">Имя</FieldLabel>
-			<InputField
+			<ProfileInput
 				id="welcome-name"
 				autoComplete="name"
 				required
@@ -38,9 +42,11 @@ export const ProfileStep = ({
 		</FieldGroup>
 		<FieldGroup>
 			<FieldLabel htmlFor="welcome-username">Username</FieldLabel>
-			<InputField
+			<ProfileInput
 				id="welcome-username"
 				autoComplete="username"
+				aria-invalid={hasUsernameError}
+				$hasError={hasUsernameError}
 				minLength={3}
 				required
 				value={username}
@@ -49,3 +55,17 @@ export const ProfileStep = ({
 		</FieldGroup>
 	</StepBody>
 );
+
+const ProfileInput = styled(InputField)<{ $hasError?: boolean }>`
+	&& {
+		border-color: ${({ $hasError }) => ($hasError ? "#e7a29a" : undefined)};
+		box-shadow: ${({ $hasError }) =>
+			$hasError ? "0 0 0 0.1875rem rgb(231 162 154 / 0.2)" : undefined};
+
+		&:hover:not(:disabled),
+		&:focus,
+		&:focus-visible {
+			border-color: ${({ $hasError }) => ($hasError ? "#d97970" : undefined)};
+		}
+	}
+`;

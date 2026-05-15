@@ -56,7 +56,7 @@ const containedInvertedStyles = css`
 	&:hover {
 		background: ${theme.colors.invertedText};
 		border-color: ${theme.colors.invertedText};
-		color: ${theme.colors.foreground};
+		color: ${theme.colors.darkerOrangeLight};
 	}
 `;
 
@@ -66,9 +66,8 @@ const outlinedStyles = css`
 	color: ${theme.colors.lightText};
 
 	&:hover {
-		background: ${theme.colors.orangeLight};
-		border-color: ${theme.colors.orangeLight};
-		color: ${theme.colors.lightText};
+		border-color: ${theme.colors.orangeDark};
+		color: ${theme.colors.orangeDark};
 	}
 `;
 
@@ -125,6 +124,7 @@ const StyledButton = styled(MuiButton)<{
 			border-color: ${theme.colors.muted};
 			background: ${theme.colors.transparent};
 			color: ${theme.colors.muted};
+			cursor: not-allowed;
 		}
 
 		${({ $variant }) => {

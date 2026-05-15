@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import styled from "styled-components";
 
 import { theme } from "@/shared/theme";
@@ -10,76 +11,98 @@ interface GoalStepProps {
 	onGoalChange: (value: number) => void;
 }
 
-export const GoalStep = ({ yearGoal, onGoalChange }: GoalStepProps) => (
-	<StepBody>
-		<StepTitle>Цель на год</StepTitle>
-		<StepDescription>
-			Читательская цель поддерживает мотивацию. Сколько книг ты хочешь прочитать
-			в этом году?
-		</StepDescription>
-		<GoalLayout>
-			<GoalLeft>
-				<GoalSubLabel>Сколько книг прочитать?</GoalSubLabel>
-				<GoalCounter>
-					<GoalBtn
-						type="button"
-						onClick={() => onGoalChange(Math.max(1, yearGoal - 1))}
-					>
-						−
-					</GoalBtn>
-					<GoalNumber>{yearGoal}</GoalNumber>
-					<GoalBtn
-						type="button"
-						onClick={() => onGoalChange(Math.min(999, yearGoal + 1))}
-					>
-						+
-					</GoalBtn>
-				</GoalCounter>
-				<GoalPresetsRow>
-					{GOAL_PRESETS.map((preset) => (
-						<GoalPreset
-							key={preset}
-							type="button"
-							$isActive={yearGoal === preset}
-							onClick={() => onGoalChange(preset)}
-						>
-							{preset}
-						</GoalPreset>
-					))}
-				</GoalPresetsRow>
-				<GoalHint>
-					{yearGoal <= 12
-						? "Отличное начало — одна книга в месяц"
-						: yearGoal <= 24
-							? "Две книги в месяц — хорошая привычка"
-							: yearGoal <= 52
-								? "Почти по книге в неделю — настоящий читатель"
-								: "Легендарный темп! Ты точно готов?"}
-				</GoalHint>
-			</GoalLeft>
-			<GoalImg
-				alt=""
-				src={
-					yearGoal >= 52
-						? "/images/welcomePage/dracoFire.png"
-						: yearGoal >= 24
-							? "/images/welcomePage/dracoSword2.png"
-							: yearGoal >= 12
-								? "/images/welcomePage/dracobook2.png"
-								: "/images/welcomePage/dracoWitch1.png"
-				}
-			/>
-		</GoalLayout>
-	</StepBody>
-);
+const clampGoal = (value: number) => Math.min(999, Math.max(1, value));
 
-/* ── Styles ──────────────────────────────────────────────── */
+export const GoalStep = ({ yearGoal, onGoalChange }: GoalStepProps) => {
+	const [draftGoal, setDraftGoal] = useState(String(yearGoal));
+
+	useEffect(() => {
+		setDraftGoal(String(yearGoal));
+	}, [yearGoal]);
+
+	const commitDraftGoal = () => {
+		const nextGoal = Number(draftGoal);
+		const normalizedGoal = Number.isFinite(nextGoal) ? clampGoal(nextGoal) : 1;
+		onGoalChange(normalizedGoal);
+		setDraftGoal(String(normalizedGoal));
+	};
+
+	const handleDraftChange = (value: string) => {
+		const digitsOnly = value.replace(/\D/g, "");
+		setDraftGoal(digitsOnly);
+
+		if (digitsOnly) {
+			onGoalChange(clampGoal(Number(digitsOnly)));
+		}
+	};
+
+	return (
+		<GoalStepBody>
+			<StepTitle>Цель на год</StepTitle>
+			<StepDescription>
+				Читательская цель поддерживает мотивацию. Сколько книг ты хочешь
+				прочитать в этом году?
+			</StepDescription>
+			<GoalLayout>
+				<GoalLeft>
+					<GoalCounter>
+						<GoalBtn
+							type="button"
+							onClick={() => onGoalChange(Math.max(1, yearGoal - 1))}
+						>
+							−
+						</GoalBtn>
+						<GoalNumberInput
+							aria-label="Количество книг на год"
+							inputMode="numeric"
+							value={draftGoal}
+							onBlur={commitDraftGoal}
+							onChange={(event) => handleDraftChange(event.target.value)}
+						/>
+						<GoalBtn
+							type="button"
+							onClick={() => onGoalChange(Math.min(999, yearGoal + 1))}
+						>
+							+
+						</GoalBtn>
+					</GoalCounter>
+					<GoalPresetsRow>
+						{GOAL_PRESETS.map((preset) => (
+							<GoalPreset
+								key={preset}
+								type="button"
+								$isActive={yearGoal === preset}
+								onClick={() => onGoalChange(preset)}
+							>
+								{preset}
+							</GoalPreset>
+						))}
+					</GoalPresetsRow>
+					<GoalHint>
+						{yearGoal <= 12
+							? "Отличное начало — одна книга в месяц"
+							: yearGoal <= 24
+								? "Две книги в месяц — хорошая привычка"
+								: yearGoal <= 52
+									? "Почти по книге в неделю — настоящий читатель"
+									: "Легендарный темп! Ты точно готов?"}
+					</GoalHint>
+				</GoalLeft>
+			</GoalLayout>
+		</GoalStepBody>
+	);
+};
+
+const GoalStepBody = styled(StepBody)`
+	gap: 1.15rem;
+`;
 
 const GoalLayout = styled.div`
 	display: flex;
 	flex: 1;
 	align-items: center;
 	gap: 2rem;
+	margin-top: 0.35rem;
 	min-height: 0;
 `;
 
@@ -87,19 +110,14 @@ const GoalLeft = styled.div`
 	display: flex;
 	flex: 1;
 	flex-direction: column;
-	gap: 1.25rem;
-`;
-
-const GoalSubLabel = styled.p`
-	margin: 0;
-	color: ${theme.colors.softForeground};
-	font-size: 0.9rem;
+	align-items: center;
+	gap: 1.5rem;
 `;
 
 const GoalCounter = styled.div`
 	display: flex;
 	align-items: center;
-	gap: 1rem;
+	gap: 1.15rem;
 `;
 
 const GoalBtn = styled.button`
@@ -125,19 +143,33 @@ const GoalBtn = styled.button`
 	}
 `;
 
-const GoalNumber = styled.span`
-	min-width: 3.5rem;
+const GoalNumberInput = styled.input`
+	width: 5.25rem;
+	border: 0;
+	border-radius: 0.75rem;
+	background: transparent;
+	padding: 0;
 	color: #04121a;
 	font-family: ${theme.fonts.serif};
 	font-size: 4rem;
 	font-weight: 600;
 	line-height: 1;
 	text-align: center;
+	outline: none;
+	transition:
+		background-color 150ms,
+		box-shadow 150ms;
+
+	&:hover,
+	&:focus {
+		background: rgb(218 142 91 / 0.08);
+		box-shadow: 0 0 0 0.125rem rgb(218 142 91 / 0.18);
+	}
 `;
 
 const GoalPresetsRow = styled.div`
 	display: flex;
-	gap: 0.5rem;
+	gap: 0.65rem;
 `;
 
 const GoalPreset = styled.button<{ $isActive: boolean }>`
@@ -164,16 +196,9 @@ const GoalPreset = styled.button<{ $isActive: boolean }>`
 `;
 
 const GoalHint = styled.p`
-	margin: 0;
+	margin: 0.1rem 0 0.85rem;
 	color: ${theme.colors.softForeground};
 	font-size: 0.875rem;
 	font-style: italic;
 	line-height: 1.4;
-`;
-
-const GoalImg = styled.img`
-	height: min(14rem, 40vh);
-	width: auto;
-	object-fit: contain;
-	flex-shrink: 0;
 `;

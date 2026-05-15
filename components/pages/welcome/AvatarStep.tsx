@@ -32,7 +32,8 @@ export const AvatarStep = ({ avatarUrl, onAvatarChange }: AvatarStepProps) => {
 		<StepBody>
 			<StepTitle>Выбери аватар</StepTitle>
 			<StepDescription>
-				Выбери изображение, которое будет представлять тебя в мире книг.
+				Выбери дракончика, который будет представлять тебя. Не волнуйся, ты
+				всегда сможешь сменить его позже!
 			</StepDescription>
 			<AvatarLayout>
 				<AvatarPreviewLarge>
@@ -58,7 +59,6 @@ export const AvatarStep = ({ avatarUrl, onAvatarChange }: AvatarStepProps) => {
 								onClick={() => onAvatarChange(avatar.url)}
 							>
 								<AvatarOptionImage alt="" src={getAvatarAssetUrl(avatar.url)} />
-								{isSelected ? <AvatarCheck>✓</AvatarCheck> : null}
 							</AvatarOption>
 						);
 					})}
@@ -68,22 +68,20 @@ export const AvatarStep = ({ avatarUrl, onAvatarChange }: AvatarStepProps) => {
 	);
 };
 
-/* ── Styles ──────────────────────────────────────────────── */
-
 const AvatarLayout = styled.div`
 	display: flex;
 	flex-direction: column;
 	align-items: center;
 	gap: 1.5rem;
+	margin-top: 1.5rem;
 `;
 
 const AvatarPreviewLarge = styled.div`
 	display: grid;
-	width: 7.5rem;
-	height: 7.5rem;
+	width: 8.5rem;
+	height: 8.5rem;
 	place-items: center;
 	overflow: hidden;
-	border: 0.1875rem solid #da8e5b;
 	border-radius: 50%;
 	background: ${theme.alpha.blueWash};
 	box-shadow: 0 0 0 0.3rem rgb(218 142 91 / 0.15);
@@ -129,8 +127,8 @@ const AvatarScrollStrip = styled.div`
 const AvatarOption = styled.button<{ $isSelected: boolean }>`
 	position: relative;
 	display: grid;
-	width: 4.5rem;
-	height: 4.5rem;
+	width: 5rem;
+	height: 5rem;
 	flex-shrink: 0;
 	place-items: center;
 	overflow: hidden;
@@ -157,19 +155,4 @@ const AvatarOptionImage = styled.img`
 	height: 100%;
 	border-radius: 50%;
 	object-fit: cover;
-`;
-
-const AvatarCheck = styled.span`
-	position: absolute;
-	right: 0.05rem;
-	bottom: 0.05rem;
-	display: grid;
-	width: 1.2rem;
-	height: 1.2rem;
-	place-items: center;
-	border-radius: 50%;
-	background: #da8e5b;
-	color: #f2efed;
-	font-size: 0.65rem;
-	font-weight: 700;
 `;

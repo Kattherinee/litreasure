@@ -5,7 +5,7 @@ import { theme } from "@/shared/theme";
 export const StepBody = styled.div`
 	display: flex;
 	flex-direction: column;
-	gap: 1rem;
+	gap: 0.5rem;
 `;
 
 export const StepTitle = styled.h2`

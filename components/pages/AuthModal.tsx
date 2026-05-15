@@ -5,7 +5,11 @@ import type { FormEvent } from "react";
 import { useState } from "react";
 import styled from "styled-components";
 
-import { type LoginPayload, useLoginMutation } from "@/shared/api/auth";
+import {
+	type LoginPayload,
+	useLoginMutation,
+	useRegisterMutation,
+} from "@/shared/api/auth";
 import { useAuthStore } from "@/shared/store/auth-store";
 import { theme } from "@/shared/theme";
 import { InputField } from "@/shared/ui/InputField";
@@ -22,64 +26,17 @@ type RegisterForm = LoginPayload & {
 	confirmPassword: string;
 };
 
-const REGISTER_DRAFT_STORAGE_KEY = "litreasure-register-draft";
-
 const initialForm: RegisterForm = {
 	email: "",
 	password: "",
 	confirmPassword: "",
 };
 
-export const saveRegisterDraft = (draft: LoginPayload) => {
-	if (typeof window === "undefined") {
-		return;
-	}
-
-	window.sessionStorage.setItem(
-		REGISTER_DRAFT_STORAGE_KEY,
-		JSON.stringify(draft),
-	);
-};
-
-export const getRegisterDraft = (): LoginPayload | null => {
-	if (typeof window === "undefined") {
-		return null;
-	}
-
-	try {
-		const rawDraft = window.sessionStorage.getItem(REGISTER_DRAFT_STORAGE_KEY);
-
-		if (!rawDraft) {
-			return null;
-		}
-
-		const draft = JSON.parse(rawDraft) as Partial<LoginPayload>;
-
-		if (typeof draft.email !== "string" || typeof draft.password !== "string") {
-			return null;
-		}
-
-		return {
-			email: draft.email,
-			password: draft.password,
-		};
-	} catch {
-		return null;
-	}
-};
-
-export const clearRegisterDraft = () => {
-	if (typeof window === "undefined") {
-		return;
-	}
-
-	window.sessionStorage.removeItem(REGISTER_DRAFT_STORAGE_KEY);
-};
-
 const AuthModal = ({ mode, onClose, onModeChange }: AuthModalProps) => {
 	const router = useRouter();
 	const setSession = useAuthStore((state) => state.setSession);
 	const loginMutation = useLoginMutation();
+	const registerMutation = useRegisterMutation();
 	const [form, setForm] = useState<RegisterForm>(initialForm);
 	const [formError, setFormError] = useState("");
 	const [touched, setTouched] = useState({
@@ -123,10 +80,12 @@ const AuthModal = ({ mode, onClose, onModeChange }: AuthModalProps) => {
 					return;
 				}
 
-				saveRegisterDraft({
+				const session = await registerMutation.mutateAsync({
 					email: form.email.trim(),
 					password: form.password,
 				});
+
+				setSession(session);
 				onClose();
 				router.push("/welcome");
 				return;
@@ -284,7 +243,10 @@ const AuthModal = ({ mode, onClose, onModeChange }: AuthModalProps) => {
 
 					{formError ? <ErrorText role="alert">{formError}</ErrorText> : null}
 
-					<SubmitButton disabled={loginMutation.isPending} type="submit">
+					<SubmitButton
+						disabled={loginMutation.isPending || registerMutation.isPending}
+						type="submit"
+					>
 						{isRegister ? "Create account" : "Sign in"}
 					</SubmitButton>
 				</AuthForm>
