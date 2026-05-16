@@ -23,12 +23,12 @@ interface IBookDetailContentProps {
 	book: IBook;
 }
 
-const formatGenreLabel = (genre: string) =>
-	genre
-		.split("-")
-		.filter(Boolean)
-		.map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-		.join(" ");
+// const formatGenreLabel = (genre: string) =>
+// 	genre
+// 		.split("-")
+// 		.filter(Boolean)
+// 		.map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+// 		.join(" ");
 
 const getBookFacts = (book: IBook) => {
 	const meta: { label: string; value: string }[] = [];
@@ -145,6 +145,7 @@ const BookDetailContent = ({ book }: IBookDetailContentProps) => {
 						) : null}
 
 						<QuickRatingBlock>
+							<QuickRatingTitle>Твоя оценка</QuickRatingTitle>
 							<QuickMuiRating
 								name="quick-book-rating"
 								value={quickRating}
@@ -153,47 +154,12 @@ const BookDetailContent = ({ book }: IBookDetailContentProps) => {
 									setQuickRatingStatus("");
 								}}
 							/>
-							<QuickRatingTitle>Твоя оценка</QuickRatingTitle>
-							<QuickRatingStars aria-label="Быстрая оценка книги">
-								{[1, 2, 3, 4, 5].map((value) => {
-									const isActive = value <= quickRating;
-
-									return (
-										<QuickRatingStar
-											key={value}
-											aria-label={`${value} из 5`}
-											type="button"
-											onClick={() => {
-												setQuickRating(value);
-												setQuickRatingStatus("");
-											}}
-										>
-											{isActive ? (
-												<StarIcon aria-hidden="true" />
-											) : (
-												<StarBorderIcon aria-hidden="true" />
-											)}
-										</QuickRatingStar>
-									);
-								})}
-							</QuickRatingStars>
-							<QuickRatingButton
-								type="button"
-								onClick={handleQuickRatingSubmit}
-							>
-								Оценить
-							</QuickRatingButton>
 							<QuickReviewLink
 								type="button"
 								onClick={() => setActiveTab("reviews")}
 							>
 								Написать отзыв
 							</QuickReviewLink>
-							{quickRatingStatus ? (
-								<QuickRatingStatus role="status">
-									{quickRatingStatus}
-								</QuickRatingStatus>
-							) : null}
 						</QuickRatingBlock>
 					</AsideRating>
 				</LeftColumn>
@@ -224,20 +190,18 @@ const BookDetailContent = ({ book }: IBookDetailContentProps) => {
 								<BookFactsSection aria-label="Жанры книги">
 									<BookFactsTitle>Жанры</BookFactsTitle>
 									<GenresBlock>
-										<GenreRow>
-											{book.genres.map((genre) => (
-												<HighlightedGenrePill
-													key={genre}
-													href={`/genres/${genre}`}
-													fontSize="0.875rem"
-													height="2rem"
-													paddingBlock="0.45rem"
-													paddingInline="1rem"
-												>
-													{formatGenreLabel(genre)}
-												</HighlightedGenrePill>
-											))}
-										</GenreRow>
+										{book.genres.map((genre) => (
+											<HighlightedGenrePill
+												key={genre.id}
+												href={`/genres/${genre.slug}`}
+												fontSize="0.875rem"
+												height="2rem"
+												paddingBlock="0.45rem"
+												paddingInline="1rem"
+											>
+												{genre.name}
+											</HighlightedGenrePill>
+										))}
 									</GenresBlock>
 								</BookFactsSection>
 							) : null}
@@ -363,9 +327,11 @@ const LeftColumn = styled.aside`
 
 const CoverWrap = styled.div`
 	position: relative;
+	display: inline-flex;
 	overflow: hidden;
-	width: min(var(--detail-cover-max-width), 100%);
-	min-height: var(--detail-cover-max-height);
+	width: fit-content;
+	max-width: min(var(--detail-cover-max-width), 100%);
+	max-height: var(--detail-cover-max-height);
 	border-radius: 0.5rem;
 	background: ${theme.colors.surface};
 	box-shadow: 0 0 0.9375rem rgb(0 0 0 / 0.45);
@@ -377,11 +343,11 @@ const CoverWrap = styled.div`
 
 const CoverImage = styled.img<{ $isLoaded: boolean }>`
 	display: block;
-	width: 100%;
+	width: auto;
 	height: auto;
 	max-width: var(--detail-cover-max-width);
 	max-height: var(--detail-cover-max-height);
-	object-fit: cover;
+	object-fit: contain;
 	opacity: ${({ $isLoaded }) => ($isLoaded ? 1 : 0)};
 	transition: opacity 220ms ease;
 `;
@@ -389,9 +355,9 @@ const CoverImage = styled.img<{ $isLoaded: boolean }>`
 const BookFactsGrid = styled.div`
 	display: grid;
 	align-items: start;
-	gap: 1.25rem;
+	gap: 1.5vw;
 	margin-top: 1.8rem;
-	grid-template-columns: minmax(0, 1.4fr) minmax(11rem, 0.7fr);
+	grid-template-columns: 5fr 4fr;
 
 	@media (max-width: 56rem) {
 		grid-template-columns: 1fr;
@@ -424,14 +390,8 @@ const GenresBlock = styled.div`
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
-	gap: 0.65rem 0.8rem;
+	gap: 0.43vw 0.35vw;
 	font-family: ${theme.fonts.sans};
-`;
-
-const GenreRow = styled.div`
-	display: flex;
-	flex-wrap: wrap;
-	gap: 0.75rem;
 `;
 
 export const HighlightedGenrePill = styled(GenrePill)`
@@ -484,12 +444,11 @@ const RatingMeta = styled.div`
 
 const Stars = styled(Rating)`
 	display: flex;
-	gap: 0.05rem;
-	color: ${theme.colors.orangePrimary};
-
+	color: ${theme.colors.orangePrimary} !important;
+	gap: 0.05vw;
 	& svg {
-		width: 1rem;
-		height: 1rem;
+		width: 1.2vw;
+		height: 1.2vw;
 	}
 `;
 
@@ -521,71 +480,18 @@ const QuickRatingTitle = styled.h3`
 `;
 
 const QuickMuiRating = styled(Rating)`
-	color: ${theme.colors.orangePrimary};
+	color: ${theme.colors.orangePrimary} !important;
 
 	& .MuiRating-icon {
-		width: 1.8rem;
-		height: 1.8rem;
+		width: 1.8vw;
+		height: 1.8vw;
 	}
 
 	& .MuiSvgIcon-root {
-		width: 1.2rem;
-		height: 1.2rem;
+		width: 1.6vw;
+		height: 1.6vw;
 	}
 `;
-
-const QuickRatingStars = styled.div`
-	display: none;
-	gap: 0.05rem;
-`;
-
-const QuickRatingStar = styled.button`
-	display: inline-grid;
-	width: 1.8rem;
-	height: 1.8rem;
-	place-items: center;
-	border: 0;
-	background: transparent;
-	padding: 0;
-	color: ${theme.colors.orangePrimary};
-	cursor: pointer;
-
-	& svg {
-		width: 1.15rem;
-		height: 1.15rem;
-	}
-
-	&:hover,
-	&:focus-visible {
-		color: ${theme.colors.orangeDark};
-		outline: none;
-	}
-`;
-
-const QuickRatingButton = styled.button`
-	align-self: flex-start;
-	border: 0;
-	border-radius: 62.4375rem;
-	background: ${theme.colors.surface};
-	padding: 0.45rem 0.9rem;
-	color: ${theme.colors.orangeDark};
-	cursor: pointer;
-	font-family: ${theme.fonts.serif};
-	font-size: 0.95rem;
-	font-weight: 700;
-	line-height: 1.2;
-	transition:
-		background 180ms ease,
-		color 180ms ease;
-
-	&:hover,
-	&:focus-visible {
-		background: ${theme.colors.orangeLight};
-		color: ${theme.colors.invertedText};
-		outline: none;
-	}
-`;
-
 const QuickReviewLink = styled.button`
 	align-self: flex-start;
 	border: 0;
@@ -605,15 +511,6 @@ const QuickReviewLink = styled.button`
 		outline: none;
 	}
 `;
-
-const QuickRatingStatus = styled.p`
-	margin: 0;
-	color: ${theme.colors.orangeDark};
-	font-family: ${theme.fonts.sans};
-	font-size: 0.78rem;
-	line-height: 1.35;
-`;
-
 const RatingBars = styled.div`
 	display: flex;
 	flex-direction: column;

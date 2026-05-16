@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import styled from "styled-components";
 
 import type { IBookSort } from "@/shared/api/books";
@@ -15,12 +16,17 @@ interface IGenrePageProps {
 }
 
 const GenrePage = ({ slug, sort }: IGenrePageProps) => {
+	const [page, setPage] = useState(1);
 	const {
-		data: books = [],
+		data: booksResponse,
 		error,
 		isError,
 		isLoading,
-	} = useBookCardsQuery({ genre: slug, sort });
+	} = useBookCardsQuery({ genre: slug, page, sort });
+	const books = booksResponse?.items ?? [];
+	const pages = booksResponse?.pages ?? 1;
+	const canGoPrev = page > 1;
+	const canGoNext = page < pages;
 
 	return (
 		<Page>
@@ -44,13 +50,38 @@ const GenrePage = ({ slug, sort }: IGenrePageProps) => {
 				) : books.length === 0 ? (
 					<StateMessage>В этом жанре пока нет книг.</StateMessage>
 				) : (
-					<BookGrid>
-						{books.map((book) => (
-							<BookItem key={book.id}>
-								<BookCard book={book} />
-							</BookItem>
-						))}
-					</BookGrid>
+					<>
+						<BookGrid>
+							{books.map((book) => (
+								<BookItem key={book.id}>
+									<BookCard book={book} />
+								</BookItem>
+							))}
+						</BookGrid>
+						{pages > 1 ? (
+							<Pagination>
+								<PageButton
+									disabled={!canGoPrev}
+									type="button"
+									onClick={() => setPage((current) => Math.max(1, current - 1))}
+								>
+									Назад
+								</PageButton>
+								<PageState>
+									{page} / {pages}
+								</PageState>
+								<PageButton
+									disabled={!canGoNext}
+									type="button"
+									onClick={() =>
+										setPage((current) => Math.min(pages, current + 1))
+									}
+								>
+									Вперёд
+								</PageButton>
+							</Pagination>
+						) : null}
+					</>
 				)}
 			</Content>
 		</Page>
@@ -117,4 +148,43 @@ const BookGrid = styled.div`
 
 const BookItem = styled.div`
 	width: fit-content;
+`;
+
+const Pagination = styled.div`
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.75rem;
+	margin-top: 2rem;
+`;
+
+const PageButton = styled.button`
+	border: 0.0625rem solid ${theme.colors.orangeDark};
+	border-radius: 62.4375rem;
+	background: ${theme.colors.transparent};
+	padding: 0.55rem 1rem;
+	color: ${theme.colors.orangeDark};
+	cursor: pointer;
+	font: inherit;
+	font-size: 0.95rem;
+	font-weight: 700;
+
+	&:not(:disabled):hover,
+	&:not(:disabled):focus-visible {
+		background: ${theme.colors.orangePrimary};
+		border-color: ${theme.colors.orangePrimary};
+		color: ${theme.colors.white};
+		outline: none;
+	}
+
+	&:disabled {
+		cursor: default;
+		opacity: 0.45;
+	}
+`;
+
+const PageState = styled.span`
+	color: ${theme.colors.softForeground};
+	font-size: 0.95rem;
+	line-height: 1.4;
 `;

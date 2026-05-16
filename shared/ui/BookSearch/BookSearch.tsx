@@ -63,13 +63,18 @@ const BookSearch = () => {
 	const [isOpen, setIsOpen] = useState(false);
 	const normalizedSearchValue = searchValue.trim();
 	const shouldSearch = normalizedSearchValue.length >= MIN_SEARCH_LENGTH;
-	const { data: searchResults = [], isFetching } = useBookCardsQuery(
+	const { data: searchResponse, isFetching } = useBookCardsQuery(
 		{
 			limit: SEARCH_RESULT_LIMIT,
 			search: normalizedSearchValue,
 		},
 		{ enabled: shouldSearch },
 	);
+	const searchResults = useMemo(
+		() => searchResponse?.items ?? [],
+		[searchResponse],
+	);
+	const searchTotal = searchResponse?.total ?? searchResults.length;
 	const filteredSearchResults = useMemo(
 		() => filterSearchResultsByTabs(searchResults, activeTabs),
 		[activeTabs, searchResults],
@@ -234,45 +239,87 @@ const BookSearch = () => {
 							{shouldSearch && !isFetching && filteredSearchResults.length > 0
 								? filteredSearchResults.map((book) => {
 										const seriesLine = formatSeriesLine(book);
+										const searchMatch = getPrimarySearchMatch(
+											book,
+											normalizedSearchValue,
+										);
+										const primaryAuthor = book.authors?.[0];
+										const authorName = primaryAuthor?.name ?? book.author;
 
 										return (
 											<ResultItem key={book.id}>
-												<ResultLink
-													href={`/books/${book.id}`}
-													onClick={() => {
-														saveRecentSearch();
-														closeSearch();
-													}}
-												>
-													<ResultCover
-														src={
-															book.coverUrl ?? "/images/book-placeholder.svg"
-														}
-														alt=""
-													/>
+												<ResultMain>
+													<ResultCoverLink
+														href={`/books/${book.id}`}
+														onClick={() => {
+															saveRecentSearch();
+															closeSearch();
+														}}
+													>
+														<ResultCover
+															src={
+																book.coverUrl ?? "/images/book-placeholder.svg"
+															}
+															alt=""
+														/>
+													</ResultCoverLink>
 													<ResultMeta>
-														{seriesLine ? (
-															<ResultSeries>
+														<ResultLink
+															href={`/books/${book.id}`}
+															onClick={() => {
+																saveRecentSearch();
+																closeSearch();
+															}}
+														>
+															{seriesLine ? (
+																<ResultSeries>
+																	<HighlightedText
+																		query={normalizedSearchValue}
+																		text={seriesLine}
+																	/>
+																</ResultSeries>
+															) : null}
+															<ResultTitle>
 																<HighlightedText
 																	query={normalizedSearchValue}
-																	text={seriesLine}
+																	text={book.title}
 																/>
-															</ResultSeries>
-														) : null}
-														<ResultTitle>
-															<HighlightedText
-																query={normalizedSearchValue}
-																text={book.title}
-															/>
-														</ResultTitle>
+															</ResultTitle>
+														</ResultLink>
 														<ResultAuthor>
-															<HighlightedText
-																query={normalizedSearchValue}
-																text={book.author}
-															/>
+															{primaryAuthor ? (
+																<ResultAuthorLink
+																	href={`/authors/${primaryAuthor.id}`}
+																	onClick={() => {
+																		saveRecentSearch();
+																		closeSearch();
+																	}}
+																>
+																	<HighlightedText
+																		query={normalizedSearchValue}
+																		text={authorName}
+																	/>
+																</ResultAuthorLink>
+															) : (
+																<HighlightedText
+																	query={normalizedSearchValue}
+																	text={authorName}
+																/>
+															)}
 														</ResultAuthor>
+														{searchMatch ? (
+															<ResultMatchLine>
+																<ResultMatchField>
+																	{formatSearchMatchField(searchMatch.field)}
+																</ResultMatchField>
+																<HighlightedText
+																	query={normalizedSearchValue}
+																	text={searchMatch.value}
+																/>
+															</ResultMatchLine>
+														) : null}
 													</ResultMeta>
-												</ResultLink>
+												</ResultMain>
 												<WantButton buttonType="oxygenPill" type="button">
 													Want to read
 												</WantButton>
@@ -289,9 +336,7 @@ const BookSearch = () => {
 						</ResultsArea>
 
 						<SearchFooter>
-							<ResultCount>
-								{getResultCountLabel(filteredSearchResults.length)}
-							</ResultCount>
+							<ResultCount>{getResultCountLabel(searchTotal)}</ResultCount>
 							<ViewAllButton
 								buttonType="containedInverted"
 								onClick={() => saveRecentSearch()}
@@ -345,6 +390,31 @@ const filterSearchResultsByTabs = (
 	return books.filter((book) =>
 		activeTabs.some((activeTab) => doesBookMatchTab(book, activeTab)),
 	);
+};
+
+const getPrimarySearchMatch = (book: IBook, query: string) => {
+	const normalizedQuery = query.trim().toLowerCase();
+
+	if (!normalizedQuery || !book.searchMatches?.length) {
+		return null;
+	}
+
+	return (
+		book.searchMatches.find((match) =>
+			match.value.toLowerCase().includes(normalizedQuery),
+		) ?? book.searchMatches[0]
+	);
+};
+
+const formatSearchMatchField = (field: string) => {
+	if (field === "author" || field === "authors") return "Автор";
+	if (field === "genre" || field === "genres") return "Жанр";
+	if (field === "series" || field === "seriesTitle") return "Серия";
+	if (field === "collection" || field === "collections") return "Подборка";
+	if (field === "publisher" || field === "publishers") return "Издатель";
+	if (field === "title" || field === "book") return "Книга";
+
+	return "Совпадение";
 };
 
 const getResultCountsByTab = (books: IBook[]) =>
@@ -493,10 +563,10 @@ const SearchWrap = styled.div`
 
 const SearchIcon = styled.span`
 	position: absolute;
-	top: 50%;
+	top: 45%;
 	left: 14px;
-	width: 14px;
-	height: 14px;
+	width: 12px;
+	height: 12px;
 	border: 2px solid currentColor;
 	border-radius: 50%;
 	color: ${theme.colors.softForeground};
@@ -517,9 +587,10 @@ const SearchIcon = styled.span`
 `;
 
 const SearchInput = styled(InputField)`
-	min-height: 38px;
+	min-height: 24px;
 	padding-block: 0.45rem;
-	padding-left: 42px;
+	padding: 0.335vw 0.875vw 0.335vw 2.8vw;
+
 	line-height: 1.35;
 
 	&::-webkit-search-cancel-button {
@@ -792,13 +863,33 @@ const ResultItem = styled.div`
 	}
 `;
 
-const ResultLink = styled(Link)`
+const ResultMain = styled.div`
 	display: grid;
 	align-items: center;
 	gap: 0.9rem;
 	grid-template-columns: 3.25rem minmax(0, 1fr);
 	min-width: 0;
 	padding: 0.6rem;
+`;
+
+const ResultCoverLink = styled(Link)`
+	display: inline-flex;
+	width: 3.25rem;
+	height: 4.7rem;
+	border-radius: 0.35rem;
+
+	&:focus-visible {
+		outline: 0.125rem solid ${theme.colors.orangeLight};
+		outline-offset: 0.125rem;
+	}
+`;
+
+const ResultLink = styled(Link)`
+	display: flex;
+	min-width: 0;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 0.35rem;
 	color: ${theme.colors.foreground};
 	text-decoration: none;
 
@@ -860,6 +951,41 @@ const ResultAuthor = styled.span`
 	line-height: 1.3;
 	text-overflow: ellipsis;
 	white-space: nowrap;
+`;
+
+const ResultAuthorLink = styled(Link)`
+	color: inherit;
+	text-decoration: none;
+
+	&:hover,
+	&:focus-visible {
+		color: ${theme.colors.orangeDark};
+		outline: none;
+		text-decoration: underline;
+	}
+`;
+
+const ResultMatchLine = styled.span`
+	display: inline-flex;
+	max-width: 100%;
+	align-items: center;
+	gap: 0.4rem;
+	overflow: hidden;
+	border-radius: 0.45rem;
+	background: rgb(218 142 91 / 0.1);
+	padding: 0.25rem 0.45rem;
+	color: ${theme.colors.softForeground};
+	font-family: ${theme.fonts.sans};
+	font-size: 0.78rem;
+	line-height: 1.25;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+`;
+
+const ResultMatchField = styled.span`
+	flex: 0 0 auto;
+	color: ${theme.colors.orangeDark};
+	font-weight: 700;
 `;
 
 const Highlight = styled.mark`

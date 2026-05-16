@@ -87,10 +87,10 @@ const oxygenPillStyles = css`
 	min-width: 0;
 	background: ${theme.colors.invertedText};
 	border-color: ${theme.colors.invertedText};
-	padding: 0.5rem 1rem;
+	padding: 0.6vw 1vw;
 	color: ${theme.colors.softForeground};
 	font-family: ${theme.fonts.sans};
-	font-size: 0.875rem;
+	font-size: 0.94vw;
 	font-weight: 400;
 	line-height: 1.25rem;
 
@@ -107,11 +107,10 @@ const StyledButton = styled(MuiButton)<{
 	&& {
 		border: 1px solid ${theme.colors.transparent};
 		border-radius: 50px;
-
 		font-family: ${theme.fonts.serif};
-		font-size: 16px;
+		font-size: 0.98vw;
 		font-weight: 500;
-		line-height: 20px;
+		line-height: 1.15vw;
 		text-align: center;
 		text-transform: none;
 		transition:

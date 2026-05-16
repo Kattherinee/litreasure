@@ -1,19 +1,17 @@
 import {
 	getCollection,
-	ICollectionPreview,
 	useCreateCollectionMutation,
 } from "@/shared/api/collections";
+import type { ICollectionPreview } from "@/shared/api/collections";
 import { useAuthStore } from "@/shared/store/auth-store";
 import { theme } from "@/shared/theme";
+import { Button } from "@/shared/ui/Button";
+import { PlusIcon } from "@/shared/ui/PlusIcon";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { KeyboardEvent, MouseEvent } from "react";
 import styled from "styled-components";
 import { PreviewRail, RowCopy } from "./CollectionsPage";
-import { PlusIcon } from "@/shared/ui/PlusIcon";
-import { Button } from "@/shared/ui/Button";
-
-import { GenrePill } from "@/shared/ui/GenrePill";
 
 export const CollectionRow = ({
 	collection,
@@ -31,8 +29,10 @@ export const CollectionRow = ({
 		collection.bookCount - collection.previewBooks.length,
 		0,
 	);
-	const sourceLabel =
-		collection.source === "open_library" ? "Litreasure" : "Пользователь";
+	const ownerLabel =
+		collection.source === "open_library"
+			? "Litreasure"
+			: collection.owner.username || collection.owner.name;
 
 	const openCollection = () => {
 		router.push(`/collections/${collection.id}`);
@@ -86,52 +86,25 @@ export const CollectionRow = ({
 			onKeyDown={handleRowKeyDown}
 		>
 			<RowCopy>
-				<HeadRow>
-					{" "}
-					<RowMeta>
-						<OwnerPill>
-							<OwnerAvatar src={getCollectionOwnerAvatar(collection)} alt="" />
-							<span>{collection.owner.name}</span>
-						</OwnerPill>
-						•
-						<OwnerPill>
-							{" "}
-							<span>{collection.bookCount}</span>
-							<span>books</span>
-						</OwnerPill>{" "}
-					</RowMeta>
-					<TitleRow>
-						{collection.topGenres.map((genre) => (
-							<GenrePill
-								fontSize="0.715rem"
-								height="1.4rem"
-								paddingBlock="0.3rem"
-								paddingInline="0.7rem"
-								href={`/genres/${genre.id}`}
-								key={genre.id}
-								color={theme.colors.bluePrimary}
-								backgroundColor={theme.colors.background}
-							>
-								{genre.name}
-							</GenrePill>
-						))}
-					</TitleRow>
-				</HeadRow>
-				<TitleRow>
-					<RowTitle>{collection.title}</RowTitle>
-					<SaveButton
-						buttonType="containedInverted"
-						disabled={createCollectionMutation.isPending}
-						title="Сохранить себе"
-						onClick={handleSaveClick}
-					>
-						<PlusIcon />
-					</SaveButton>
-				</TitleRow>
+				<RowTitle>{collection.title}</RowTitle>
 
-				{saveStatus ? (
-					<SaveStatus role="status">{saveStatus}</SaveStatus>
-				) : null}
+				<RowMeta>
+					<OwnerLink>
+						<OwnerAvatar src={getCollectionOwnerAvatar(collection)} alt="" />
+						<span>{ownerLabel}</span>
+					</OwnerLink>
+					<BookCount>{collection.bookCount} книг</BookCount>
+				</RowMeta>
+
+				<SaveButton
+					buttonType="containedInverted"
+					disabled={createCollectionMutation.isPending}
+					title="Сохранить себе"
+					onClick={handleSaveClick}
+				>
+					<PlusIcon />
+					<span> {saveStatus ? "Добавлено" : "Сохранить"}</span>
+				</SaveButton>
 			</RowCopy>
 
 			<PreviewRail aria-label={`Книги из подборки ${collection.title}`}>
@@ -139,8 +112,8 @@ export const CollectionRow = ({
 					collection.previewBooks.map((book) => (
 						<PreviewBook
 							key={book.id}
-							onClick={(e) => {
-								e.stopPropagation();
+							onClick={(event) => {
+								event.stopPropagation();
 								router.push(`/books/${book.id}`);
 							}}
 						>
@@ -165,134 +138,127 @@ export const CollectionRow = ({
 	);
 };
 
-const RowMeta = styled.div`
-	display: flex;
-	flex-wrap: wrap;
-	align-items: center;
-	gap: 0.45rem;
-	color: ${theme.colors.orangeDark};
+const RowTitle = styled.h2`
+	min-width: 0;
+	margin: 0;
+	overflow: hidden;
+	color: ${theme.colors.foreground};
+	font-family: ${theme.fonts.serif};
+	font-size: 1.25vw;
+	font-weight: 500;
+	line-height: 1.65vw;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+
+	&:hover {
+		text-decoration: underline 1px;
+	}
 `;
 
-const OwnerPill = styled.span`
+const BookCount = styled.span`
+	flex: 0 0 auto;
+	color: ${theme.colors.bluePrimary};
+	font-family: ${theme.fonts.sans};
+	font-size: 0.84vw;
+	font-weight: 400;
+	letter-spacing: 0.01em;
+	line-height: 1rem;
+`;
+
+const RowMeta = styled.div`
+	display: flex;
+	min-height: 1rem;
+	align-items: center;
+	gap: 0.75rem;
+`;
+
+const OwnerLink = styled.span`
 	display: inline-flex;
 	align-items: center;
-	gap: 0.4rem;
-	color: ${theme.colors.orangeDark};
-	font-size: 0.72rem;
-	font-weight: 800;
-	line-height: 1.2;
+	gap: 0.4vw;
+	color: ${theme.colors.orangePrimary};
+	font-family: ${theme.fonts.sans};
+	font-size: 0.84vw;
+	font-weight: 400;
+	letter-spacing: 0.01em;
+	line-height: 1rem;
+	text-decoration: underline;
+
+	&:hover {
+		color: ${theme.colors.orangeDark};
+	}
 `;
 
 const OwnerAvatar = styled.img`
-	width: 1.2rem;
-	height: 1.2rem;
+	width: 1.3vw;
+	height: 1.3vw;
 	border-radius: 50%;
 	object-fit: cover;
 `;
 
-const TitleRow = styled.div`
-	display: flex;
-	flex-wrap: wrap;
-	align-items: center;
-	gap: 0.55rem;
-`;
-
-const HeadRow = styled.div`
-	display: flex;
-	flex-wrap: wrap;
-	align-items: center;
-	justify-content: space-between;
-	gap: 0.85rem;
-`;
-
-const SaveStatus = styled.p`
-	margin: 0;
-	color: ${theme.colors.orangeDark};
-	font-size: 0.78rem;
-	font-weight: 700;
-	line-height: 1.3;
-`;
-
-const RowTitle = styled.h2`
-	margin: 0;
-	color: ${theme.colors.foreground};
-	font-family: ${theme.fonts.serif};
-	font-size: clamp(1.05rem, 1.8vw, 1.35rem);
-	font-weight: 600;
-	line-height: 1.05;
-	overflow-wrap: anywhere;
-`;
-
-const RowDescription = styled.p`
-	display: -webkit-box;
-	overflow: hidden;
-	-webkit-box-orient: vertical;
-	-webkit-line-clamp: 3;
-	margin: 0;
-	color: ${theme.colors.softForeground};
-	font-size: 0.9rem;
-	line-height: 1.45;
-`;
-const MoreBooksBadge = styled.span`
-	display: inline-flex;
-	width: 2.3rem;
-	height: 2.3rem;
-	flex-direction: column;
-	align-items: center;
-	justify-content: center;
-
-	border-radius: 50%;
-	margin-left: 0.7rem;
-	color: ${theme.colors.bluePrimary};
-	background-color: ${theme.colors.background};
-	font-size: 0.9rem;
-	font-weight: 500;
-	line-height: 1;
-`;
-
 const SaveButton = styled(Button)`
 	&& {
-		svg {
-			width: 0.95rem;
-			height: 0.95rem;
-		}
+		width: max-content;
+		gap: 0.4vw;
+		font-weight: 400;
+		font-family: ${theme.fonts.sans};
+		margin-top: 0.7vw;
+		font-size: 0.94vw;
+		padding: 0.35vw 1vw 0.4vw;
 
-		height: 1.4rem;
-		margin-left: 1rem;
+		svg {
+			width: 1vw;
+			height: 1vw;
+		}
 	}
 `;
+
 const Row = styled.article`
 	position: relative;
-	display: grid;
-	grid-template-columns: minmax(14rem, 1fr) auto;
-	gap: clamp(1.3rem, 3.4vw, 3rem);
+	display: flex;
+	min-height: 7.5rem;
 	align-items: center;
+	justify-content: space-between;
+	gap: 3.75rem;
 	overflow: visible;
-	border: 0.0625rem solid rgb(35 61 77 / 0.1);
-	border-radius: 0.5rem;
-	background: rgb(242 239 237 / 0.66);
-	padding: clamp(0.8rem, 2vw, 1.1rem);
+	border: 0;
+	border-radius: 1rem;
+	background: ${theme.colors.white};
+	padding: 1.05vw;
 	color: inherit;
-	box-shadow: 0 0.75rem 1.6rem rgb(4 18 26 / 0.05);
 	cursor: pointer;
 	transition:
-		border-color 180ms ease,
 		box-shadow 180ms ease,
 		transform 180ms ease;
 
 	&:hover,
 	&:focus-visible {
-		border-color: rgb(212 100 28 / 0.38);
-		box-shadow: 0 1rem 2rem rgb(4 18 26 / 0.09);
+		box-shadow: 0 0.75rem 1.5rem rgb(4 18 26 / 0.08);
 		outline: none;
 		transform: translateY(-0.0625rem);
 	}
 
 	@media (max-width: 56rem) {
-		grid-template-columns: 1fr;
-		align-items: start;
+		gap: 1rem;
+	}
+
+	@media (max-width: 42rem) {
+		flex-direction: column;
+		align-items: stretch;
 	}
 `;
+
+const PreviewBook = styled.span`
+	position: relative;
+	display: block;
+	width: 3.75rem;
+	height: 5rem;
+	flex: 0 0 auto;
+	border-radius: 0.625rem;
+	background: #dadada;
+	box-shadow: none;
+`;
+
 const PreviewCover = styled.img`
 	display: block;
 	width: 100%;
@@ -300,21 +266,29 @@ const PreviewCover = styled.img`
 	border-radius: inherit;
 	object-fit: cover;
 `;
-const PreviewBook = styled.span`
-	position: relative;
-	display: block;
-	width: 4.75rem;
-	height: 6.25rem;
-	border-radius: 0.45rem;
-	background: ${theme.colors.surface};
-	box-shadow: 0 0.3rem 0.85rem rgb(4 18 26 / 0.1);
+
+const MoreBooksBadge = styled.span`
+	display: inline-flex;
+	width: 1.75rem;
+	height: 1.75rem;
+	flex: 0 0 auto;
+	align-items: center;
+	justify-content: center;
+	border-radius: 50%;
+	background-color: #ededed;
+	color: ${theme.colors.foreground};
+	font-family: ${theme.fonts.sans};
+	font-size: 0.75rem;
+	font-weight: 400;
+	letter-spacing: 0.01em;
+	line-height: 1rem;
 `;
 
 const BookTooltip = styled.span`
 	position: absolute;
-	z-index: 10;
 	right: 50%;
 	bottom: calc(100% + 0.5rem);
+	z-index: 10;
 	width: max-content;
 	max-width: 14rem;
 	border: 0.0625rem solid rgb(35 61 77 / 0.1);

@@ -7,7 +7,8 @@ import "./globals.css";
 
 export const metadata: Metadata = {
 	title: "Litreasure",
-	description: "Starter with Zustand and TanStack Query",
+	description:
+		"Discover your next favorite book with Litreasure - your personalized book recommendation platform. Explore curated collections, find hidden gems, and dive into a world of literary treasures tailored just for you.",
 };
 
 export default function RootLayout({

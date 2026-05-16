@@ -105,17 +105,17 @@ export default CollectionsPage;
 const CollectionSkeleton = () => (
 	<SkeletonRow aria-hidden="true">
 		<RowCopy>
-			<SkeletonBlock $height="0.85rem" $width="10rem" />
-			<SkeletonBlock $height="1.6rem" $width="min(100%, 24rem)" />
-			<SkeletonBlock $height="1rem" $width="min(100%, 30rem)" />
+			<SkeletonBlock $height="1.25rem" $width="min(100%, 22rem)" />
+			<SkeletonBlock $height="1rem" $width="7rem" />
+			<SkeletonBlock $height="1.75rem" $radius="50px" $width="7rem" />
 		</RowCopy>
 		<SkeletonPreview>
 			{Array.from({ length: 5 }, (_, index) => (
 				<SkeletonBlock
 					key={index}
-					$height="7.25rem"
-					$radius="0.45rem"
-					$width="4.75rem"
+					$height="5rem"
+					$radius="0.625rem"
+					$width="3.75rem"
 				/>
 			))}
 		</SkeletonPreview>
@@ -145,27 +145,17 @@ const Hero = styled.section`
 const HeroInner = styled.div`
 	width: min(
 		calc(100% - (${theme.layout.contentGutter} * 2)),
-		${theme.layout.contentMaxWidth}
+		${theme.layout.collectionsPageMaxWidth}
 	);
 	margin: 0 auto;
 	padding: 4vw 0 0vw;
-`;
-
-const PageKicker = styled.p`
-	margin: 0 0 0.75rem;
-	color: ${theme.colors.orangePrimary};
-	font-size: 0.8125rem;
-	font-weight: 700;
-	letter-spacing: 0.08em;
-	line-height: 1.2;
-	text-transform: uppercase;
 `;
 
 const PageTitle = styled.h1`
 	margin: 0;
 	color: ${theme.colors.foreground};
 	font-family: ${theme.fonts.serif};
-	font-size: clamp(2rem, 3vw, 3.5rem);
+	font-size: 2.5vw;
 	font-weight: 600;
 	line-height: 0.98;
 `;
@@ -181,7 +171,7 @@ const HeroText = styled.p`
 const Content = styled.section`
 	width: min(
 		calc(100% - (${theme.layout.contentGutter} * 2)),
-		${theme.layout.contentMaxWidth}
+		${theme.layout.collectionsPageMaxWidth}
 	);
 	margin: 0 auto;
 	padding-top: clamp(2.5rem, 5vw, 4rem);
@@ -201,33 +191,41 @@ const ListSummary = styled.p`
 `;
 
 const SkeletonRow = styled.article`
-	display: grid;
-	grid-template-columns: minmax(14rem, 1fr) auto;
-	gap: clamp(1rem, 3vw, 2rem);
+	display: flex;
+	min-height: 7.5rem;
 	align-items: center;
-	border: 0.0625rem solid rgb(35 61 77 / 0.1);
-	border-radius: 0.5rem;
-	background: rgb(242 239 237 / 0.66);
-	padding: clamp(0.8rem, 2vw, 1rem);
-	box-shadow: 0 0.75rem 1.6rem rgb(4 18 26 / 0.05);
+	justify-content: space-between;
+	gap: 3.75rem;
+	border-radius: 1rem;
+	background: ${theme.colors.white};
+	padding: 1.25rem;
 
 	@media (max-width: 56rem) {
-		grid-template-columns: 1fr;
+		gap: 1rem;
+	}
+
+	@media (max-width: 42rem) {
+		flex-direction: column;
+		align-items: stretch;
 	}
 `;
 
 export const RowCopy = styled.div`
 	display: flex;
+	flex: 1 1 22.375rem;
 	min-width: 0;
+	max-width: 22.375rem;
 	flex-direction: column;
-	gap: 0.62rem;
+	align-items: flex-start;
+	gap: 0.32vw;
 `;
 
 export const PreviewRail = styled.div`
-	display: grid;
-	grid-template-columns: repeat(5, 4.75rem) auto;
-	gap: 0.45rem;
+	display: flex;
+	flex: 0 0 auto;
 	align-items: center;
+	justify-content: flex-end;
+	gap: 0.5rem;
 	overflow: visible;
 
 	@media (max-width: 40rem) {

@@ -3,6 +3,7 @@
 import AddIcon from "@mui/icons-material/Add";
 import AutoStoriesOutlinedIcon from "@mui/icons-material/AutoStoriesOutlined";
 import MoreHorizIcon from "@mui/icons-material/MoreHoriz";
+import Link from "next/link";
 import styled from "styled-components";
 
 import type { IBook } from "@/shared/api/books";
@@ -15,12 +16,28 @@ interface IBookDetailHeroProps {
 
 const BookDetailHero = ({ book }: IBookDetailHeroProps) => {
 	const seriesTag = getSeriesTag(book);
+	const primaryAuthor = book.authors?.[0];
+	const authorName = primaryAuthor?.name ?? book.author;
+	const authorPhotoUrl = primaryAuthor?.photoUrl;
 
 	return (
 		<HeaderBlock>
 			{seriesTag ? <SeriesTag>{seriesTag}</SeriesTag> : null}
 			<Title>{book.title}</Title>
-			<Author>{book.author}</Author>
+			{primaryAuthor ? (
+				<AuthorLink href={`/authors/${primaryAuthor.id}`}>
+					<AuthorBy>by</AuthorBy>
+					{authorPhotoUrl ? (
+						<AuthorPhoto $photoUrl={authorPhotoUrl} />
+					) : null}
+					<AuthorName>{authorName}</AuthorName>
+				</AuthorLink>
+			) : (
+				<Author>
+					<AuthorBy>by</AuthorBy>
+					<AuthorName>{authorName}</AuthorName>
+				</Author>
+			)}
 
 			<ActionRow>
 				<ActionButton buttonType="containedInverted">
@@ -139,6 +156,9 @@ const Title = styled.h1`
 `;
 
 const Author = styled.p`
+	display: inline-flex;
+	align-items: center;
+	gap: 0.45rem;
 	max-width: 100%;
 	overflow: hidden;
 	margin: 0.55rem 0 0;
@@ -156,6 +176,68 @@ const Author = styled.p`
 	@media (max-width: 47.9375rem) {
 		font-size: 1.1rem;
 	}
+`;
+
+const AuthorLink = styled(Link)`
+	display: inline-flex;
+	align-items: center;
+	gap: 0.45rem;
+	width: fit-content;
+	max-width: 100%;
+	overflow: hidden;
+	margin: 0.35vw 0 0;
+	color: ${theme.colors.orangeLight};
+	font-family: ${theme.fonts.sans};
+	font-size: 1.1vw;
+	line-height: 1.4;
+	text-decoration: none;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+
+	&:hover,
+	&:focus-visible {
+		outline: none;
+		text-decoration: underline;
+	}
+
+	@media (max-width: 74.9375rem) {
+		font-size: 0.95rem;
+	}
+
+	@media (max-width: 47.9375rem) {
+		font-size: 1.1rem;
+	}
+`;
+
+const AuthorBy = styled.span`
+	color: ${theme.colors.orangeLight};
+	${AuthorLink}:hover & {
+		text-decoration: none !important;
+	}
+`;
+
+const AuthorPhoto = styled.span<{ $photoUrl?: string }>`
+	display: inline-flex;
+	width: 1.75rem;
+	height: 1.75rem;
+	flex: 0 0 auto;
+	align-items: center;
+	justify-content: center;
+	border: 0.0625rem solid rgb(242 239 237 / 0.36);
+	border-radius: 50%;
+	background: url("${({ $photoUrl }) => $photoUrl}") center / cover no-repeat;
+	color: ${theme.colors.orangeLight};
+	font-family: ${theme.fonts.serif};
+	font-size: 0.85rem;
+	font-weight: 600;
+	line-height: 1;
+`;
+
+const AuthorName = styled.span`
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 `;
 
 const ActionRow = styled.div`

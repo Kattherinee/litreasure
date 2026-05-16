@@ -71,7 +71,7 @@ const BookDetailsPage = ({ slug }: IBookDetailsPageProps) => {
 			<BookDetailContent book={book} />
 			<RelatedSection>
 				<BookSliderSection
-					genre={book.genres[0]}
+					genre={book.genres[0]?.slug}
 					limit={20}
 					sort="rating"
 					title="Вам понравится"

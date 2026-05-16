@@ -18,9 +18,9 @@ const StyledInput = styled.input<{ $height?: string; $width?: string }>`
 	width: ${({ $width }) => $width ?? "100%"};
 	min-height: ${({ $height }) => $height ?? "2.375rem"};
 	border: 0.0625rem solid #bab7b4;
-	border-radius: 1rem;
+	border-radius: 20px;
 	background: #ddd6d2;
-	padding: 0.375rem 0.875rem;
+	padding: 0.375vw 0.875vw;
 	color: #04121a;
 	font: inherit;
 	font-size: 1rem;

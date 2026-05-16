@@ -45,14 +45,25 @@ const BookCarousel = ({
 		dragFree: true,
 	});
 	const viewportNode = useRef<HTMLDivElement | null>(null);
+	const containerNode = useRef<HTMLDivElement | null>(null);
 	const [canScrollPrev, setCanScrollPrev] = useState(false);
 	const [canScrollNext, setCanScrollNext] = useState(false);
+	const [hasOverflow, setHasOverflow] = useState(false);
 
 	const updateControls = useCallback((api: EmblaCarouselType) => {
+		const viewport = viewportNode.current;
+		const container = containerNode.current;
+		const measuredOverflow =
+			viewport && container
+				? container.scrollWidth - viewport.clientWidth > 1
+				: false;
+		const hasCarouselScroll =
+			measuredOverflow || api.canScrollPrev() || api.canScrollNext();
 		const progress = api.scrollProgress();
 
-		setCanScrollPrev(progress > SCROLL_EDGE_THRESHOLD);
-		setCanScrollNext(progress < 1 - SCROLL_EDGE_THRESHOLD);
+		setHasOverflow(hasCarouselScroll);
+		setCanScrollPrev(hasCarouselScroll && progress > SCROLL_EDGE_THRESHOLD);
+		setCanScrollNext(hasCarouselScroll && progress < 1 - SCROLL_EDGE_THRESHOLD);
 	}, []);
 
 	const scrollPrev = useCallback(() => {
@@ -71,9 +82,13 @@ const BookCarousel = ({
 		[emblaRef],
 	);
 
+	const setContainerRef = useCallback((node: HTMLDivElement | null) => {
+		containerNode.current = node;
+	}, []);
+
 	const handleWheel = useCallback(
 		(event: WheelEvent) => {
-			if (!emblaApi) {
+			if (!emblaApi || !hasOverflow) {
 				return;
 			}
 
@@ -109,7 +124,7 @@ const BookCarousel = ({
 			engine.scrollTo.distance(constrainedForce, false);
 			window.requestAnimationFrame(() => updateControls(emblaApi));
 		},
-		[emblaApi, updateControls],
+		[emblaApi, hasOverflow, updateControls],
 	);
 
 	useEffect(() => {
@@ -136,9 +151,24 @@ const BookCarousel = ({
 		emblaApi.on("reInit", updateControls);
 		emblaApi.on("settle", updateControls);
 		const frame = window.requestAnimationFrame(() => updateControls(emblaApi));
+		const resizeObserver =
+			typeof ResizeObserver === "undefined"
+				? null
+				: new ResizeObserver(() => {
+						updateControls(emblaApi);
+					});
+
+		if (viewportNode.current) {
+			resizeObserver?.observe(viewportNode.current);
+		}
+
+		if (containerNode.current) {
+			resizeObserver?.observe(containerNode.current);
+		}
 
 		return () => {
 			window.cancelAnimationFrame(frame);
+			resizeObserver?.disconnect();
 			emblaApi.off("select", updateControls);
 			emblaApi.off("scroll", updateControls);
 			emblaApi.off("reInit", updateControls);
@@ -147,14 +177,13 @@ const BookCarousel = ({
 	}, [emblaApi, updateControls]);
 
 	useEffect(() => {
-		onControlsChange?.({ canScrollNext, canScrollPrev, scrollNext, scrollPrev });
-	}, [
-		canScrollNext,
-		canScrollPrev,
-		onControlsChange,
-		scrollNext,
-		scrollPrev,
-	]);
+		onControlsChange?.({
+			canScrollNext,
+			canScrollPrev,
+			scrollNext,
+			scrollPrev,
+		});
+	}, [canScrollNext, canScrollPrev, onControlsChange, scrollNext, scrollPrev]);
 
 	if (books.length === 0) {
 		return null;
@@ -162,8 +191,8 @@ const BookCarousel = ({
 
 	return (
 		<Carousel aria-label="Карусель книг">
-			<Viewport $bleed={bleed} ref={setViewportRef}>
-				<Container $bleed={bleed}>
+			<Viewport $bleed={bleed} $hasOverflow={hasOverflow} ref={setViewportRef}>
+				<Container $bleed={bleed} ref={setContainerRef}>
 					{books.map((book, index) => (
 						<Slide key={`${book.id}-${index}`}>
 							<BookCard
@@ -173,11 +202,11 @@ const BookCarousel = ({
 							/>
 						</Slide>
 					))}
-					{bleed ? <EndSpace aria-hidden="true" /> : null}
+					{bleed && hasOverflow ? <EndSpace aria-hidden="true" /> : null}
 				</Container>
 			</Viewport>
 
-			{onControlsChange ? null : (
+			{onControlsChange || !hasOverflow ? null : (
 				<Controls>
 					<ControlButton
 						aria-label="Предыдущие книги"
@@ -215,17 +244,17 @@ const Carousel = styled.section`
 	width: 100%;
 `;
 
-const Viewport = styled.div<{ $bleed: boolean }>`
+const Viewport = styled.div<{ $bleed: boolean; $hasOverflow: boolean }>`
 	width: ${({ $bleed }) => ($bleed ? "100vw" : "100%")};
 	margin-left: ${({ $bleed }) =>
 		$bleed ? "calc(var(--content-side-space) * -1)" : "0"};
-	overflow: hidden;
+	overflow: ${({ $hasOverflow }) => ($hasOverflow ? "hidden" : "visible")};
 	overscroll-behavior: contain;
 	padding-block: 0.125rem;
 `;
 
 const Container = styled.div<{ $bleed: boolean }>`
-	--slide-gap: clamp(0.775rem, 1vw, 1.25rem);
+	--slide-gap: clamp(0.575rem, 0.8vw, 1rem);
 
 	display: flex;
 	align-items: flex-start;

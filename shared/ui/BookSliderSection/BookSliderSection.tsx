@@ -50,12 +50,16 @@ const BookSliderSection = ({
 	const [carouselControls, setCarouselControls] =
 		useState<ICarouselControls | null>(null);
 	const {
-		data: books = [],
+		data: booksResponse,
 		error,
 		isError,
 		isLoading,
 	} = useBookCardsQuery({ sort, genre, limit });
+	const books = booksResponse?.items ?? [];
 	const sectionHref = getSectionHref({ genre, sort });
+	const hasCarouselControls = Boolean(
+		carouselControls?.canScrollPrev || carouselControls?.canScrollNext,
+	);
 
 	return (
 		<Section>
@@ -67,7 +71,7 @@ const BookSliderSection = ({
 					</ShowMoreButton>
 				</SectionHeading>
 
-				<Controls>
+				<Controls $isVisible={hasCarouselControls}>
 					<ControlButton
 						aria-label="Предыдущие книги"
 						disabled={!carouselControls?.canScrollPrev}
@@ -100,6 +104,7 @@ const BookSliderSection = ({
 			) : (
 				<BookCarousel
 					books={books}
+					size="compact"
 					onControlsChange={(controls) => {
 						setCarouselControls((currentControls) => {
 							if (
@@ -163,8 +168,8 @@ const ShowMoreButton = styled(Button)`
 	}
 `;
 
-const Controls = styled.div`
-	display: flex;
+const Controls = styled.div<{ $isVisible: boolean }>`
+	display: ${({ $isVisible }) => ($isVisible ? "flex" : "none")};
 	flex: 0 0 auto;
 	gap: 0.625rem;
 `;

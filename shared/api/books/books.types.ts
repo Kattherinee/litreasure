@@ -1,11 +1,15 @@
+import { IGenre } from "../genres";
+
 export interface IBook {
 	id: string;
 	title: string;
 	author: string;
+	authors?: IAuthorShort[];
 	description?: string;
 	coverUrl?: string;
+	isbns?: string[];
 	pagesCount?: number;
-	genres: string[];
+	genres: IGenre[];
 	setting: string[];
 	publishedYear?: number;
 	firstPublishDate?: string;
@@ -22,7 +26,7 @@ export interface IBook {
 	seriesLabel?: string;
 	seriesRelationType?: IBookSeriesRelationType;
 	seriesTitle?: string;
-	authors: string[];
+
 	series?: {
 		id?: string;
 		title?: string;
@@ -43,6 +47,12 @@ export interface IBook {
 	};
 	createdAt: string;
 	updatedAt: string;
+}
+
+export interface IAuthorShort {
+	id: string;
+	name: string;
+	photoUrl?: string;
 }
 
 export interface IBookSearchMatch {
@@ -80,9 +90,18 @@ export type IBookSearchScope =
 	| "series";
 
 export interface IBookCardsParams {
-	limit?: number;
 	genre?: string;
+	limit?: number;
+	page?: number;
 	search?: string;
 	searchScope?: IBookSearchScope;
 	sort?: IBookSort;
+}
+
+export interface IBookCardsResponse {
+	items: IBook[];
+	limit: number;
+	page: number;
+	pages: number;
+	total: number;
 }

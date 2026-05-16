@@ -9,6 +9,7 @@ import { useState, useSyncExternalStore } from "react";
 import styled from "styled-components";
 
 import AuthModal, { type IAuthModalMode } from "@/components/pages/AuthModal";
+import { useGenresQuery } from "@/shared/api/genres";
 import { LogoIcon } from "@/public/icons/logo";
 import { getAvatarAssetUrl } from "@/shared/api/avatarsRepository";
 import { useAuthStore } from "@/shared/store/auth-store";
@@ -16,7 +17,29 @@ import { theme } from "@/shared/theme";
 import { BookSearch } from "@/shared/ui/BookSearch";
 import { Button } from "@/shared/ui/Button";
 
-const navItems = ["Жанры", "Авторы", "Подборки", "Книжный трекинг"];
+const navItems = [
+	{
+		href: "/",
+		label: "Главная",
+		match: (pathname: string) => pathname === "/",
+	},
+	{
+		href: "/genres",
+		hasGenresDropdown: true,
+		label: "Жанры",
+		match: (pathname: string) => pathname.startsWith("/genres"),
+	},
+	{
+		href: "/authors",
+		label: "Авторы",
+		match: (pathname: string) => pathname.startsWith("/authors"),
+	},
+	{
+		href: "/collections",
+		label: "Подборки",
+		match: (pathname: string) => pathname.startsWith("/collections"),
+	},
+];
 
 const profileItems = ["Профиль", "Мои сокровища", "Книжный вызов"];
 
@@ -39,10 +62,14 @@ const Header = () => {
 	const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
 	const session = useAuthStore((state) => state.session);
 	const logout = useAuthStore((state) => state.logout);
+	const { data: genres = [], isLoading: isGenresLoading } = useGenresQuery();
 	const user = session?.user;
 	const displayName = user?.name || user?.username || user?.email;
 	const avatarUrl = getAvatarAssetUrl(user?.avatarUrl);
 	const isWelcomePage = pathname === "/welcome";
+	const topGenres = [...genres]
+		.slice(0, 30)
+		.sort((a, b) => a.name.localeCompare(b.name, "ru"));
 
 	const closeProfileMenu = () => setIsProfileMenuOpen(false);
 
@@ -88,10 +115,41 @@ const Header = () => {
 					</BrandLink>
 
 					<DesktopNav id="main-navigation" aria-label="Main navigation">
-						{navItems.map((item, index) => (
-							<NavButton key={item} href={index === 2 ? "/collections" : "/"}>
-								{item}
-							</NavButton>
+						{navItems.map((item) => (
+							<NavItem key={item.label}>
+								<NavButton href={item.href} $active={item.match(pathname)}>
+									{item.label}
+								</NavButton>
+								{"hasGenresDropdown" in item && item.hasGenresDropdown ? (
+									<GenresDropdown>
+										<GenresDropdownInner>
+											<GenresDropdownTitle>Топ 30 жанров</GenresDropdownTitle>
+											<GenresList>
+												{isGenresLoading
+													? Array.from({ length: 10 }, (_, index) => (
+															<GenreSkeleton key={index} />
+														))
+													: topGenres.map((genre) => (
+															<GenreDropdownLink
+																key={genre.id}
+																href={`/genres/${genre.slug}`}
+															>
+																{genre.name}
+															</GenreDropdownLink>
+														))}
+											</GenresList>
+										</GenresDropdownInner>
+										<GenresDropdownFooter>
+											<ViewAllGenresButton
+												buttonType="containedInverted"
+												href="/genres"
+											>
+												Посмотреть все
+											</ViewAllGenresButton>
+										</GenresDropdownFooter>
+									</GenresDropdown>
+								) : null}
+							</NavItem>
 						))}
 					</DesktopNav>
 
@@ -302,21 +360,202 @@ const DesktopNav = styled.nav`
 	}
 `;
 
-const NavButton = styled(Link)`
+const NavItem = styled.div`
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+
+	&::after {
+		position: absolute;
+		top: 100%;
+		right: -1.25rem;
+		left: -1.25rem;
+		height: 1.35rem;
+		content: "";
+	}
+
+	&:hover > div,
+	&:focus-within > div {
+		opacity: 1;
+		pointer-events: auto;
+		transform: translate(-50%, 0);
+	}
+`;
+
+const NavButton = styled(Link)<{ $active: boolean }>`
+	position: relative;
 	display: inline-flex;
 	align-items: center;
 	min-width: auto;
-	border-radius: 0.5rem;
-	padding: 0.75rem 0.75rem 1rem;
-	color: ${theme.colors.invertedText};
+	border-radius: 0;
+	padding: 1.25rem 0.9rem 1.35rem;
+	color: ${({ $active }) =>
+		$active ? theme.colors.orangeLight : theme.colors.invertedText};
 	font: inherit;
+	font-family: ${theme.fonts.sans};
+	font-size: 1.04vw;
+	line-height: 1.35vw;
 	text-decoration: none;
 	text-transform: none;
+	transition: color 180ms ease;
+
+	&::after {
+		position: absolute;
+		right: 0.9rem;
+		bottom: -0.0625rem;
+		left: 0.9rem;
+		height: 0.1875rem;
+		border-radius: 62.4375rem;
+		background: ${theme.colors.orangeLight};
+		content: "";
+		opacity: ${({ $active }) => ($active ? 1 : 0)};
+		transform: scaleX(${({ $active }) => ($active ? 1 : 0.45)});
+		transform-origin: center;
+		transition:
+			opacity 180ms ease,
+			transform 180ms ease;
+	}
 
 	&:hover,
 	&:focus-visible {
-		background: rgb(242 239 237 / 0.1);
+		color: ${theme.colors.orangeLight};
 		outline: none;
+	}
+
+	&:hover::after,
+	&:focus-visible::after {
+		opacity: 1;
+		transform: scaleX(1);
+	}
+`;
+
+const GenresDropdown = styled.div`
+	position: absolute;
+	top: calc(100% + 0.55rem);
+	left: 50%;
+	z-index: 20;
+	display: flex;
+	width: min(38rem, calc(100vw - 2rem));
+	max-height: min(31rem, calc(100dvh - 7rem));
+	flex-direction: column;
+	overflow: hidden;
+	border: 0.0625rem solid rgb(242 239 237 / 0.18);
+	border-radius: 1.25rem;
+	background: ${theme.colors.background};
+	box-shadow: 0 1.25rem 4rem rgb(4 18 26 / 0.32);
+	opacity: 0;
+	pointer-events: none;
+	transform: translate(-50%, -0.4rem);
+	transition:
+		opacity 160ms ease,
+		transform 180ms ease;
+
+	&::before {
+		position: absolute;
+		top: -0.6rem;
+		right: 0;
+		left: 0;
+		height: 0.6rem;
+		content: "";
+	}
+`;
+
+const GenresDropdownInner = styled.div`
+	overflow-y: auto;
+	padding: 1rem 1.25rem 5.4rem;
+`;
+
+const GenresDropdownTitle = styled.h2`
+	margin: 0 0 0.75rem;
+	color: ${theme.colors.foreground};
+	font-family: ${theme.fonts.serif};
+	font-size: 1.15rem;
+	font-weight: 500;
+	line-height: 1.2;
+`;
+
+const GenresList = styled.div`
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.55rem;
+`;
+
+const GenreDropdownLink = styled(Link)`
+	display: inline-flex;
+	align-items: center;
+	min-height: 2rem;
+	border: 0.0625rem solid rgb(211 202 196 / 0.7);
+	border-radius: 62.4375rem;
+	background: ${theme.colors.surface};
+	padding: 0.45rem 0.9rem;
+	color: ${theme.colors.foreground};
+	font-family: ${theme.fonts.sans};
+	font-size: 0.9rem;
+	line-height: 1;
+	text-decoration: none;
+	white-space: nowrap;
+	transition:
+		border-color 160ms ease,
+		color 160ms ease,
+		transform 160ms ease;
+
+	&:hover,
+	&:focus-visible {
+		border-color: ${theme.colors.orangeLight};
+		color: ${theme.colors.orangeDark};
+		outline: none;
+		transform: translateY(-0.0625rem);
+	}
+`;
+
+const GenreSkeleton = styled.span`
+	display: inline-flex;
+	width: 5.6rem;
+	height: 2rem;
+	border-radius: 62.4375rem;
+	background: linear-gradient(
+		90deg,
+		rgb(242 239 237 / 0.7),
+		rgb(255 255 255 / 0.72),
+		rgb(242 239 237 / 0.7)
+	);
+	background-size: 220% 100%;
+	animation: genre-pulse 1.2s ease-in-out infinite;
+
+	@keyframes genre-pulse {
+		0% {
+			background-position: 100% 50%;
+		}
+
+		100% {
+			background-position: 0 50%;
+		}
+	}
+`;
+
+const GenresDropdownFooter = styled.div`
+	position: absolute;
+	right: 0;
+	bottom: 0;
+	left: 0;
+	display: flex;
+	justify-content: flex-end;
+	border-top: 0.0625rem solid rgb(211 202 196 / 0.72);
+	background:
+		linear-gradient(
+			180deg,
+			rgb(232 226 222 / 0),
+			${theme.colors.background} 26%
+		),
+		${theme.colors.background};
+	padding: 1.1rem 1.25rem 1rem;
+`;
+
+const ViewAllGenresButton = styled(Button)`
+	&& {
+		padding: 0.6rem 1.25rem;
+		font-family: ${theme.fonts.sans};
+		font-size: 0.95rem;
 	}
 `;
 

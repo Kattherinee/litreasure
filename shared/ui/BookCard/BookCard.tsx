@@ -1,11 +1,12 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { KeyboardEvent, MouseEvent, SyntheticEvent } from "react";
 import { useState } from "react";
 import styled from "styled-components";
 
-import type { IBookSeriesRelationType } from "@/shared/api/books";
+import type { IAuthorShort, IBookSeriesRelationType } from "@/shared/api/books";
 import { theme } from "@/shared/theme";
 import { PlusIcon } from "@/shared/ui/PlusIcon";
 import { CoverPlaceholder } from "@/shared/ui/Skeleton";
@@ -14,6 +15,8 @@ export interface IBookCardData {
 	id: string;
 	title: string;
 	author?: string;
+	authorId?: string;
+	authors?: IAuthorShort[];
 	coverUrl?: string;
 	orderInSeries?: number;
 	relationType?: IBookSeriesRelationType;
@@ -31,16 +34,21 @@ interface IBookCardProps {
 const BookCard = ({
 	book,
 	isActive = false,
-	size = "default",
+	size = "compact",
 }: IBookCardProps) => {
 	const {
-		author = "",
+		author,
+		authorId,
+		authors,
 		coverUrl,
 		orderInSeries,
 		relationType,
 		seriesLabel,
 		title,
 	} = book;
+	const primaryAuthor = authors?.[0];
+	const authorName = author ?? primaryAuthor?.name ?? "";
+	const resolvedAuthorId = authorId ?? primaryAuthor?.id;
 	const seriesBadgeLabel = getSeriesBadgeLabel({
 		orderInSeries,
 		relationType,
@@ -73,6 +81,12 @@ const BookCard = ({
 		event.stopPropagation();
 	};
 
+	const stopNestedNavigation = (
+		event: MouseEvent<HTMLAnchorElement> | KeyboardEvent<HTMLAnchorElement>,
+	) => {
+		event.stopPropagation();
+	};
+
 	const handleCoverLoad = (event: SyntheticEvent<HTMLImageElement>) => {
 		const image = event.currentTarget;
 
@@ -91,7 +105,7 @@ const BookCard = ({
 			$coverWidth={coverWidth}
 			$isActive={isActive}
 			$size={size}
-			aria-label={`${title}, ${author}`}
+			aria-label={`${title}, ${authorName}`}
 			aria-current={isActive ? "page" : undefined}
 			role="link"
 			tabIndex={0}
@@ -120,9 +134,20 @@ const BookCard = ({
 				</BookAddButton>
 			</BookCover>
 
-			<BookMeta>
+			<BookMeta $coverWidth={coverWidth}>
 				<BookTitle $size={size}>{title}</BookTitle>
-				<BookAuthor $size={size}>{author}</BookAuthor>
+				{resolvedAuthorId ? (
+					<BookAuthorLink
+						$size={size}
+						href={`/authors/${resolvedAuthorId}`}
+						onClick={stopNestedNavigation}
+						onKeyDown={stopNestedNavigation}
+					>
+						{authorName}
+					</BookAuthorLink>
+				) : (
+					<BookAuthor $size={size}>{authorName}</BookAuthor>
+				)}
 			</BookMeta>
 		</BookCardWrapper>
 	);
@@ -161,8 +186,7 @@ const BookCardWrapper = styled.article<{
 }>`
 	position: relative;
 	display: flex;
-	width: ${({ $coverWidth }) =>
-		$coverWidth ? `${$coverWidth}px` : "fit-content"};
+	width: min-content;
 	max-width: 100%;
 	flex-direction: column;
 	gap: 0.5rem;
@@ -181,8 +205,6 @@ const BookCover = styled.div<{ $size: IBookCardSize }>`
 	position: relative;
 	overflow: hidden;
 	width: fit-content;
-	min-width: ${({ $size }) => ($size === "compact" ? "7.5rem" : "10rem")};
-	max-width: 100%;
 	height: ${({ $size }) => ($size === "compact" ? "11.5rem" : "15.25rem")};
 
 	border-radius: 0.7rem;
@@ -212,9 +234,12 @@ const BookCoverImage = styled.img<{ $isLoaded: boolean }>`
 	transition: opacity 220ms ease;
 `;
 
-const BookMeta = styled.div`
+const BookMeta = styled.div<{ $coverWidth: number | null }>`
 	display: flex;
 	flex-direction: column;
+	${({ $coverWidth }) =>
+		$coverWidth ? `width: ${$coverWidth}px;` : `width: 0; min-width: 100%;`}
+	overflow: hidden;
 `;
 
 const BookTitle = styled.h2<{ $size: IBookCardSize }>`
@@ -243,6 +268,22 @@ const BookAuthor = styled.p<{ $size: IBookCardSize }>`
 	font-size: ${({ $size }) => ($size === "compact" ? "0.76rem" : "0.875rem")};
 	line-height: 1.3334;
 	overflow-wrap: anywhere;
+`;
+
+const BookAuthorLink = styled(Link)<{ $size: IBookCardSize }>`
+	margin-block: 0;
+	color: ${theme.colors.lightText};
+	font-size: ${({ $size }) => ($size === "compact" ? "0.76rem" : "0.875rem")};
+	line-height: 1.3334;
+	overflow-wrap: anywhere;
+	text-decoration: none;
+
+	&:hover,
+	&:focus-visible {
+		color: ${theme.colors.orangeDark};
+		outline: none;
+		text-decoration: underline;
+	}
 `;
 
 const SeriesBadge = styled.span`
