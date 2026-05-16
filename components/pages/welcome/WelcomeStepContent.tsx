@@ -4,10 +4,10 @@ import { AvatarStep } from "./AvatarStep";
 import { GenresStep } from "./GenresStep";
 import { GoalStep } from "./GoalStep";
 import { ProfileStep } from "./ProfileStep";
-import type { WelcomeStep } from "./types";
+import type { IWelcomeStep } from "./types";
 
-interface WelcomeStepContentProps {
-	activeStep: WelcomeStep;
+interface IWelcomeStepContentProps {
+	activeStep: IWelcomeStep;
 	name: string;
 	username: string;
 	hasUsernameError: boolean;
@@ -34,7 +34,7 @@ export const WelcomeStepContent = ({
 	onAvatarChange,
 	onGenreToggle,
 	onGoalChange,
-}: WelcomeStepContentProps) => {
+}: IWelcomeStepContentProps) => {
 	if (activeStep === "profile") {
 		return (
 			<ProfileStep

@@ -5,28 +5,29 @@ import styled, { css } from "styled-components";
 
 import { theme } from "@/shared/theme";
 
-type ButtonStyle = "default" | "oxygenPill";
-type ButtonVariant = "contained" | "outlined" | "text" | "containedInverted";
+type IButtonType =
+	| "contained"
+	| "outlined"
+	| "text"
+	| "containedInverted"
+	| "oxygenPill";
 
-export type ButtonProps = Omit<
+export interface IButtonProps extends Omit<
 	MuiButtonProps,
 	"disableElevation" | "variant"
-> & {
-	buttonStyle?: ButtonStyle;
-	variant?: ButtonVariant;
-};
+> {
+	buttonType?: IButtonType;
+}
 
-const Button = ({
-	buttonStyle = "default",
-	variant = "contained",
-	...props
-}: ButtonProps) => {
-	const muiVariant = variant === "containedInverted" ? "contained" : variant;
+const Button = ({ buttonType = "contained", ...props }: IButtonProps) => {
+	const muiVariant =
+		buttonType === "containedInverted" || buttonType === "oxygenPill"
+			? "contained"
+			: buttonType;
 
 	return (
 		<StyledButton
-			$buttonStyle={buttonStyle}
-			$variant={variant}
+			$buttonType={buttonType}
 			disableElevation
 			variant={muiVariant}
 			{...props}
@@ -54,9 +55,8 @@ const containedInvertedStyles = css`
 	color: ${theme.colors.invertedText};
 
 	&:hover {
-		background: ${theme.colors.invertedText};
-		border-color: ${theme.colors.invertedText};
-		color: ${theme.colors.darkerOrangeLight};
+		background: ${theme.colors.bluePrimary};
+		border-color: ${theme.colors.bluePrimary};
 	}
 `;
 
@@ -102,8 +102,7 @@ const oxygenPillStyles = css`
 `;
 
 const StyledButton = styled(MuiButton)<{
-	$buttonStyle: ButtonStyle;
-	$variant: ButtonVariant;
+	$buttonType: IButtonType;
 }>`
 	&& {
 		border: 1px solid ${theme.colors.transparent};
@@ -127,22 +126,12 @@ const StyledButton = styled(MuiButton)<{
 			cursor: not-allowed;
 		}
 
-		${({ $variant }) => {
-			if ($variant === "outlined") {
-				return outlinedStyles;
-			}
-
-			if ($variant === "text") {
-				return textStyles;
-			}
-			if ($variant === "containedInverted") {
-				return containedInvertedStyles;
-			}
-
+		${({ $buttonType }) => {
+			if ($buttonType === "outlined") return outlinedStyles;
+			if ($buttonType === "text") return textStyles;
+			if ($buttonType === "containedInverted") return containedInvertedStyles;
+			if ($buttonType === "oxygenPill") return oxygenPillStyles;
 			return containedStyles;
 		}}
-
-		${({ $buttonStyle }) =>
-			$buttonStyle === "oxygenPill" ? oxygenPillStyles : null}
 	}
 `;

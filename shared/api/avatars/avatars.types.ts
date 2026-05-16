@@ -1,4 +1,4 @@
-export type IAvatar = {
+export interface IAvatar {
 	id: string;
 	url: string;
-};
+}

@@ -50,10 +50,10 @@ export const theme = {
 	},
 } as const;
 
-type RubberScreen = keyof typeof theme.rubberSize;
+type IRubberScreen = keyof typeof theme.rubberSize;
 
-const getScreenWidth = (screen: RubberScreen) =>
+const getScreenWidth = (screen: IRubberScreen) =>
 	Number.parseFloat(theme.rubberSize[screen]);
 
-export const pxToVw = (size: number, screen: RubberScreen = "desktop") =>
+export const pxToVw = (size: number, screen: IRubberScreen = "desktop") =>
 	`${(size / getScreenWidth(screen)) * 100}vw`;

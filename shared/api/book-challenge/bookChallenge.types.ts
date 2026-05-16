@@ -1,23 +1,23 @@
-export type ChallengePeriodType = "month" | "week" | "year";
-export type ChallengeType = "books";
+export type IChallengePeriodType = "month" | "week" | "year";
+export type IChallengeType = "books";
 
-export type BookChallenge = {
+export interface IBookChallenge {
 	id: string;
-	type: ChallengeType;
-	periodType: ChallengePeriodType;
+	type: IChallengeType;
+	periodType: IChallengePeriodType;
 	targetValue: number;
 	startDate: string;
 	endDate: string;
 	isActive: boolean;
-};
+}
 
-export type CreateBookChallengePayload = {
-	type: ChallengeType;
-	periodType: ChallengePeriodType;
+export interface ICreateBookChallengePayload {
+	type: IChallengeType;
+	periodType: IChallengePeriodType;
 	targetValue: number;
 	startDate: string;
 	endDate: string;
 	isActive?: boolean;
-};
+}
 
-export type UpdateBookChallengePayload = Partial<CreateBookChallengePayload>;
+export type IUpdateBookChallengePayload = Partial<ICreateBookChallengePayload>;

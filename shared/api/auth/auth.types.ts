@@ -1,14 +1,14 @@
-export type RegisterPayload = {
+export interface IRegisterPayload {
 	email: string;
 	password: string;
-};
+}
 
-export type LoginPayload = {
+export interface ILoginPayload {
 	email: string;
 	password: string;
-};
+}
 
-export type RawAuthResponse = {
+export interface IRawAuthResponse {
 	accessToken?: unknown;
 	avatarUrl?: unknown;
 	email?: unknown;
@@ -18,4 +18,4 @@ export type RawAuthResponse = {
 	token?: unknown;
 	user?: unknown;
 	username?: unknown;
-};
+}

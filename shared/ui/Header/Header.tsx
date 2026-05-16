@@ -2,13 +2,13 @@
 
 import AppBar from "@mui/material/AppBar";
 import Box from "@mui/material/Box";
-import MuiButton from "@mui/material/Button";
 import Toolbar from "@mui/material/Toolbar";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useSyncExternalStore } from "react";
 import styled from "styled-components";
 
-import AuthModal, { type AuthModalMode } from "@/components/pages/AuthModal";
+import AuthModal, { type IAuthModalMode } from "@/components/pages/AuthModal";
 import { LogoIcon } from "@/public/icons/logo";
 import { getAvatarAssetUrl } from "@/shared/api/avatarsRepository";
 import { useAuthStore } from "@/shared/store/auth-store";
@@ -32,7 +32,7 @@ const Header = () => {
 		getServerSnapshot,
 	);
 
-	const [authModalMode, setAuthModalMode] = useState<AuthModalMode | null>(
+	const [authModalMode, setAuthModalMode] = useState<IAuthModalMode | null>(
 		null,
 	);
 	const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
@@ -47,7 +47,7 @@ const Header = () => {
 	const closeProfileMenu = () => setIsProfileMenuOpen(false);
 
 	const toggleProfileMenu = () => setIsProfileMenuOpen((current) => !current);
-	const openAuthModal = (mode: AuthModalMode) => {
+	const openAuthModal = (mode: IAuthModalMode) => {
 		setAuthModalMode(mode);
 
 		closeProfileMenu();
@@ -88,8 +88,10 @@ const Header = () => {
 					</BrandLink>
 
 					<DesktopNav id="main-navigation" aria-label="Main navigation">
-						{navItems.map((item) => (
-							<NavButton key={item}>{item}</NavButton>
+						{navItems.map((item, index) => (
+							<NavButton key={item} href={index === 2 ? "/collections" : "/"}>
+								{item}
+							</NavButton>
 						))}
 					</DesktopNav>
 
@@ -144,14 +146,14 @@ const Header = () => {
 							<>
 								<AuthButton
 									type="button"
-									variant="text"
+									buttonType="text"
 									onClick={() => openAuthModal("register")}
 								>
 									Регистрация
 								</AuthButton>
 								<AuthButton
 									type="button"
-									variant="contained"
+									buttonType="contained"
 									onClick={() => openAuthModal("login")}
 								>
 									Вход
@@ -185,14 +187,14 @@ const Header = () => {
 						<ConfirmActions>
 							<ConfirmSecondaryButton
 								type="button"
-								variant="outlined"
+								buttonType="outlined"
 								onClick={closeLogoutConfirm}
 							>
 								Отмена
 							</ConfirmSecondaryButton>
 							<ConfirmPrimaryButton
 								type="button"
-								variant="containedInverted"
+								buttonType="containedInverted"
 								onClick={confirmLogout}
 							>
 								Выйти
@@ -300,13 +302,21 @@ const DesktopNav = styled.nav`
 	}
 `;
 
-const NavButton = styled(MuiButton)`
-	&& {
-		min-width: auto;
-		padding: 0.75rem 0.75rem 1rem;
-		color: ${theme.colors.invertedText};
-		font: inherit;
-		text-transform: none;
+const NavButton = styled(Link)`
+	display: inline-flex;
+	align-items: center;
+	min-width: auto;
+	border-radius: 0.5rem;
+	padding: 0.75rem 0.75rem 1rem;
+	color: ${theme.colors.invertedText};
+	font: inherit;
+	text-decoration: none;
+	text-transform: none;
+
+	&:hover,
+	&:focus-visible {
+		background: rgb(242 239 237 / 0.1);
+		outline: none;
 	}
 `;
 

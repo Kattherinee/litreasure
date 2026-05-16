@@ -6,14 +6,14 @@ import { theme } from "@/shared/theme";
 import { StepBody, StepDescription, StepTitle } from "./stepStyles";
 import { GOAL_PRESETS } from "./types";
 
-interface GoalStepProps {
+interface IGoalStepProps {
 	yearGoal: number;
 	onGoalChange: (value: number) => void;
 }
 
 const clampGoal = (value: number) => Math.min(999, Math.max(1, value));
 
-export const GoalStep = ({ yearGoal, onGoalChange }: GoalStepProps) => {
+export const GoalStep = ({ yearGoal, onGoalChange }: IGoalStepProps) => {
 	const [draftGoal, setDraftGoal] = useState(String(yearGoal));
 
 	useEffect(() => {

@@ -11,12 +11,12 @@ import { theme } from "@/shared/theme";
 
 import { StepBody, StepDescription, StepTitle } from "./stepStyles";
 
-interface AvatarStepProps {
+interface IAvatarStepProps {
 	avatarUrl: string;
 	onAvatarChange: (url: string) => void;
 }
 
-export const AvatarStep = ({ avatarUrl, onAvatarChange }: AvatarStepProps) => {
+export const AvatarStep = ({ avatarUrl, onAvatarChange }: IAvatarStepProps) => {
 	const { data } = useAvatarsQuery();
 	const avatars = data ?? [];
 	const selectedAvatar = avatars.find((a) => a.url === avatarUrl) ?? avatars[0];

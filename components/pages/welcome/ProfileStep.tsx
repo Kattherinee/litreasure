@@ -10,7 +10,7 @@ import {
 	StepTitle,
 } from "./stepStyles";
 
-interface ProfileStepProps {
+interface IProfileStepProps {
 	name: string;
 	username: string;
 	hasUsernameError: boolean;
@@ -24,7 +24,7 @@ export const ProfileStep = ({
 	hasUsernameError,
 	onNameChange,
 	onUsernameChange,
-}: ProfileStepProps) => (
+}: IProfileStepProps) => (
 	<StepBody>
 		<StepTitle>Как к тебе обращаться?</StepTitle>
 		<StepDescription>

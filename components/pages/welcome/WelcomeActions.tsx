@@ -4,7 +4,7 @@ import styled from "styled-components";
 
 import { Button } from "@/shared/ui/Button";
 
-interface WelcomeActionsProps {
+interface IWelcomeActionsProps {
 	canGoBack: boolean;
 	isFinalStep: boolean;
 	isNextDisabled: boolean;
@@ -26,10 +26,10 @@ export const WelcomeActions = ({
 	onBack,
 	onFinish,
 	onNext,
-}: WelcomeActionsProps) => (
+}: IWelcomeActionsProps) => (
 	<Actions $hasBackButton={canGoBack}>
 		{canGoBack ? (
-			<SecondaryButton type="button" variant="outlined" onClick={onBack}>
+			<SecondaryButton type="button" buttonType="outlined" onClick={onBack}>
 				Назад
 			</SecondaryButton>
 		) : null}
@@ -38,7 +38,7 @@ export const WelcomeActions = ({
 				<PrimaryButton
 					disabled={isSubmitting}
 					type="button"
-					variant="containedInverted"
+					buttonType="containedInverted"
 					onClick={onFinish}
 				>
 					Завершить
@@ -47,7 +47,7 @@ export const WelcomeActions = ({
 				<PrimaryButton
 					disabled={isNextDisabled}
 					type="button"
-					variant="containedInverted"
+					buttonType="containedInverted"
 					onClick={onNext}
 				>
 					{isCheckingUsername

@@ -5,34 +5,34 @@ import type { KeyboardEvent, MouseEvent, SyntheticEvent } from "react";
 import { useState } from "react";
 import styled from "styled-components";
 
-import type { BookSeriesRelationType } from "@/shared/api/books";
+import type { IBookSeriesRelationType } from "@/shared/api/books";
 import { theme } from "@/shared/theme";
 import { PlusIcon } from "@/shared/ui/PlusIcon";
 import { CoverPlaceholder } from "@/shared/ui/Skeleton";
 
-export type BookCardData = {
+export interface IBookCardData {
 	id: string;
 	title: string;
 	author?: string;
 	coverUrl?: string;
 	orderInSeries?: number;
-	relationType?: BookSeriesRelationType;
+	relationType?: IBookSeriesRelationType;
 	seriesLabel?: string;
-};
+}
 
-export type BookCardSize = "default" | "compact";
+export type IBookCardSize = "default" | "compact";
 
-type BookCardProps = {
-	book: BookCardData;
+interface IBookCardProps {
+	book: IBookCardData;
 	isActive?: boolean;
-	size?: BookCardSize;
-};
+	size?: IBookCardSize;
+}
 
 const BookCard = ({
 	book,
 	isActive = false,
 	size = "default",
-}: BookCardProps) => {
+}: IBookCardProps) => {
 	const {
 		author = "",
 		coverUrl,
@@ -136,7 +136,7 @@ const getSeriesBadgeLabel = ({
 	seriesLabel,
 }: {
 	orderInSeries?: number;
-	relationType?: BookSeriesRelationType;
+	relationType?: IBookSeriesRelationType;
 	seriesLabel?: string;
 }) => {
 	if (relationType === "spin_off") {
@@ -157,7 +157,7 @@ const getSeriesBadgeLabel = ({
 const BookCardWrapper = styled.article<{
 	$coverWidth: number | null;
 	$isActive: boolean;
-	$size: BookCardSize;
+	$size: IBookCardSize;
 }>`
 	position: relative;
 	display: flex;
@@ -177,7 +177,7 @@ const BookCardWrapper = styled.article<{
 	}
 `;
 
-const BookCover = styled.div<{ $size: BookCardSize }>`
+const BookCover = styled.div<{ $size: IBookCardSize }>`
 	position: relative;
 	overflow: hidden;
 	width: fit-content;
@@ -217,7 +217,7 @@ const BookMeta = styled.div`
 	flex-direction: column;
 `;
 
-const BookTitle = styled.h2<{ $size: BookCardSize }>`
+const BookTitle = styled.h2<{ $size: IBookCardSize }>`
 	display: -webkit-box;
 	overflow: hidden;
 	-webkit-box-orient: vertical;
@@ -237,7 +237,7 @@ const BookTitle = styled.h2<{ $size: BookCardSize }>`
 	}
 `;
 
-const BookAuthor = styled.p<{ $size: BookCardSize }>`
+const BookAuthor = styled.p<{ $size: IBookCardSize }>`
 	margin-block: 0;
 	color: ${theme.colors.lightText};
 	font-size: ${({ $size }) => ($size === "compact" ? "0.76rem" : "0.875rem")};

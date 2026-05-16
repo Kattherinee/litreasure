@@ -8,14 +8,14 @@ import { checkUsernameAvailability } from "@/shared/api/auth";
 import { updateUserGenres, updateUserProfile } from "@/shared/api/users";
 import { useAuthStore } from "@/shared/store/auth-store";
 
-import { MIN_SELECTED_GENRES, STEPS, type WelcomeStep } from "./types";
+import { MIN_SELECTED_GENRES, STEPS, type IWelcomeStep } from "./types";
 
 export const useWelcomeOnboarding = () => {
 	const router = useRouter();
 	const session = useAuthStore((state) => state.session);
 	const setSession = useAuthStore((state) => state.setSession);
 
-	const [activeStep, setActiveStep] = useState<WelcomeStep>("profile");
+	const [activeStep, setActiveStep] = useState<IWelcomeStep>("profile");
 	const [name, setName] = useState("");
 	const [username, setUsername] = useState("");
 	const [avatarUrl, setAvatarUrl] = useState("");
@@ -65,7 +65,7 @@ export const useWelcomeOnboarding = () => {
 		setFormError("");
 	};
 
-	const selectStep = (step: WelcomeStep) => {
+	const selectStep = (step: IWelcomeStep) => {
 		setActiveStep(step);
 		clearError();
 	};

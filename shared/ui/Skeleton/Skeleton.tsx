@@ -4,13 +4,13 @@ import styled, { keyframes } from "styled-components";
 
 import { theme } from "@/shared/theme";
 
-type SkeletonBlockProps = {
+interface ISkeletonBlockProps {
 	$height?: string;
 	$radius?: string;
 	$width?: string;
-};
+}
 
-export const SkeletonBlock = styled.div<SkeletonBlockProps>`
+export const SkeletonBlock = styled.div<ISkeletonBlockProps>`
 	position: relative;
 	overflow: hidden;
 	width: ${({ $width }) => $width ?? "100%"};

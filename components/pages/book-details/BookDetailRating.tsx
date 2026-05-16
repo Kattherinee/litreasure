@@ -5,17 +5,17 @@ import StarIcon from "@mui/icons-material/Star";
 import styled from "styled-components";
 import Rating from "@mui/material/Rating";
 
-import type { Book } from "@/shared/api/books";
+import type { IBook } from "@/shared/api/books";
 import { theme } from "@/shared/theme";
 import Button from "@/shared/ui/Button/Button";
 
-type BookDetailRatingProps = {
-	book: Book;
-};
+interface IBookDetailRatingProps {
+	book: IBook;
+}
 
 const defaultRatingLines = [0, 0, 0, 0, 0];
 
-const BookDetailRating = ({ book }: BookDetailRatingProps) => {
+const BookDetailRating = ({ book }: IBookDetailRatingProps) => {
 	const normalizedRating = book.ratingAvg ?? book.rating ?? 0;
 	const activeStars = Math.round(normalizedRating);
 	const formattedRating = normalizedRating.toFixed(1).replace(".0", "");

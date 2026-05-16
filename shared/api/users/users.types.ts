@@ -1,9 +1,9 @@
-export type UpdateUserGenresPayload = {
+export interface IUpdateUserGenresPayload {
 	genreIds: string[];
-};
+}
 
-export type UpdateUserProfilePayload = {
+export interface IUpdateUserProfilePayload {
 	name?: string;
 	username?: string;
 	avatarUrl?: string;
-};
+}

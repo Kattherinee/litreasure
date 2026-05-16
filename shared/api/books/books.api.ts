@@ -1,26 +1,29 @@
 import { request } from "../base";
 import type {
-	Book,
-	BookSearchMatch,
-	BookSeriesRelationType,
-	CreateBookPayload,
+	IBook,
+	IBookSearchMatch,
+	IBookSeriesRelationType,
+	ICreateBookPayload,
 	IBookCardsParams,
-	UpdateBookPayload,
+	IUpdateBookPayload,
 } from "./books.types";
 
 // ── Raw type (before normalisation) ──────────────────────────────────────────
 
-type RawBook = Omit<
-	Book,
+interface IRawBook extends Omit<
+	IBook,
 	| "author"
 	| "authors"
 	| "genres"
 	| "ratingsByStars"
 	| "relationType"
+	| "searchMatches"
 	| "series"
 	| "seriesLabel"
+	| "seriesRelationType"
+	| "seriesTitle"
 	| "setting"
-> & {
+> {
 	author?: unknown;
 	authors?: unknown;
 	genres?: unknown;
@@ -32,7 +35,7 @@ type RawBook = Omit<
 	seriesRelationType?: unknown;
 	seriesTitle?: unknown;
 	setting?: unknown;
-};
+}
 
 // ── Normalisation helpers ─────────────────────────────────────────────────────
 
@@ -70,7 +73,7 @@ const normalizeSeriesId = (seriesId: unknown): string => {
 
 const normalizeSeriesRelationType = (
 	relationType: unknown,
-): BookSeriesRelationType | undefined => {
+): IBookSeriesRelationType | undefined => {
 	if (
 		relationType === "collection" ||
 		relationType === "main" ||
@@ -83,7 +86,7 @@ const normalizeSeriesRelationType = (
 	return undefined;
 };
 
-const normalizeSearchMatches = (searchMatches: unknown): BookSearchMatch[] => {
+const normalizeSearchMatches = (searchMatches: unknown): IBookSearchMatch[] => {
 	if (!Array.isArray(searchMatches)) return [];
 	return searchMatches.flatMap((match) => {
 		if (!match || typeof match !== "object") return [];
@@ -93,7 +96,7 @@ const normalizeSearchMatches = (searchMatches: unknown): BookSearchMatch[] => {
 	});
 };
 
-const normalizeSeries = (series: unknown): Book["series"] => {
+const normalizeSeries = (series: unknown): IBook["series"] => {
 	if (!series || typeof series !== "object") return undefined;
 
 	const s = series as {
@@ -152,7 +155,7 @@ const normalizeSeries = (series: unknown): Book["series"] => {
 	};
 };
 
-export const normalizeBook = (book: RawBook): Book => ({
+export const normalizeBook = (book: IRawBook): IBook => ({
 	...book,
 	author:
 		typeof book.author === "string"
@@ -214,8 +217,8 @@ export const normalizeBook = (book: RawBook): Book => ({
 
 // ── API functions ─────────────────────────────────────────────────────────────
 
-export const getBooks = async (): Promise<Book[]> => {
-	const books = await request<RawBook[]>("/books");
+export const getBooks = async (): Promise<IBook[]> => {
+	const books = await request<IRawBook[]>("/books");
 	return books.map(normalizeBook);
 };
 
@@ -223,7 +226,7 @@ export const getBookCards = async ({
 	params,
 }: {
 	params: IBookCardsParams;
-}): Promise<Book[]> => {
+}): Promise<IBook[]> => {
 	const searchParams = new URLSearchParams();
 	if (params.genre) searchParams.set("genre", params.genre);
 	if (params.limit) searchParams.set("limit", String(params.limit));
@@ -231,19 +234,19 @@ export const getBookCards = async ({
 	if (params.searchScope) searchParams.set("searchScope", params.searchScope);
 	if (params.sort) searchParams.set("sort", params.sort);
 	const query = searchParams.toString();
-	const books = await request<RawBook[]>(
+	const books = await request<IRawBook[]>(
 		query ? `/books/cards?${query}` : "/books/cards",
 	);
 	return books.map(normalizeBook);
 };
 
-export const getBook = async (id: string): Promise<Book> => {
-	const book = await request<RawBook>(`/books/${id}`);
+export const getBook = async (id: string): Promise<IBook> => {
+	const book = await request<IRawBook>(`/books/${id}`);
 	return normalizeBook(book);
 };
 
-export const createBook = async (payload: CreateBookPayload): Promise<Book> => {
-	const book = await request<RawBook>("/books", {
+export const createBook = async (payload: ICreateBookPayload): Promise<IBook> => {
+	const book = await request<IRawBook>("/books", {
 		body: JSON.stringify(payload),
 		method: "POST",
 	});
@@ -252,9 +255,9 @@ export const createBook = async (payload: CreateBookPayload): Promise<Book> => {
 
 export const updateBook = async (
 	id: string,
-	payload: UpdateBookPayload,
-): Promise<Book> => {
-	const book = await request<RawBook>(`/books/${id}`, {
+	payload: IUpdateBookPayload,
+): Promise<IBook> => {
+	const book = await request<IRawBook>(`/books/${id}`, {
 		body: JSON.stringify(payload),
 		method: "PATCH",
 	});

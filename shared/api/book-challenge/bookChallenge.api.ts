@@ -1,29 +1,29 @@
 import { requestAuth } from "../base";
 import type {
-	BookChallenge,
-	CreateBookChallengePayload,
-	UpdateBookChallengePayload,
+	IBookChallenge,
+	ICreateBookChallengePayload,
+	IUpdateBookChallengePayload,
 } from "./bookChallenge.types";
 
 export const createChallenge = (
-	payload: CreateBookChallengePayload,
-): Promise<BookChallenge> =>
-	requestAuth<BookChallenge>("/book-challenge", {
+	payload: ICreateBookChallengePayload,
+): Promise<IBookChallenge> =>
+	requestAuth<IBookChallenge>("/book-challenge", {
 		body: JSON.stringify(payload),
 		method: "POST",
 	});
 
-export const getChallenges = (): Promise<BookChallenge[]> =>
-	requestAuth<BookChallenge[]>("/book-challenge");
+export const getChallenges = (): Promise<IBookChallenge[]> =>
+	requestAuth<IBookChallenge[]>("/book-challenge");
 
-export const getChallengeById = (id: string): Promise<BookChallenge> =>
-	requestAuth<BookChallenge>(`/book-challenge/${id}`);
+export const getChallengeById = (id: string): Promise<IBookChallenge> =>
+	requestAuth<IBookChallenge>(`/book-challenge/${id}`);
 
 export const updateChallenge = (
 	id: string,
-	payload: UpdateBookChallengePayload,
-): Promise<BookChallenge> =>
-	requestAuth<BookChallenge>(`/book-challenge/${id}`, {
+	payload: IUpdateBookChallengePayload,
+): Promise<IBookChallenge> =>
+	requestAuth<IBookChallenge>(`/book-challenge/${id}`, {
 		body: JSON.stringify(payload),
 		method: "PATCH",
 	});

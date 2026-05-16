@@ -3,16 +3,16 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import AuthModal, { type AuthModalMode } from "@/components/pages/AuthModal";
+import AuthModal, { type IAuthModalMode } from "@/components/pages/AuthModal";
 import HomePage from "@/components/pages/HomePage";
 
-type AuthPageProps = {
-	mode: AuthModalMode;
-};
+interface IAuthPageProps {
+	mode: IAuthModalMode;
+}
 
-const AuthPage = ({ mode }: AuthPageProps) => {
+const AuthPage = ({ mode }: IAuthPageProps) => {
 	const router = useRouter();
-	const [modalMode, setModalMode] = useState<AuthModalMode>(mode);
+	const [modalMode, setModalMode] = useState<IAuthModalMode>(mode);
 
 	return (
 		<>

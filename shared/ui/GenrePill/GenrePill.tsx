@@ -6,16 +6,19 @@ import styled from "styled-components";
 
 import { theme } from "@/shared/theme";
 
-export type GenrePillProps = Omit<
+export interface IGenrePillProps extends Omit<
 	ComponentPropsWithoutRef<typeof Link>,
 	"as" | "children"
-> & {
+> {
 	children: ReactNode;
 	fontSize?: string;
 	height?: string;
 	paddingBlock?: string;
 	paddingInline?: string;
-};
+	borderColor?: string;
+	color?: string;
+	backgroundColor?: string;
+}
 
 const GenrePill = ({
 	children,
@@ -23,14 +26,20 @@ const GenrePill = ({
 	height = "2.25rem",
 	paddingBlock = "0.6rem",
 	paddingInline = "1.325rem",
+	color = theme.colors.foreground,
+	borderColor = "transparent",
+	backgroundColor = theme.colors.surface,
 	...props
-}: GenrePillProps) => {
+}: IGenrePillProps) => {
 	return (
 		<PillLink
 			$fontSize={fontSize}
 			$height={height}
 			$paddingBlock={paddingBlock}
 			$paddingInline={paddingInline}
+			$borderColor={borderColor}
+			$color={color}
+			$backgroundColor={backgroundColor}
 			{...props}
 		>
 			{children}
@@ -45,15 +54,19 @@ const PillLink = styled(Link)<{
 	$height: string;
 	$paddingBlock: string;
 	$paddingInline: string;
+	$borderColor: string;
+	$color: string;
+	$backgroundColor: string;
 }>`
 	display: inline-flex;
 	align-items: center;
 	min-height: ${({ $height }) => $height};
 	border-radius: 62.4375rem;
-	background: ${theme.alpha.surfaceRaised};
+	border: 0.0625rem solid ${({ $borderColor }) => $borderColor};
+	background: ${({ $backgroundColor }) => $backgroundColor};
 	padding: ${({ $paddingBlock, $paddingInline }) =>
 		`${$paddingBlock} ${$paddingInline}`};
-	color: ${theme.colors.foreground};
+	color: ${({ $color }) => $color};
 	font-family: ${theme.fonts.sans};
 	font-size: ${({ $fontSize }) => $fontSize};
 	font-weight: 400;

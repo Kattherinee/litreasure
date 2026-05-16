@@ -6,20 +6,22 @@ import StarIcon from "@mui/icons-material/Star";
 import Rating from "@mui/material/Rating";
 import styled from "styled-components";
 
-import AuthModal, { type AuthModalMode } from "@/components/pages/AuthModal";
-import type { Book } from "@/shared/api/books";
+import AuthModal, { type IAuthModalMode } from "@/components/pages/AuthModal";
+import type { IBook } from "@/shared/api/books";
 import { useAuthStore } from "@/shared/store/auth-store";
 import { theme } from "@/shared/theme";
 import GenrePill from "@/shared/ui/GenrePill/GenrePill";
 import { CoverPlaceholder } from "@/shared/ui/Skeleton";
 
+import InfoChip, { InfoChipLabel, InfoChipValue } from "@/shared/ui/InfoChip";
+
 import BookDetailHero from "./BookDetailHero";
-import BookDetailTabs, { type TabId } from "./BookDetailTabs";
+import BookDetailTabs, { type ITabId } from "./BookDetailTabs";
 import BookSeriesBlock from "./BookSeriesBlock";
 
-type BookDetailContentProps = {
-	book: Book;
-};
+interface IBookDetailContentProps {
+	book: IBook;
+}
 
 const formatGenreLabel = (genre: string) =>
 	genre
@@ -28,7 +30,7 @@ const formatGenreLabel = (genre: string) =>
 		.map((part) => part.charAt(0).toUpperCase() + part.slice(1))
 		.join(" ");
 
-const getBookFacts = (book: Book) => {
+const getBookFacts = (book: IBook) => {
 	const meta: { label: string; value: string }[] = [];
 
 	if (book.publishedYear) {
@@ -51,7 +53,7 @@ const getBookFacts = (book: Book) => {
 
 const ratingLabels = [5, 4, 3, 2, 1];
 
-const BookDetailContent = ({ book }: BookDetailContentProps) => {
+const BookDetailContent = ({ book }: IBookDetailContentProps) => {
 	const coverSrc = book.coverUrl?.trim()
 		? book.coverUrl
 		: "/images/book-placeholder.svg";
@@ -65,10 +67,12 @@ const BookDetailContent = ({ book }: BookDetailContentProps) => {
 		(item) => item.value.trim().toLowerCase() !== "unknown",
 	);
 	const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-	const [authModalMode, setAuthModalMode] = useState<AuthModalMode | null>(null);
+	const [authModalMode, setAuthModalMode] = useState<IAuthModalMode | null>(
+		null,
+	);
 	const [quickRating, setQuickRating] = useState(0);
 	const [quickRatingStatus, setQuickRatingStatus] = useState("");
-	const [activeTab, setActiveTab] = useState<TabId>("description");
+	const [activeTab, setActiveTab] = useState<ITabId>("description");
 
 	const handleQuickRatingSubmit = () => {
 		if (!quickRating) {
@@ -81,7 +85,9 @@ const BookDetailContent = ({ book }: BookDetailContentProps) => {
 			return;
 		}
 
-		setQuickRatingStatus("Оценка готова к отправке. Позже подключим метод API.");
+		setQuickRatingStatus(
+			"Оценка готова к отправке. Позже подключим метод API.",
+		);
 	};
 
 	return (
@@ -171,7 +177,10 @@ const BookDetailContent = ({ book }: BookDetailContentProps) => {
 									);
 								})}
 							</QuickRatingStars>
-							<QuickRatingButton type="button" onClick={handleQuickRatingSubmit}>
+							<QuickRatingButton
+								type="button"
+								onClick={handleQuickRatingSubmit}
+							>
 								Оценить
 							</QuickRatingButton>
 							<QuickReviewLink
@@ -203,10 +212,10 @@ const BookDetailContent = ({ book }: BookDetailContentProps) => {
 									<BookFactsTitle>Информация о книге</BookFactsTitle>
 									<BookInfoBlock>
 										{bookMeta.map((item) => (
-											<BookInfoChip key={item.label}>
-												<BookInfoLabel>{item.label}</BookInfoLabel>
-												<BookInfoValue>{item.value}</BookInfoValue>
-											</BookInfoChip>
+											<InfoChip key={item.label}>
+												<InfoChipLabel>{item.label}</InfoChipLabel>
+												<InfoChipValue>{item.value}</InfoChipValue>
+											</InfoChip>
 										))}
 									</BookInfoBlock>
 								</BookFactsSection>
@@ -411,37 +420,6 @@ const BookInfoBlock = styled.div`
 	line-height: 1.35;
 `;
 
-const BookInfoChip = styled.span`
-	display: inline-flex;
-	align-items: center;
-	max-width: 100%;
-	min-height: 2rem;
-	gap: 0.42rem;
-	border: 0.0625rem solid rgb(255 255 255 / 0.24);
-	border-radius: 62.4375rem;
-	background: rgb(174 176 178 / 0.82);
-	padding: 0.34rem 0.72rem;
-	box-shadow: 0 0.25rem 0.85rem rgb(4 18 26 / 0.05);
-`;
-
-const BookInfoLabel = styled.span`
-	color: rgb(255 255 255 / 0.7);
-	font-size: 0.7rem;
-	font-weight: 800;
-	letter-spacing: 0.04em;
-	text-transform: uppercase;
-`;
-
-const BookInfoValue = styled.span`
-	min-width: 0;
-	overflow: hidden;
-	color: ${theme.colors.white};
-	font-size: 0.9rem;
-	font-weight: 800;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-`;
-
 const GenresBlock = styled.div`
 	display: flex;
 	flex-wrap: wrap;
@@ -456,7 +434,7 @@ const GenreRow = styled.div`
 	gap: 0.75rem;
 `;
 
-const HighlightedGenrePill = styled(GenrePill)`
+export const HighlightedGenrePill = styled(GenrePill)`
 	&& {
 		border-color: rgb(218 142 91 / 0.25);
 		background: rgb(242 239 237 / 0.86);

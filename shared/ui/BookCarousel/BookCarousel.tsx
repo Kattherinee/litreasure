@@ -8,8 +8,8 @@ import styled from "styled-components";
 import { theme } from "@/shared/theme";
 import {
 	BookCard,
-	type BookCardData,
-	type BookCardSize,
+	type IBookCardData,
+	type IBookCardSize,
 } from "@/shared/ui/BookCard";
 
 const WHEEL_SENSITIVITY = -0.91;
@@ -17,20 +17,20 @@ const EMBLA_WHEEL_DURATION = 15;
 const EMBLA_WHEEL_FRICTION = 0.68;
 const SCROLL_EDGE_THRESHOLD = 0.002;
 
-type BookCarouselControls = {
+interface IBookCarouselControls {
 	canScrollNext: boolean;
 	canScrollPrev: boolean;
 	scrollNext: () => void;
 	scrollPrev: () => void;
-};
+}
 
-type BookCarouselProps = {
+interface IBookCarouselProps {
 	activeBookId?: string;
 	bleed?: boolean;
-	books: BookCardData[];
-	onControlsChange?: (controls: BookCarouselControls) => void;
-	size?: BookCardSize;
-};
+	books: IBookCardData[];
+	onControlsChange?: (controls: IBookCarouselControls) => void;
+	size?: IBookCardSize;
+}
 
 const BookCarousel = ({
 	activeBookId,
@@ -38,7 +38,7 @@ const BookCarousel = ({
 	books,
 	onControlsChange,
 	size = "default",
-}: BookCarouselProps) => {
+}: IBookCarouselProps) => {
 	const [emblaRef, emblaApi] = useEmblaCarousel({
 		align: "start",
 		containScroll: "keepSnaps",

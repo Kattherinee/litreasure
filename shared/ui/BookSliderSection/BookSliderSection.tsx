@@ -3,31 +3,31 @@
 import { useState } from "react";
 import styled from "styled-components";
 
-import type { BookSort } from "@/shared/api/books";
+import type { IBookSort } from "@/shared/api/books";
 import { useBookCardsQuery } from "@/shared/api/books";
 import { theme } from "@/shared/theme";
 import { Button } from "@/shared/ui/Button";
 import BookCarousel from "@/shared/ui/BookCarousel/BookCarousel";
 import { BookCardSkeleton } from "@/shared/ui/Skeleton";
 
-type CarouselControls = {
+interface ICarouselControls {
 	canScrollNext: boolean;
 	canScrollPrev: boolean;
 	scrollNext: () => void;
 	scrollPrev: () => void;
-};
+}
 
-type BookSliderSectionProps = {
+interface IBookSliderSectionProps {
 	genre?: string;
 	limit?: number;
-	sort?: BookSort;
+	sort?: IBookSort;
 	title: string;
-};
+}
 
 const getSectionHref = ({
 	genre,
 	sort,
-}: Pick<BookSliderSectionProps, "genre" | "sort">) => {
+}: Pick<IBookSliderSectionProps, "genre" | "sort">) => {
 	if (genre) {
 		const query = sort ? `?sort=${sort}` : "";
 
@@ -35,10 +35,10 @@ const getSectionHref = ({
 	}
 
 	if (sort) {
-		return `/collections/${sort}`;
+		return `/catalog/${sort}`;
 	}
 
-	return "/collections/newest";
+	return "/catalog/newest";
 };
 
 const BookSliderSection = ({
@@ -46,9 +46,9 @@ const BookSliderSection = ({
 	genre,
 	limit,
 	title,
-}: BookSliderSectionProps) => {
+}: IBookSliderSectionProps) => {
 	const [carouselControls, setCarouselControls] =
-		useState<CarouselControls | null>(null);
+		useState<ICarouselControls | null>(null);
 	const {
 		data: books = [],
 		error,
@@ -62,7 +62,7 @@ const BookSliderSection = ({
 			<SectionHeader>
 				<SectionHeading>
 					<SectionTitle>{title}</SectionTitle>
-					<ShowMoreButton buttonStyle="oxygenPill" href={sectionHref}>
+					<ShowMoreButton buttonType="oxygenPill" href={sectionHref}>
 						Посмотреть все
 					</ShowMoreButton>
 				</SectionHeading>
@@ -94,9 +94,7 @@ const BookSliderSection = ({
 					))}
 				</SkeletonCarousel>
 			) : isError ? (
-				<StateMessage>
-					Не удалось загрузить книги: {error.message}
-				</StateMessage>
+				<StateMessage>Не удалось загрузить книги: {error.message}</StateMessage>
 			) : books.length === 0 ? (
 				<StateMessage>Пока нет книг для отображения.</StateMessage>
 			) : (

@@ -1,14 +1,14 @@
 import type { InputHTMLAttributes } from "react";
 import styled from "styled-components";
 
-export interface InputFieldProps extends InputHTMLAttributes<HTMLInputElement> {
+export interface IInputFieldProps extends InputHTMLAttributes<HTMLInputElement> {
 	disabled?: boolean;
 	"aria-label"?: string;
 	$height?: string;
 	$width?: string;
 }
 
-const InputField = ({ disabled = false, ...props }: InputFieldProps) => (
+const InputField = ({ disabled = false, ...props }: IInputFieldProps) => (
 	<StyledInput {...props} disabled={disabled} />
 );
 

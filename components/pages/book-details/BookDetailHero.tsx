@@ -5,15 +5,15 @@ import AutoStoriesOutlinedIcon from "@mui/icons-material/AutoStoriesOutlined";
 import MoreHorizIcon from "@mui/icons-material/MoreHoriz";
 import styled from "styled-components";
 
-import type { Book } from "@/shared/api/books";
+import type { IBook } from "@/shared/api/books";
 import { theme } from "@/shared/theme";
 import { Button } from "@/shared/ui/Button";
 
-type BookDetailHeroProps = {
-	book: Book;
-};
+interface IBookDetailHeroProps {
+	book: IBook;
+}
 
-const BookDetailHero = ({ book }: BookDetailHeroProps) => {
+const BookDetailHero = ({ book }: IBookDetailHeroProps) => {
 	const seriesTag = getSeriesTag(book);
 
 	return (
@@ -23,7 +23,7 @@ const BookDetailHero = ({ book }: BookDetailHeroProps) => {
 			<Author>{book.author}</Author>
 
 			<ActionRow>
-				<ActionButton variant="containedInverted">
+				<ActionButton buttonType="containedInverted">
 					<span>Add to library</span>
 					<AddIcon aria-hidden="true" />
 				</ActionButton>
@@ -40,7 +40,7 @@ const BookDetailHero = ({ book }: BookDetailHeroProps) => {
 
 export default BookDetailHero;
 
-const getSeriesTag = (book: Book) => {
+const getSeriesTag = (book: IBook) => {
 	const series = book.series;
 	const seriesTitle = series?.title;
 

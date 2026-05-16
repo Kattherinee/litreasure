@@ -4,16 +4,16 @@ import styled from "styled-components";
 
 import { theme } from "@/shared/theme";
 
-import type { WelcomeStep } from "./types";
+import type { IWelcomeStep } from "./types";
 import { STEPS } from "./types";
 
-type Props = {
-	activeStep: WelcomeStep;
+interface IProps {
+	activeStep: IWelcomeStep;
 	activeStepIndex: number;
 	canSkip?: boolean;
-	onStepClick: (step: WelcomeStep) => void;
+	onStepClick: (step: IWelcomeStep) => void;
 	onSkip?: () => void;
-};
+}
 
 export const StepTabs = ({
 	activeStep,
@@ -21,7 +21,7 @@ export const StepTabs = ({
 	canSkip = false,
 	onStepClick,
 	onSkip,
-}: Props) => (
+}: IProps) => (
 	<Header>
 		<Tabs aria-label="Этапы регистрации">
 			{STEPS.map((step, index) => {

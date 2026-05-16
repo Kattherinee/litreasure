@@ -7,22 +7,22 @@ import type { FormEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 import styled from "styled-components";
 
-import AuthModal, { type AuthModalMode } from "@/components/pages/AuthModal";
-import type { Book } from "@/shared/api/books";
+import AuthModal, { type IAuthModalMode } from "@/components/pages/AuthModal";
+import type { IBook } from "@/shared/api/books";
 import { useAuthStore } from "@/shared/store/auth-store";
 import { theme } from "@/shared/theme";
 
-type BookDetailTabsProps = {
-	activeTab?: TabId;
-	book: Book;
-	onActiveTabChange?: (tab: TabId) => void;
-};
+interface IBookDetailTabsProps {
+	activeTab?: ITabId;
+	book: IBook;
+	onActiveTabChange?: (tab: ITabId) => void;
+}
 
-export type TabId = "description" | "quotes" | "reviews";
+export type ITabId = "description" | "quotes" | "reviews";
 
 const tabs: Array<{
 	count?: number;
-	id: TabId;
+	id: ITabId;
 	label: string;
 }> = [
 	{ id: "description", label: "Description" },
@@ -34,12 +34,12 @@ const BookDetailTabs = ({
 	activeTab: controlledActiveTab,
 	book,
 	onActiveTabChange,
-}: BookDetailTabsProps) => {
+}: IBookDetailTabsProps) => {
 	const [internalActiveTab, setInternalActiveTab] =
-		useState<TabId>("description");
+		useState<ITabId>("description");
 	const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
 	const [canExpandDescription, setCanExpandDescription] = useState(false);
-	const [authModalMode, setAuthModalMode] = useState<AuthModalMode | null>(null);
+	const [authModalMode, setAuthModalMode] = useState<IAuthModalMode | null>(null);
 	const [reviewRating, setReviewRating] = useState(0);
 	const [reviewText, setReviewText] = useState("");
 	const [reviewStatus, setReviewStatus] = useState("");

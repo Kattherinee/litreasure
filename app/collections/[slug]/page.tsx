@@ -1,13 +1,13 @@
 import CollectionPage from "@/components/pages/CollectionPage";
 
-type PageProps = {
+interface IPageProps {
 	params: Promise<{
 		slug: string;
 	}>;
-};
+}
 
-export default async function CollectionRoute({ params }: PageProps) {
+export default async function CollectionRoute({ params }: IPageProps) {
 	const { slug } = await params;
 
-	return <CollectionPage slug={slug} />;
+	return <CollectionPage id={slug} />;
 }

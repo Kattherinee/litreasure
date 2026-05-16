@@ -1,4 +1,4 @@
-export type Book = {
+export interface IBook {
 	id: string;
 	title: string;
 	author: string;
@@ -17,10 +17,10 @@ export type Book = {
 	language?: string;
 	openLibraryWorkKey?: string;
 	orderInSeries?: number;
-	relationType?: BookSeriesRelationType;
-	searchMatches?: BookSearchMatch[];
+	relationType?: IBookSeriesRelationType;
+	searchMatches?: IBookSearchMatch[];
 	seriesLabel?: string;
-	seriesRelationType?: BookSeriesRelationType;
+	seriesRelationType?: IBookSeriesRelationType;
 	seriesTitle?: string;
 	authors: string[];
 	series?: {
@@ -29,7 +29,7 @@ export type Book = {
 		openLibrarySeriesKey?: string;
 		seriesId: string;
 		orderInSeries?: number;
-		relationType?: BookSeriesRelationType;
+		relationType?: IBookSeriesRelationType;
 		seriesLabel?: string;
 		books?: Array<{
 			id: string;
@@ -37,27 +37,27 @@ export type Book = {
 			author?: string;
 			coverUrl?: string;
 			orderInSeries?: number;
-			relationType?: BookSeriesRelationType;
+			relationType?: IBookSeriesRelationType;
 			seriesLabel?: string;
 		}>;
 	};
 	createdAt: string;
 	updatedAt: string;
-};
+}
 
-export type BookSearchMatch = {
+export interface IBookSearchMatch {
 	field: string;
 	value: string;
-};
+}
 
-export type BookSeriesRelationType =
+export type IBookSeriesRelationType =
 	| "collection"
 	| "main"
 	| "omnibus"
 	| "spin_off"
 	| "unknown";
 
-export type CreateBookPayload = {
+export interface ICreateBookPayload {
 	title: string;
 	author: string;
 	description?: string;
@@ -65,13 +65,13 @@ export type CreateBookPayload = {
 	genres: string[];
 	publishedYear?: number;
 	rating?: number;
-};
+}
 
-export type UpdateBookPayload = Partial<CreateBookPayload>;
+export type IUpdateBookPayload = Partial<ICreateBookPayload>;
 
-export type BookSort = "newest" | "popular" | "rating";
+export type IBookSort = "newest" | "popular" | "rating";
 
-export type BookSearchScope =
+export type IBookSearchScope =
 	| "authors"
 	| "books"
 	| "collections"
@@ -83,6 +83,6 @@ export interface IBookCardsParams {
 	limit?: number;
 	genre?: string;
 	search?: string;
-	searchScope?: BookSearchScope;
-	sort?: BookSort;
+	searchScope?: IBookSearchScope;
+	sort?: IBookSort;
 }

@@ -1,19 +1,19 @@
-import type { BookSort } from "@/shared/api/books";
+import type { IBookSort } from "@/shared/api/books";
 import GenrePage from "@/components/pages/GenrePage";
 
-type PageProps = {
+interface IPageProps {
 	params: Promise<{
 		slug: string;
 	}>;
 	searchParams: Promise<{
 		sort?: string;
 	}>;
-};
+}
 
-const isBookSort = (sort?: string): sort is BookSort =>
+const isBookSort = (sort?: string): sort is IBookSort =>
 	sort === "newest" || sort === "popular" || sort === "rating";
 
-export default async function GenreRoute({ params, searchParams }: PageProps) {
+export default async function GenreRoute({ params, searchParams }: IPageProps) {
 	const { slug } = await params;
 	const { sort } = await searchParams;
 

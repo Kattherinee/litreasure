@@ -1,15 +1,15 @@
-import type { AuthSession, AuthUser } from "@/shared/store/auth-store";
+import type { IAuthSession, IAuthUser } from "@/shared/store/auth-store";
 
 import { request } from "../base";
 import type {
-	LoginPayload,
-	RawAuthResponse,
-	RegisterPayload,
+	ILoginPayload,
+	IRawAuthResponse,
+	IRegisterPayload,
 } from "./auth.types";
 
-const normalizeUser = (source: unknown, fallbackEmail: string): AuthUser => {
+const normalizeUser = (source: unknown, fallbackEmail: string): IAuthUser => {
 	const user =
-		source && typeof source === "object" ? (source as RawAuthResponse) : {};
+		source && typeof source === "object" ? (source as IRawAuthResponse) : {};
 
 	return {
 		id: typeof user.id === "string" ? user.id : undefined,
@@ -21,9 +21,9 @@ const normalizeUser = (source: unknown, fallbackEmail: string): AuthUser => {
 };
 
 const normalizeAuthResponse = (
-	response: RawAuthResponse,
+	response: IRawAuthResponse,
 	fallbackEmail: string,
-): AuthSession => {
+): IAuthSession => {
 	const rawUser = response.user ?? response;
 	const user = normalizeUser(rawUser, fallbackEmail);
 	const accessToken =
@@ -44,17 +44,17 @@ const normalizeAuthResponse = (
 };
 
 export const register = async (
-	payload: RegisterPayload,
-): Promise<AuthSession> => {
-	const response = await request<RawAuthResponse>("/auth/register", {
+	payload: IRegisterPayload,
+): Promise<IAuthSession> => {
+	const response = await request<IRawAuthResponse>("/auth/register", {
 		body: JSON.stringify(payload),
 		method: "POST",
 	});
 	return normalizeAuthResponse(response, payload.email);
 };
 
-export const login = async (payload: LoginPayload): Promise<AuthSession> => {
-	const response = await request<RawAuthResponse>("/auth/login", {
+export const login = async (payload: ILoginPayload): Promise<IAuthSession> => {
+	const response = await request<IRawAuthResponse>("/auth/login", {
 		body: JSON.stringify(payload),
 		method: "POST",
 	});

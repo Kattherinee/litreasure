@@ -11,9 +11,9 @@ import {
 	updateBook,
 } from "./books.api";
 import type {
-	CreateBookPayload,
+	ICreateBookPayload,
 	IBookCardsParams,
-	UpdateBookPayload,
+	IUpdateBookPayload,
 } from "./books.types";
 
 export const booksQueryKeys = {
@@ -45,7 +45,7 @@ export const useBookQuery = (id: string) =>
 export const useCreateBookMutation = () => {
 	const queryClient = useQueryClient();
 	return useMutation({
-		mutationFn: (payload: CreateBookPayload) => createBook(payload),
+		mutationFn: (payload: ICreateBookPayload) => createBook(payload),
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: booksQueryKeys.all });
 		},
@@ -55,7 +55,7 @@ export const useCreateBookMutation = () => {
 export const useUpdateBookMutation = () => {
 	const queryClient = useQueryClient();
 	return useMutation({
-		mutationFn: ({ id, payload }: { id: string; payload: UpdateBookPayload }) =>
+		mutationFn: ({ id, payload }: { id: string; payload: IUpdateBookPayload }) =>
 			updateBook(id, payload),
 		onSuccess: (_data, { id }) => {
 			queryClient.invalidateQueries({ queryKey: booksQueryKeys.byId(id) });

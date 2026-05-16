@@ -1,12 +1,12 @@
 import { requestAuth } from "../base";
 import type {
-	UpdateUserGenresPayload,
-	UpdateUserProfilePayload,
+	IUpdateUserGenresPayload,
+	IUpdateUserProfilePayload,
 } from "./users.types";
 
 export const updateUserGenres = (
 	userId: string,
-	payload: UpdateUserGenresPayload,
+	payload: IUpdateUserGenresPayload,
 ): Promise<void> =>
 	requestAuth<void>(`/users/${userId}/genres`, {
 		body: JSON.stringify(payload),
@@ -15,7 +15,7 @@ export const updateUserGenres = (
 
 export const updateUserProfile = (
 	userId: string,
-	payload: UpdateUserProfilePayload,
+	payload: IUpdateUserProfilePayload,
 ): Promise<void> =>
 	requestAuth<void>(`/users/${userId}`, {
 		body: JSON.stringify(payload),

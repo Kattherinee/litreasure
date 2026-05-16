@@ -9,11 +9,11 @@ import BookSliderSection from "@/shared/ui/BookSliderSection/BookSliderSection";
 
 import BookDetailContent from "./book-details/BookDetailContent";
 
-type BookDetailsPageProps = {
+interface IBookDetailsPageProps {
 	slug: string;
-};
+}
 
-const BookDetailsPage = ({ slug }: BookDetailsPageProps) => {
+const BookDetailsPage = ({ slug }: IBookDetailsPageProps) => {
 	const { data: book, error, isError, isLoading } = useBookQuery(slug);
 
 	if (isLoading) {

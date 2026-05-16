@@ -1,10 +1,10 @@
-export interface Genre {
+export interface IGenre {
 	id: string;
 	name: string;
 	slug: string;
 }
 
-export interface GenreItem {
+export interface IGenreItem {
 	id: string;
 	name: string;
 	slug: string;
@@ -12,12 +12,12 @@ export interface GenreItem {
 	subcategory: string;
 }
 
-export interface GenreSubcategory {
+export interface IGenreSubcategory {
 	subcategory: string;
-	genres: GenreItem[];
+	genres: IGenreItem[];
 }
 
-export interface GenreCategory {
+export interface IGenreCategory {
 	category: string;
-	subcategories: GenreSubcategory[];
+	subcategories: IGenreSubcategory[];
 }

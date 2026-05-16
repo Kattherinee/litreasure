@@ -2,15 +2,15 @@
 
 import styled from "styled-components";
 
-import type { Book } from "@/shared/api/books";
+import type { IBook } from "@/shared/api/books";
 import { theme } from "@/shared/theme";
 import BookCarousel from "@/shared/ui/BookCarousel/BookCarousel";
 
-type BookSeriesBlockProps = {
-	book: Book;
-};
+interface IBookSeriesBlockProps {
+	book: IBook;
+}
 
-const BookSeriesBlock = ({ book }: BookSeriesBlockProps) => {
+const BookSeriesBlock = ({ book }: IBookSeriesBlockProps) => {
 	const seriesBooks = book.series?.books ?? [];
 	const alternativeEditions = seriesBooks.filter(
 		(seriesBook) =>

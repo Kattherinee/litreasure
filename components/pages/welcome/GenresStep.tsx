@@ -15,12 +15,12 @@ import {
 } from "./stepStyles";
 import { MIN_SELECTED_GENRES } from "./types";
 
-interface GenresStepProps {
+interface IGenresStepProps {
 	selectedGenres: string[];
 	onToggle: (slug: string) => void;
 }
 
-export const GenresStep = ({ selectedGenres, onToggle }: GenresStepProps) => {
+export const GenresStep = ({ selectedGenres, onToggle }: IGenresStepProps) => {
 	const { data } = useGenresByCategoryQuery();
 	const genreCategories = useMemo(() => data ?? [], [data]);
 

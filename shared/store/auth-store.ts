@@ -3,30 +3,30 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-export type AuthUser = {
+export interface IAuthUser {
 	id?: string;
 	email: string;
 	name?: string;
 	username?: string;
 	avatarUrl?: string;
-};
+}
 
-export type AuthSession = {
+export interface IAuthSession {
 	accessToken?: string;
 	refreshToken?: string;
-	user: AuthUser;
-};
+	user: IAuthUser;
+}
 
-type AuthStoreState = {
-	session: AuthSession | null;
+interface IAuthStoreState {
+	session: IAuthSession | null;
 	isAuthenticated: boolean;
-	setSession: (session: AuthSession) => void;
+	setSession: (session: IAuthSession) => void;
 	logout: () => void;
-};
+}
 
 export const AUTH_STORAGE_KEY = "litreasure-auth";
 
-export const useAuthStore = create<AuthStoreState>()(
+export const useAuthStore = create<IAuthStoreState>()(
 	persist(
 		(set) => ({
 			session: null,

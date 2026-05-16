@@ -4,8 +4,8 @@ import { useMutation } from "@tanstack/react-query";
 
 import { updateUserGenres, updateUserProfile } from "./users.api";
 import type {
-	UpdateUserGenresPayload,
-	UpdateUserProfilePayload,
+	IUpdateUserGenresPayload,
+	IUpdateUserProfilePayload,
 } from "./users.types";
 
 export const useUpdateUserGenresMutation = () =>
@@ -15,7 +15,7 @@ export const useUpdateUserGenresMutation = () =>
 			payload,
 		}: {
 			userId: string;
-			payload: UpdateUserGenresPayload;
+			payload: IUpdateUserGenresPayload;
 		}) => updateUserGenres(userId, payload),
 	});
 
@@ -26,6 +26,6 @@ export const useUpdateUserProfileMutation = () =>
 			payload,
 		}: {
 			userId: string;
-			payload: UpdateUserProfilePayload;
+			payload: IUpdateUserProfilePayload;
 		}) => updateUserProfile(userId, payload),
 	});

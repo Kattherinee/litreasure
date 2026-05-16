@@ -56,6 +56,23 @@ export const request = async <T>(
 	return handleResponse<T>(response);
 };
 
+/** Public request that attaches Authorization only when a token exists. */
+export const requestOptionalAuth = async <T>(
+	path: string,
+	options: RequestInit = {},
+): Promise<T> => {
+	const token = getStoredAccessToken();
+	const response = await fetch(`${API_BASE_URL}${path}`, {
+		...options,
+		headers: {
+			"Content-Type": "application/json",
+			...(token ? { Authorization: `Bearer ${token}` } : {}),
+			...options.headers,
+		},
+	});
+	return handleResponse<T>(response);
+};
+
 /**
  * Authenticated request — always attaches the Bearer token.
  * Throws if no token is stored.

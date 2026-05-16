@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import styled from "styled-components";
 
-import type { Book, BookSearchScope } from "@/shared/api/books";
+import type { IBook, IBookSearchScope } from "@/shared/api/books";
 import { useBookCardsQuery } from "@/shared/api/books";
 import { theme } from "@/shared/theme";
 import { Button } from "@/shared/ui/Button";
@@ -15,9 +15,9 @@ const RECENT_SEARCHES_KEY = "litreasure:recent-searches";
 const RECENT_SEARCHES_LIMIT = 6;
 const SEARCH_RESULT_LIMIT = 40;
 
-type SearchTab = BookSearchScope;
+type ISearchTab = IBookSearchScope;
 
-const searchTabs: Array<{ id: SearchTab; label: string }> = [
+const searchTabs: Array<{ id: ISearchTab; label: string }> = [
 	{ id: "books", label: "Книги" },
 	{ id: "authors", label: "Авторы" },
 	{ id: "series", label: "Серии" },
@@ -59,7 +59,7 @@ const BookSearch = () => {
 	const [recentSearches, setRecentSearches] = useState<string[]>(
 		getStoredRecentSearches,
 	);
-	const [activeTabs, setActiveTabs] = useState<SearchTab[]>([]);
+	const [activeTabs, setActiveTabs] = useState<ISearchTab[]>([]);
 	const [isOpen, setIsOpen] = useState(false);
 	const normalizedSearchValue = searchValue.trim();
 	const shouldSearch = normalizedSearchValue.length >= MIN_SEARCH_LENGTH;
@@ -107,7 +107,7 @@ const BookSearch = () => {
 	};
 
 	const clearSearch = () => setSearchValue("");
-	const toggleSearchTab = (tab: SearchTab) => {
+	const toggleSearchTab = (tab: ISearchTab) => {
 		setActiveTabs((currentTabs) =>
 			currentTabs.includes(tab)
 				? currentTabs.filter((currentTab) => currentTab !== tab)
@@ -273,7 +273,7 @@ const BookSearch = () => {
 														</ResultAuthor>
 													</ResultMeta>
 												</ResultLink>
-												<WantButton buttonStyle="oxygenPill" type="button">
+												<WantButton buttonType="oxygenPill" type="button">
 													Want to read
 												</WantButton>
 											</ResultItem>
@@ -281,7 +281,9 @@ const BookSearch = () => {
 									})
 								: null}
 
-							{shouldSearch && !isFetching && filteredSearchResults.length === 0 ? (
+							{shouldSearch &&
+							!isFetching &&
+							filteredSearchResults.length === 0 ? (
 								<EmptyState>Ничего не найдено.</EmptyState>
 							) : null}
 						</ResultsArea>
@@ -291,7 +293,7 @@ const BookSearch = () => {
 								{getResultCountLabel(filteredSearchResults.length)}
 							</ResultCount>
 							<ViewAllButton
-								variant="containedInverted"
+								buttonType="containedInverted"
 								onClick={() => saveRecentSearch()}
 							>
 								Посмотреть все
@@ -306,13 +308,7 @@ const BookSearch = () => {
 
 export default BookSearch;
 
-const HighlightedText = ({
-	query,
-	text,
-}: {
-	query: string;
-	text: string;
-}) => {
+const HighlightedText = ({ query, text }: { query: string; text: string }) => {
 	const highlightValue = query.trim();
 
 	if (!highlightValue) {
@@ -338,7 +334,10 @@ const HighlightedText = ({
 	);
 };
 
-const filterSearchResultsByTabs = (books: Book[], activeTabs: SearchTab[]) => {
+const filterSearchResultsByTabs = (
+	books: IBook[],
+	activeTabs: ISearchTab[],
+) => {
 	if (activeTabs.length === 0) {
 		return books;
 	}
@@ -348,16 +347,16 @@ const filterSearchResultsByTabs = (books: Book[], activeTabs: SearchTab[]) => {
 	);
 };
 
-const getResultCountsByTab = (books: Book[]) =>
+const getResultCountsByTab = (books: IBook[]) =>
 	searchTabs.reduce(
 		(counts, tab) => ({
 			...counts,
 			[tab.id]: books.filter((book) => doesBookMatchTab(book, tab.id)).length,
 		}),
-		{} as Record<SearchTab, number>,
+		{} as Record<ISearchTab, number>,
 	);
 
-const doesBookMatchTab = (book: Book, activeTab: SearchTab) => {
+const doesBookMatchTab = (book: IBook, activeTab: ISearchTab) => {
 	if (activeTab === "books") {
 		return isBookResult(book);
 	}
@@ -385,13 +384,13 @@ const doesBookMatchTab = (book: Book, activeTab: SearchTab) => {
 	return true;
 };
 
-const hasSearchMatch = (book: Book, fields: string[]) =>
+const hasSearchMatch = (book: IBook, fields: string[]) =>
 	book.searchMatches?.some((match) => fields.includes(match.field)) ?? false;
 
-const getBookRelationType = (book: Book) =>
+const getBookRelationType = (book: IBook) =>
 	book.seriesRelationType ?? book.series?.relationType ?? book.relationType;
 
-const isCollectionResult = (book: Book) => {
+const isCollectionResult = (book: IBook) => {
 	const relationType = getBookRelationType(book);
 
 	return (
@@ -401,7 +400,7 @@ const isCollectionResult = (book: Book) => {
 	);
 };
 
-const isSeriesResult = (book: Book) => {
+const isSeriesResult = (book: IBook) => {
 	if (isCollectionResult(book)) {
 		return false;
 	}
@@ -414,7 +413,7 @@ const isSeriesResult = (book: Book) => {
 	);
 };
 
-const isBookResult = (book: Book) => {
+const isBookResult = (book: IBook) => {
 	if (isCollectionResult(book)) {
 		return false;
 	}
@@ -436,7 +435,7 @@ const isBookResult = (book: Book) => {
 	);
 };
 
-const formatSeriesLine = (book: Book) => {
+const formatSeriesLine = (book: IBook) => {
 	const seriesTitle = book.seriesTitle ?? book.series?.title;
 	const orderInSeries = book.series?.orderInSeries ?? book.orderInSeries;
 	const relationType =

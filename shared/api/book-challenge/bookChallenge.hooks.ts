@@ -10,8 +10,8 @@ import {
 	updateChallenge,
 } from "./bookChallenge.api";
 import type {
-	CreateBookChallengePayload,
-	UpdateBookChallengePayload,
+	ICreateBookChallengePayload,
+	IUpdateBookChallengePayload,
 } from "./bookChallenge.types";
 
 export const challengeQueryKeys = {
@@ -32,7 +32,7 @@ export const useChallengeByIdQuery = (id: string) =>
 export const useCreateChallengeMutation = () => {
 	const queryClient = useQueryClient();
 	return useMutation({
-		mutationFn: (payload: CreateBookChallengePayload) =>
+		mutationFn: (payload: ICreateBookChallengePayload) =>
 			createChallenge(payload),
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: challengeQueryKeys.all });
@@ -48,7 +48,7 @@ export const useUpdateChallengeMutation = () => {
 			payload,
 		}: {
 			id: string;
-			payload: UpdateBookChallengePayload;
+			payload: IUpdateBookChallengePayload;
 		}) => updateChallenge(id, payload),
 		onSuccess: (_data, { id }) => {
 			queryClient.invalidateQueries({ queryKey: challengeQueryKeys.byId(id) });

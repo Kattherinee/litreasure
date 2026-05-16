@@ -1,7 +1,7 @@
 import { request } from "../base";
-import type { Genre, GenreCategory } from "./genres.types";
+import type { IGenre, IGenreCategory } from "./genres.types";
 
-export const getGenres = (): Promise<Genre[]> => request<Genre[]>("/genres");
+export const getGenres = (): Promise<IGenre[]> => request<IGenre[]>("/genres");
 
-export const getGenresByCategory = (): Promise<GenreCategory[]> =>
-	request<GenreCategory[]>("/genres/byCategory");
+export const getGenresByCategory = (): Promise<IGenreCategory[]> =>
+	request<IGenreCategory[]>("/genres/byCategory");

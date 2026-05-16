@@ -5,10 +5,10 @@ import styled from "styled-components";
 
 import { theme } from "@/shared/theme";
 
-import { STEP_IMAGES, STEP_SUBTITLES, STEPS, type WelcomeStep } from "./types";
+import { STEP_IMAGES, STEP_SUBTITLES, STEPS, type IWelcomeStep } from "./types";
 
-interface WelcomeLayoutProps extends PropsWithChildren {
-	activeStep: WelcomeStep;
+interface IWelcomeLayoutProps extends PropsWithChildren {
+	activeStep: IWelcomeStep;
 	activeStepIndex: number;
 }
 
@@ -16,7 +16,7 @@ export const WelcomeLayout = ({
 	activeStep,
 	activeStepIndex,
 	children,
-}: WelcomeLayoutProps) => (
+}: IWelcomeLayoutProps) => (
 	<Page $step={activeStep}>
 		<PageInner $step={activeStep}>
 			<LeftPanel>
@@ -43,7 +43,7 @@ export const WelcomeLayout = ({
 	</Page>
 );
 
-const Page = styled.div<{ $step: WelcomeStep }>`
+const Page = styled.div<{ $step: IWelcomeStep }>`
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -58,7 +58,7 @@ const Page = styled.div<{ $step: WelcomeStep }>`
 	}
 `;
 
-const PageInner = styled.div<{ $step: WelcomeStep }>`
+const PageInner = styled.div<{ $step: IWelcomeStep }>`
 	display: grid;
 	width: min(
 		100%,
@@ -172,7 +172,7 @@ const RightPanel = styled.div`
 	}
 `;
 
-const RightInner = styled.div<{ $step: WelcomeStep }>`
+const RightInner = styled.div<{ $step: IWelcomeStep }>`
 	display: flex;
 	flex-direction: column;
 	width: 100%;

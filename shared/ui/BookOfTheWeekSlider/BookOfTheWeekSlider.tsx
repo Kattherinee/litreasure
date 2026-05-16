@@ -11,15 +11,15 @@ import styled from "styled-components";
 import { theme } from "@/shared/theme";
 import { CoverPlaceholder } from "@/shared/ui/Skeleton";
 
-type WeekBook = {
+interface IWeekBook {
 	id: string;
 	title: string;
 	description: string;
 	tag: string;
 	imageUrl: string;
-};
+}
 
-const weekBooks: WeekBook[] = [
+const weekBooks: IWeekBook[] = [
 	{
 		id: "morana-shadow",
 		title: "Морана и Тень. Видящий",

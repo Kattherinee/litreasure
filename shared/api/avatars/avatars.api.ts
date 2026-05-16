@@ -1,9 +1,9 @@
 import { API_BASE_URL, request } from "../base";
 import type { IAvatar } from "./avatars.types";
 
-type AvatarsResponse = IAvatar[] | { avatars?: unknown };
+type IAvatarsResponse = IAvatar[] | { avatars?: unknown };
 
-const normalizeAvatars = (response: AvatarsResponse): IAvatar[] => {
+const normalizeAvatars = (response: IAvatarsResponse): IAvatar[] => {
 	const list = Array.isArray(response) ? response : response.avatars;
 	if (!Array.isArray(list)) return [];
 
@@ -24,6 +24,6 @@ export const getAvatarAssetUrl = (url?: string): string | undefined => {
 };
 
 export const getAvatars = async (): Promise<IAvatar[]> => {
-	const response = await request<AvatarsResponse>("/avatars/options");
+	const response = await request<IAvatarsResponse>("/avatars/options");
 	return normalizeAvatars(response);
 };

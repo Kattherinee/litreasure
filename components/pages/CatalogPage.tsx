@@ -9,25 +9,34 @@ import { theme } from "@/shared/theme";
 import { BookCard } from "@/shared/ui/BookCard";
 import { BookCardSkeleton } from "@/shared/ui/Skeleton";
 
-interface IGenrePageProps {
+interface ICatalogPageProps {
 	slug: string;
-	sort?: IBookSort;
 }
 
-const GenrePage = ({ slug, sort }: IGenrePageProps) => {
+const catalogTitle: Record<IBookSort, string> = {
+	newest: "Новинки",
+	popular: "Популярное",
+	rating: "Лучшие по рейтингу",
+};
+
+const isBookSort = (slug: string): slug is IBookSort =>
+	slug === "newest" || slug === "popular" || slug === "rating";
+
+const CatalogPage = ({ slug }: ICatalogPageProps) => {
+	const sort = isBookSort(slug) ? slug : "newest";
 	const {
 		data: books = [],
 		error,
 		isError,
 		isLoading,
-	} = useBookCardsQuery({ genre: slug, sort });
+	} = useBookCardsQuery({ sort });
 
 	return (
 		<Page>
 			<Content>
 				<BackLink href="/">На главную</BackLink>
-				<Title>{slug}</Title>
-				<Lead>Подборка книг в жанре {slug}.</Lead>
+				<Title>{catalogTitle[sort]}</Title>
+				<Lead>Книжная выдача по фильтру {sort}.</Lead>
 
 				{isLoading ? (
 					<BookGrid aria-label="Загружаем книги">
@@ -42,7 +51,7 @@ const GenrePage = ({ slug, sort }: IGenrePageProps) => {
 						Не удалось загрузить книги: {error.message}
 					</StateMessage>
 				) : books.length === 0 ? (
-					<StateMessage>В этом жанре пока нет книг.</StateMessage>
+					<StateMessage>Здесь пока нет книг.</StateMessage>
 				) : (
 					<BookGrid>
 						{books.map((book) => (
@@ -57,7 +66,7 @@ const GenrePage = ({ slug, sort }: IGenrePageProps) => {
 	);
 };
 
-export default GenrePage;
+export default CatalogPage;
 
 const Page = styled.div`
 	min-height: 100dvh;

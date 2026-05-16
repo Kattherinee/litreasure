@@ -6,7 +6,7 @@ import { useState } from "react";
 import styled from "styled-components";
 
 import {
-	type LoginPayload,
+	type ILoginPayload,
 	useLoginMutation,
 	useRegisterMutation,
 } from "@/shared/api/auth";
@@ -14,20 +14,20 @@ import { useAuthStore } from "@/shared/store/auth-store";
 import { theme } from "@/shared/theme";
 import { InputField } from "@/shared/ui/InputField";
 
-export type AuthModalMode = "login" | "register";
+export type IAuthModalMode = "login" | "register";
 
-type AuthModalProps = {
-	mode: AuthModalMode;
+interface IAuthModalProps {
+	mode: IAuthModalMode;
 	onClose: () => void;
-	onModeChange?: (mode: AuthModalMode) => void;
+	onModeChange?: (mode: IAuthModalMode) => void;
 	redirectOnSuccess?: boolean;
-};
+}
 
-type RegisterForm = LoginPayload & {
+interface IRegisterForm extends ILoginPayload {
 	confirmPassword: string;
-};
+}
 
-const initialForm: RegisterForm = {
+const initialForm: IRegisterForm = {
 	email: "",
 	password: "",
 	confirmPassword: "",
@@ -38,12 +38,12 @@ const AuthModal = ({
 	onClose,
 	onModeChange,
 	redirectOnSuccess = true,
-}: AuthModalProps) => {
+}: IAuthModalProps) => {
 	const router = useRouter();
 	const setSession = useAuthStore((state) => state.setSession);
 	const loginMutation = useLoginMutation();
 	const registerMutation = useRegisterMutation();
-	const [form, setForm] = useState<RegisterForm>(initialForm);
+	const [form, setForm] = useState<IRegisterForm>(initialForm);
 	const [formError, setFormError] = useState("");
 	const [touched, setTouched] = useState({
 		email: false,
@@ -118,7 +118,7 @@ const AuthModal = ({
 		}
 	};
 
-	const switchMode = (nextMode: AuthModalMode) => {
+	const switchMode = (nextMode: IAuthModalMode) => {
 		setFormError("");
 		setTouched({ email: false, password: false, confirmPassword: false });
 		onModeChange?.(nextMode);
