@@ -1,30 +1,62 @@
 "use client";
 
-import Link from "next/link";
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import styled from "styled-components";
 
-import type { IBook, IBookSearchScope } from "@/shared/api/books";
-import { useBookCardsQuery } from "@/shared/api/books";
+import type {
+	ISearchAllResponse,
+	ISearchAuthor,
+	ISearchBook,
+	ISearchCollection,
+	ISearchGenre,
+	ISearchSeries,
+} from "@/shared/api/search";
+import {
+	useSearchAllQuery,
+	useSearchAuthorsQuery,
+	useSearchBooksQuery,
+	useSearchCollectionsQuery,
+	useSearchGenresQuery,
+	useSearchSeriesQuery,
+} from "@/shared/api/search";
+
+import {
+	type ISearchTabActiveId,
+	type ISearchTabId,
+	SEARCH_TABS,
+	SearchTabBar,
+} from "./SearchTabBar";
 import { theme } from "@/shared/theme";
 import { Button } from "@/shared/ui/Button";
 import { InputField } from "@/shared/ui/InputField";
 
+import { AuthorResultCard } from "./AuthorResultCard";
+import { BookResultCard } from "./BookResultCard";
+import { CollectionResultCard } from "./CollectionResultCard";
+import { GenreResultCard } from "./GenreResultCard";
+import { SeriesResultCard } from "./SeriesResultCard";
+
 const MIN_SEARCH_LENGTH = 2;
 const RECENT_SEARCHES_KEY = "litreasure:recent-searches";
 const RECENT_SEARCHES_LIMIT = 6;
-const SEARCH_RESULT_LIMIT = 40;
+const MODAL_SEARCH_LIMIT = 15;
 
-type ISearchTab = IBookSearchScope;
+type ISearchResults = {
+	author: ISearchAuthor[];
+	book: ISearchBook[];
+	collection: ISearchCollection[];
+	genre: ISearchGenre[];
+	series: ISearchSeries[];
+};
 
-const searchTabs: Array<{ id: ISearchTab; label: string }> = [
-	{ id: "books", label: "Книги" },
-	{ id: "authors", label: "Авторы" },
-	{ id: "series", label: "Серии" },
-	{ id: "genres", label: "Жанры" },
-	{ id: "collections", label: "Подборки" },
-	{ id: "publishers", label: "Публикаторы" },
-];
+const emptySearchResults: ISearchResults = {
+	author: [],
+	book: [],
+	collection: [],
+	genre: [],
+	series: [],
+};
 
 const getStoredRecentSearches = () => {
 	if (typeof window === "undefined") {
@@ -55,33 +87,102 @@ const getStoredRecentSearches = () => {
 };
 
 const BookSearch = () => {
+	const router = useRouter();
 	const [searchValue, setSearchValue] = useState("");
 	const [recentSearches, setRecentSearches] = useState<string[]>(
 		getStoredRecentSearches,
 	);
-	const [activeTabs, setActiveTabs] = useState<ISearchTab[]>([]);
+	const [activeTab, setActiveTab] = useState<ISearchTabActiveId>("all");
 	const [isOpen, setIsOpen] = useState(false);
 	const normalizedSearchValue = searchValue.trim();
 	const shouldSearch = normalizedSearchValue.length >= MIN_SEARCH_LENGTH;
-	const { data: searchResponse, isFetching } = useBookCardsQuery(
-		{
-			limit: SEARCH_RESULT_LIMIT,
-			search: normalizedSearchValue,
-		},
+	const { data: searchResponse, isFetching: isFetchingAll } = useSearchAllQuery(
+		normalizedSearchValue,
+		MODAL_SEARCH_LIMIT,
 		{ enabled: shouldSearch },
 	);
-	const searchResults = useMemo(
-		() => searchResponse?.items ?? [],
+	const { data: booksResponse, isFetching: isFetchingBooks } =
+		useSearchBooksQuery(normalizedSearchValue, 1, MODAL_SEARCH_LIMIT, {
+			enabled: shouldSearch,
+		});
+	const { data: authorsResponse, isFetching: isFetchingAuthors } =
+		useSearchAuthorsQuery(normalizedSearchValue, 1, MODAL_SEARCH_LIMIT, {
+			enabled: shouldSearch,
+		});
+	const { data: seriesResponse, isFetching: isFetchingSeries } =
+		useSearchSeriesQuery(normalizedSearchValue, 1, MODAL_SEARCH_LIMIT, {
+			enabled: shouldSearch,
+		});
+	const { data: genresResponse, isFetching: isFetchingGenres } =
+		useSearchGenresQuery(normalizedSearchValue, 1, MODAL_SEARCH_LIMIT, {
+			enabled: shouldSearch,
+		});
+	const { data: collectionsResponse, isFetching: isFetchingCollections } =
+		useSearchCollectionsQuery(normalizedSearchValue, 1, MODAL_SEARCH_LIMIT, {
+			enabled: shouldSearch,
+		});
+	const allSearchResults = useMemo(
+		() => getSearchResults(searchResponse),
 		[searchResponse],
 	);
-	const searchTotal = searchResponse?.total ?? searchResults.length;
-	const filteredSearchResults = useMemo(
-		() => filterSearchResultsByTabs(searchResults, activeTabs),
-		[activeTabs, searchResults],
+	const tabSearchResults = useMemo(
+		(): ISearchResults => ({
+			author: authorsResponse?.items ?? [],
+			book: booksResponse?.items ?? [],
+			collection: collectionsResponse?.items ?? [],
+			genre: genresResponse?.items ?? [],
+			series: seriesResponse?.items ?? [],
+		}),
+		[
+			authorsResponse,
+			booksResponse,
+			collectionsResponse,
+			genresResponse,
+			seriesResponse,
+		],
 	);
+	const searchResults =
+		activeTab === "all" ? allSearchResults : tabSearchResults;
 	const resultCountsByTab = useMemo(
-		() => getResultCountsByTab(searchResults),
-		[searchResults],
+		(): Record<ISearchTabId, number> => ({
+			author: authorsResponse?.total ?? 0,
+			book: booksResponse?.total ?? 0,
+			collection: collectionsResponse?.total ?? 0,
+			genre: genresResponse?.total ?? 0,
+			series: seriesResponse?.total ?? 0,
+		}),
+		[
+			authorsResponse,
+			booksResponse,
+			collectionsResponse,
+			genresResponse,
+			seriesResponse,
+		],
+	);
+	const searchTotal =
+		searchResponse?.total ?? getResultCountsTotal(resultCountsByTab);
+	const activeTabTotal =
+		activeTab === "all"
+			? searchTotal
+			: resultCountsByTab[activeTab as ISearchTabId];
+	const isFetching =
+		activeTab === "all"
+			? isFetchingAll
+			: activeTab === "book"
+				? isFetchingBooks
+				: activeTab === "author"
+					? isFetchingAuthors
+					: activeTab === "series"
+						? isFetchingSeries
+						: activeTab === "genre"
+							? isFetchingGenres
+							: isFetchingCollections;
+	const visibleTabs =
+		activeTab === "all"
+			? SEARCH_TABS.map((tab) => tab.id)
+			: [activeTab as ISearchTabId];
+	const hasVisibleResults = visibleTabs.some(
+		(tab) => searchResults[tab].length > 0,
 	);
 
 	const closeSearch = () => setIsOpen(false);
@@ -112,13 +213,7 @@ const BookSearch = () => {
 	};
 
 	const clearSearch = () => setSearchValue("");
-	const toggleSearchTab = (tab: ISearchTab) => {
-		setActiveTabs((currentTabs) =>
-			currentTabs.includes(tab)
-				? currentTabs.filter((currentTab) => currentTab !== tab)
-				: [...currentTabs, tab],
-		);
-	};
+	const selectTab = (tab: ISearchTabActiveId) => setActiveTab(tab);
 
 	useEffect(() => {
 		if (!isOpen) {
@@ -142,9 +237,9 @@ const BookSearch = () => {
 		<SearchWrap>
 			<SearchIcon aria-hidden="true" />
 			<SearchInput
-				type="search"
-				placeholder="Название, автор"
 				aria-label="Поиск книг"
+				placeholder="Название, автор"
+				type="search"
 				value={searchValue}
 				onChange={(event) => setSearchValue(event.target.value)}
 				onFocus={() => setIsOpen(true)}
@@ -158,9 +253,9 @@ const BookSearch = () => {
 							<PanelSearchIcon aria-hidden="true" />
 							<PanelSearchInput
 								autoFocus
-								type="search"
-								placeholder="Название, автор, серия"
 								aria-label="Расширенный поиск"
+								placeholder="Название, автор, серия"
+								type="search"
 								value={searchValue}
 								onChange={(event) => setSearchValue(event.target.value)}
 								onKeyDown={(event) => {
@@ -171,8 +266,8 @@ const BookSearch = () => {
 							/>
 							{searchValue ? (
 								<ClearButton
-									type="button"
 									aria-label="Очистить поиск"
+									type="button"
 									onClick={clearSearch}
 								>
 									×
@@ -181,33 +276,14 @@ const BookSearch = () => {
 						</SearchPanelHeader>
 
 						<Tabs role="tablist" aria-label="Фильтры поиска">
-							{searchTabs.map((tab) => {
-								const isActive = activeTabs.includes(tab.id);
-								const resultCount = resultCountsByTab[tab.id] ?? 0;
-								const showResultState = shouldSearch && !isFetching;
-
-								return (
-									<TabButton
-										key={tab.id}
-										aria-pressed={isActive}
-										$hasResults={resultCount > 0}
-										$isActive={isActive}
-										$showResultState={showResultState}
-										type="button"
-										onClick={() => toggleSearchTab(tab.id)}
-									>
-										{tab.label}
-										{showResultState ? (
-											<TabCount
-												$hasResults={resultCount > 0}
-												$isActive={isActive}
-											>
-												{resultCount}
-											</TabCount>
-										) : null}
-									</TabButton>
-								);
-							})}
+							<SearchTabBar
+								activeTab={activeTab}
+								counts={resultCountsByTab}
+								isFetching={isFetching}
+								shouldSearch={shouldSearch}
+								total={searchTotal}
+								onTabChange={selectTab}
+							/>
 						</Tabs>
 
 						<ResultsArea>
@@ -236,110 +312,100 @@ const BookSearch = () => {
 								<EmptyState>Ищем книги...</EmptyState>
 							) : null}
 
-							{shouldSearch && !isFetching && filteredSearchResults.length > 0
-								? filteredSearchResults.map((book) => {
-										const seriesLine = formatSeriesLine(book);
-										const searchMatch = getPrimarySearchMatch(
-											book,
-											normalizedSearchValue,
-										);
-										const primaryAuthor = book.authors?.[0];
-										const authorName = primaryAuthor?.name ?? book.author;
-
-										return (
-											<ResultItem key={book.id}>
-												<ResultMain>
-													<ResultCoverLink
-														href={`/books/${book.id}`}
-														onClick={() => {
-															saveRecentSearch();
-															closeSearch();
-														}}
-													>
-														<ResultCover
-															src={
-																book.coverUrl ?? "/images/book-placeholder.svg"
-															}
-															alt=""
-														/>
-													</ResultCoverLink>
-													<ResultMeta>
-														<ResultLink
-															href={`/books/${book.id}`}
-															onClick={() => {
-																saveRecentSearch();
-																closeSearch();
-															}}
-														>
-															{seriesLine ? (
-																<ResultSeries>
-																	<HighlightedText
-																		query={normalizedSearchValue}
-																		text={seriesLine}
-																	/>
-																</ResultSeries>
-															) : null}
-															<ResultTitle>
-																<HighlightedText
-																	query={normalizedSearchValue}
-																	text={book.title}
-																/>
-															</ResultTitle>
-														</ResultLink>
-														<ResultAuthor>
-															{primaryAuthor ? (
-																<ResultAuthorLink
-																	href={`/authors/${primaryAuthor.id}`}
-																	onClick={() => {
-																		saveRecentSearch();
-																		closeSearch();
-																	}}
-																>
-																	<HighlightedText
-																		query={normalizedSearchValue}
-																		text={authorName}
-																	/>
-																</ResultAuthorLink>
-															) : (
-																<HighlightedText
-																	query={normalizedSearchValue}
-																	text={authorName}
-																/>
-															)}
-														</ResultAuthor>
-														{searchMatch ? (
-															<ResultMatchLine>
-																<ResultMatchField>
-																	{formatSearchMatchField(searchMatch.field)}
-																</ResultMatchField>
-																<HighlightedText
-																	query={normalizedSearchValue}
-																	text={searchMatch.value}
-																/>
-															</ResultMatchLine>
-														) : null}
-													</ResultMeta>
-												</ResultMain>
-												<WantButton buttonType="oxygenPill" type="button">
-													Want to read
-												</WantButton>
-											</ResultItem>
-										);
-									})
+							{shouldSearch &&
+							!isFetching &&
+							visibleTabs.includes("book") &&
+							searchResults.book.length > 0
+								? searchResults.book.map((book) => (
+										<BookResultCard
+											key={book.id}
+											book={book}
+											closeSearch={closeSearch}
+											query={normalizedSearchValue}
+											saveRecentSearch={saveRecentSearch}
+										/>
+									))
 								: null}
 
 							{shouldSearch &&
 							!isFetching &&
-							filteredSearchResults.length === 0 ? (
+							visibleTabs.includes("author") &&
+							searchResults.author.length > 0
+								? searchResults.author.map((author) => (
+										<AuthorResultCard
+											key={`author-${author.id}`}
+											author={author}
+											closeSearch={closeSearch}
+											query={normalizedSearchValue}
+											saveRecentSearch={saveRecentSearch}
+										/>
+									))
+								: null}
+
+							{shouldSearch &&
+							!isFetching &&
+							visibleTabs.includes("series") &&
+							searchResults.series.length > 0
+								? searchResults.series.map((series) => (
+										<SeriesResultCard
+											key={`series-${series.id}`}
+											query={normalizedSearchValue}
+											series={series}
+											saveRecentSearch={saveRecentSearch}
+										/>
+									))
+								: null}
+
+							{shouldSearch &&
+							!isFetching &&
+							visibleTabs.includes("genre") &&
+							searchResults.genre.length > 0
+								? searchResults.genre.map((genre) => (
+										<GenreResultCard
+											key={`genre-${genre.id}`}
+											closeSearch={closeSearch}
+											genre={genre}
+											query={normalizedSearchValue}
+											saveRecentSearch={saveRecentSearch}
+										/>
+									))
+								: null}
+
+							{shouldSearch &&
+							!isFetching &&
+							visibleTabs.includes("collection") &&
+							searchResults.collection.length > 0
+								? searchResults.collection.map((collection) => (
+										<CollectionResultCard
+											key={`collection-${collection.id}`}
+											closeSearch={closeSearch}
+											collection={collection}
+											query={normalizedSearchValue}
+											saveRecentSearch={saveRecentSearch}
+										/>
+									))
+								: null}
+
+							{shouldSearch && !isFetching && !hasVisibleResults ? (
 								<EmptyState>Ничего не найдено.</EmptyState>
 							) : null}
 						</ResultsArea>
 
 						<SearchFooter>
-							<ResultCount>{getResultCountLabel(searchTotal)}</ResultCount>
+							<ResultCount>{getResultCountLabel(activeTabTotal)}</ResultCount>
 							<ViewAllButton
 								buttonType="containedInverted"
-								onClick={() => saveRecentSearch()}
+								onClick={() => {
+									saveRecentSearch();
+									const params = new URLSearchParams();
+									if (normalizedSearchValue)
+										params.set("q", normalizedSearchValue);
+									if (activeTab !== "all") {
+										params.set("tab", activeTab);
+									}
+									closeSearch();
+									router.push(`/search?${params.toString()}`);
+								}}
 							>
 								Посмотреть все
 							</ViewAllButton>
@@ -353,187 +419,19 @@ const BookSearch = () => {
 
 export default BookSearch;
 
-const HighlightedText = ({ query, text }: { query: string; text: string }) => {
-	const highlightValue = query.trim();
+const getSearchResults = (response?: ISearchAllResponse): ISearchResults =>
+	response
+		? {
+				author: response.authors,
+				book: response.books,
+				collection: response.collections,
+				genre: response.genres,
+				series: response.series,
+			}
+		: emptySearchResults;
 
-	if (!highlightValue) {
-		return text;
-	}
-
-	const matchIndex = text.toLowerCase().indexOf(highlightValue.toLowerCase());
-
-	if (matchIndex === -1) {
-		return text;
-	}
-
-	const before = text.slice(0, matchIndex);
-	const match = text.slice(matchIndex, matchIndex + highlightValue.length);
-	const after = text.slice(matchIndex + highlightValue.length);
-
-	return (
-		<Fragment>
-			{before}
-			<Highlight>{match}</Highlight>
-			{after}
-		</Fragment>
-	);
-};
-
-const filterSearchResultsByTabs = (
-	books: IBook[],
-	activeTabs: ISearchTab[],
-) => {
-	if (activeTabs.length === 0) {
-		return books;
-	}
-
-	return books.filter((book) =>
-		activeTabs.some((activeTab) => doesBookMatchTab(book, activeTab)),
-	);
-};
-
-const getPrimarySearchMatch = (book: IBook, query: string) => {
-	const normalizedQuery = query.trim().toLowerCase();
-
-	if (!normalizedQuery || !book.searchMatches?.length) {
-		return null;
-	}
-
-	return (
-		book.searchMatches.find((match) =>
-			match.value.toLowerCase().includes(normalizedQuery),
-		) ?? book.searchMatches[0]
-	);
-};
-
-const formatSearchMatchField = (field: string) => {
-	if (field === "author" || field === "authors") return "Автор";
-	if (field === "genre" || field === "genres") return "Жанр";
-	if (field === "series" || field === "seriesTitle") return "Серия";
-	if (field === "collection" || field === "collections") return "Подборка";
-	if (field === "publisher" || field === "publishers") return "Издатель";
-	if (field === "title" || field === "book") return "Книга";
-
-	return "Совпадение";
-};
-
-const getResultCountsByTab = (books: IBook[]) =>
-	searchTabs.reduce(
-		(counts, tab) => ({
-			...counts,
-			[tab.id]: books.filter((book) => doesBookMatchTab(book, tab.id)).length,
-		}),
-		{} as Record<ISearchTab, number>,
-	);
-
-const doesBookMatchTab = (book: IBook, activeTab: ISearchTab) => {
-	if (activeTab === "books") {
-		return isBookResult(book);
-	}
-
-	if (activeTab === "authors") {
-		return hasSearchMatch(book, ["author", "authors"]);
-	}
-
-	if (activeTab === "series") {
-		return isSeriesResult(book);
-	}
-
-	if (activeTab === "genres") {
-		return hasSearchMatch(book, ["genre", "genres"]);
-	}
-
-	if (activeTab === "collections") {
-		return isCollectionResult(book);
-	}
-
-	if (activeTab === "publishers") {
-		return hasSearchMatch(book, ["publisher", "publishers"]);
-	}
-
-	return true;
-};
-
-const hasSearchMatch = (book: IBook, fields: string[]) =>
-	book.searchMatches?.some((match) => fields.includes(match.field)) ?? false;
-
-const getBookRelationType = (book: IBook) =>
-	book.seriesRelationType ?? book.series?.relationType ?? book.relationType;
-
-const isCollectionResult = (book: IBook) => {
-	const relationType = getBookRelationType(book);
-
-	return (
-		relationType === "collection" ||
-		relationType === "omnibus" ||
-		hasSearchMatch(book, ["collection", "collections"])
-	);
-};
-
-const isSeriesResult = (book: IBook) => {
-	if (isCollectionResult(book)) {
-		return false;
-	}
-
-	return (
-		getBookRelationType(book) === "main" ||
-		getBookRelationType(book) === "spin_off" ||
-		Boolean(book.seriesTitle ?? book.series?.title) ||
-		hasSearchMatch(book, ["series", "seriesTitle"])
-	);
-};
-
-const isBookResult = (book: IBook) => {
-	if (isCollectionResult(book)) {
-		return false;
-	}
-
-	return (
-		hasSearchMatch(book, ["book", "title"]) ||
-		!hasSearchMatch(book, [
-			"author",
-			"authors",
-			"collection",
-			"collections",
-			"genre",
-			"genres",
-			"publisher",
-			"publishers",
-			"series",
-			"seriesTitle",
-		])
-	);
-};
-
-const formatSeriesLine = (book: IBook) => {
-	const seriesTitle = book.seriesTitle ?? book.series?.title;
-	const orderInSeries = book.series?.orderInSeries ?? book.orderInSeries;
-	const relationType =
-		book.seriesRelationType ?? book.series?.relationType ?? book.relationType;
-
-	if (relationType === "spin_off" && seriesTitle) {
-		return `Spin-off in ${seriesTitle}`;
-	}
-
-	if (
-		(relationType === "collection" || relationType === "omnibus") &&
-		seriesTitle
-	) {
-		return `${book.series?.seriesLabel ?? book.seriesLabel ?? "Collection"} in ${seriesTitle}`;
-	}
-
-	if (orderInSeries && orderInSeries > 0) {
-		return seriesTitle
-			? `Book ${orderInSeries} in ${seriesTitle}`
-			: `Book ${orderInSeries} in series`;
-	}
-
-	if (seriesTitle) {
-		return `Part of ${seriesTitle}`;
-	}
-
-	return null;
-};
+const getResultCountsTotal = (counts: Record<ISearchTabId, number>) =>
+	SEARCH_TABS.reduce((total, tab) => total + counts[tab.id], 0);
 
 const getResultCountLabel = (count: number) => {
 	if (count === 1) {
@@ -590,7 +488,6 @@ const SearchInput = styled(InputField)`
 	min-height: 24px;
 	padding-block: 0.45rem;
 	padding: 0.335vw 0.875vw 0.335vw 2.8vw;
-
 	line-height: 1.35;
 
 	&::-webkit-search-cancel-button {
@@ -650,7 +547,6 @@ const PanelSearchInput = styled(InputField)`
 	padding-block: 0.55rem;
 	padding-right: 3rem;
 	padding-left: 3rem;
-
 	font-size: 1rem;
 	line-height: 1.35;
 
@@ -723,75 +619,6 @@ const Tabs = styled.div`
 	}
 `;
 
-const TabButton = styled.button<{
-	$hasResults: boolean;
-	$isActive: boolean;
-	$showResultState: boolean;
-}>`
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	gap: 0.45rem;
-	flex: 0 0 auto;
-	min-height: 2rem;
-	border: 0.0625rem solid
-		${({ $hasResults, $isActive, $showResultState }) =>
-			$isActive
-				? theme.colors.orangeLight
-				: $showResultState && $hasResults
-					? "rgb(218 142 91 / 0.45)"
-					: theme.colors.transparent};
-	border-radius: 62.4375rem;
-	background: ${({ $isActive }) =>
-		$isActive ? theme.colors.orangeLight : theme.colors.surface};
-	padding: 0.45rem 0.95rem;
-	color: ${({ $hasResults, $isActive, $showResultState }) =>
-		$isActive
-			? theme.colors.invertedText
-			: $showResultState && !$hasResults
-				? theme.colors.muted
-				: theme.colors.foreground};
-	cursor: pointer;
-	font-family: ${theme.fonts.sans};
-	font-size: 0.9rem;
-	line-height: 1;
-	white-space: nowrap;
-	transition:
-		background 160ms ease,
-		border-color 160ms ease,
-		color 160ms ease;
-
-	&:hover,
-	&:focus-visible {
-		border-color: ${theme.colors.orangeLight};
-		outline: none;
-	}
-`;
-
-const TabCount = styled.span<{ $hasResults: boolean; $isActive: boolean }>`
-	display: inline-flex;
-	min-width: 1.25rem;
-	height: 1.25rem;
-	align-items: center;
-	justify-content: center;
-	border-radius: 999px;
-	background: ${({ $hasResults, $isActive }) =>
-		$isActive
-			? "rgb(242 239 237 / 0.9)"
-			: $hasResults
-				? "rgb(218 142 91 / 0.16)"
-				: "rgb(186 183 180 / 0.18)"};
-	color: ${({ $hasResults, $isActive }) =>
-		$isActive
-			? theme.colors.orangeDark
-			: $hasResults
-				? theme.colors.orangeDark
-				: theme.colors.muted};
-	font-size: 0.72rem;
-	font-weight: 700;
-	line-height: 1;
-`;
-
 const ResultsArea = styled.div`
 	position: relative;
 	z-index: 1;
@@ -839,170 +666,6 @@ const RecentButton = styled.button`
 		border-color: ${theme.colors.orangeLight};
 		color: ${theme.colors.orangeDark};
 		outline: none;
-	}
-`;
-
-const ResultItem = styled.div`
-	display: grid;
-	align-items: center;
-	gap: 0.9rem;
-	grid-template-columns: minmax(0, 1fr) auto;
-	border-radius: 0.8rem;
-	transition:
-		background 160ms ease,
-		transform 160ms ease;
-
-	&:hover,
-	&:focus-within {
-		background: rgb(242 239 237 / 0.78);
-		transform: translateY(-0.0625rem);
-	}
-
-	@media (max-width: 34rem) {
-		grid-template-columns: 1fr;
-	}
-`;
-
-const ResultMain = styled.div`
-	display: grid;
-	align-items: center;
-	gap: 0.9rem;
-	grid-template-columns: 3.25rem minmax(0, 1fr);
-	min-width: 0;
-	padding: 0.6rem;
-`;
-
-const ResultCoverLink = styled(Link)`
-	display: inline-flex;
-	width: 3.25rem;
-	height: 4.7rem;
-	border-radius: 0.35rem;
-
-	&:focus-visible {
-		outline: 0.125rem solid ${theme.colors.orangeLight};
-		outline-offset: 0.125rem;
-	}
-`;
-
-const ResultLink = styled(Link)`
-	display: flex;
-	min-width: 0;
-	flex-direction: column;
-	align-items: flex-start;
-	gap: 0.35rem;
-	color: ${theme.colors.foreground};
-	text-decoration: none;
-
-	&:focus-visible {
-		outline: none;
-	}
-`;
-
-const ResultCover = styled.img`
-	width: 3.25rem;
-	height: 4.7rem;
-	border-radius: 0.35rem;
-	object-fit: cover;
-`;
-
-const ResultMeta = styled.span`
-	display: flex;
-	min-width: 0;
-	flex-direction: column;
-	align-items: flex-start;
-	gap: 0.35rem;
-`;
-
-const ResultSeries = styled.span`
-	display: inline-flex;
-	max-width: 100%;
-	align-items: center;
-	border: 0.0625rem solid rgb(212 100 28 / 0.18);
-	border-radius: 62.4375rem;
-	background: rgb(242 239 237 / 0.62);
-	padding: 0.28rem 0.55rem;
-	color: ${theme.colors.orangeDark};
-	font-family: ${theme.fonts.sans};
-	font-size: 0.72rem;
-	font-weight: 600;
-	line-height: 1;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-`;
-
-const ResultTitle = styled.span`
-	display: -webkit-box;
-	overflow: hidden;
-	-webkit-box-orient: vertical;
-	-webkit-line-clamp: 2;
-	color: ${theme.colors.foreground};
-	font-family: ${theme.fonts.serif};
-	font-size: 1.05rem;
-	font-weight: 500;
-	line-height: 1.15;
-`;
-
-const ResultAuthor = styled.span`
-	overflow: hidden;
-	color: ${theme.colors.softForeground};
-	font-family: ${theme.fonts.sans};
-	font-size: 0.85rem;
-	line-height: 1.3;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-`;
-
-const ResultAuthorLink = styled(Link)`
-	color: inherit;
-	text-decoration: none;
-
-	&:hover,
-	&:focus-visible {
-		color: ${theme.colors.orangeDark};
-		outline: none;
-		text-decoration: underline;
-	}
-`;
-
-const ResultMatchLine = styled.span`
-	display: inline-flex;
-	max-width: 100%;
-	align-items: center;
-	gap: 0.4rem;
-	overflow: hidden;
-	border-radius: 0.45rem;
-	background: rgb(218 142 91 / 0.1);
-	padding: 0.25rem 0.45rem;
-	color: ${theme.colors.softForeground};
-	font-family: ${theme.fonts.sans};
-	font-size: 0.78rem;
-	line-height: 1.25;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-`;
-
-const ResultMatchField = styled.span`
-	flex: 0 0 auto;
-	color: ${theme.colors.orangeDark};
-	font-weight: 700;
-`;
-
-const Highlight = styled.mark`
-	background: ${theme.colors.transparent};
-	color: ${theme.colors.orangeDark};
-	font-weight: inherit;
-`;
-
-const WantButton = styled(Button)`
-	&& {
-		justify-self: end;
-		margin-right: 0.6rem;
-		white-space: nowrap;
-
-		@media (max-width: 34rem) {
-			display: none;
-		}
 	}
 `;
 

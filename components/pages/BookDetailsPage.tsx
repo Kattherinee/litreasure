@@ -27,18 +27,54 @@ const BookDetailsPage = ({ slug }: IBookDetailsPageProps) => {
 							<SkeletonBlock $height="5.5rem" $radius="0.7rem" $width="14rem" />
 						</SkeletonAside>
 						<SkeletonMain>
-							<SkeletonBlock $height="2rem" $radius="62.4375rem" $width="14rem" />
-							<SkeletonBlock $height="3.4rem" $radius="0.7rem" $width="min(100%, 34rem)" />
-							<SkeletonBlock $height="1.35rem" $radius="0.5rem" $width="12rem" />
+							<SkeletonBlock
+								$height="2rem"
+								$radius="62.4375rem"
+								$width="14rem"
+							/>
+							<SkeletonBlock
+								$height="3.4rem"
+								$radius="0.7rem"
+								$width="min(100%, 34rem)"
+							/>
+							<SkeletonBlock
+								$height="1.35rem"
+								$radius="0.5rem"
+								$width="12rem"
+							/>
 							<SkeletonActions>
-								<SkeletonBlock $height="2.65rem" $radius="62.4375rem" $width="10rem" />
-								<SkeletonBlock $height="2.65rem" $radius="50%" $width="2.65rem" />
-								<SkeletonBlock $height="2.65rem" $radius="50%" $width="2.65rem" />
+								<SkeletonBlock
+									$height="2.65rem"
+									$radius="62.4375rem"
+									$width="10rem"
+								/>
+								<SkeletonBlock
+									$height="2.65rem"
+									$radius="50%"
+									$width="2.65rem"
+								/>
+								<SkeletonBlock
+									$height="2.65rem"
+									$radius="50%"
+									$width="2.65rem"
+								/>
 							</SkeletonActions>
 							<SkeletonTabs>
-								<SkeletonBlock $height="2.4rem" $radius="62.4375rem" $width="9rem" />
-								<SkeletonBlock $height="2.4rem" $radius="62.4375rem" $width="8rem" />
-								<SkeletonBlock $height="2.4rem" $radius="62.4375rem" $width="7rem" />
+								<SkeletonBlock
+									$height="2.4rem"
+									$radius="62.4375rem"
+									$width="9rem"
+								/>
+								<SkeletonBlock
+									$height="2.4rem"
+									$radius="62.4375rem"
+									$width="8rem"
+								/>
+								<SkeletonBlock
+									$height="2.4rem"
+									$radius="62.4375rem"
+									$width="7rem"
+								/>
 							</SkeletonTabs>
 							<SkeletonBlock $height="1rem" $width="100%" />
 							<SkeletonBlock $height="1rem" $width="92%" />
@@ -88,7 +124,6 @@ const Page = styled.div`
 
 	min-height: 100dvh;
 	overflow-x: hidden;
-	background: ${theme.colors.background};
 	padding-bottom: 7rem;
 `;
 

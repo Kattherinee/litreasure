@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import styled from "styled-components";
@@ -6,6 +6,7 @@ import styled from "styled-components";
 import AuthModal, { type IAuthModalMode } from "@/components/pages/AuthModal";
 import { usePublicCollectionsQuery } from "@/shared/api/collections";
 import { theme } from "@/shared/theme";
+import { AppPagination } from "@/shared/ui/AppPagination";
 import { SkeletonBlock } from "@/shared/ui/Skeleton";
 import { CollectionRow } from "./CollectionsRow";
 
@@ -23,8 +24,6 @@ const CollectionsPage = () => {
 	const collections = collectionsResponse?.items ?? [];
 	const pages = collectionsResponse?.pages ?? 1;
 	const total = collectionsResponse?.total ?? 0;
-	const canGoPrev = page > 1;
-	const canGoNext = page < pages;
 
 	return (
 		<Page>
@@ -65,24 +64,7 @@ const CollectionsPage = () => {
 							))}
 						</CollectionList>
 						{pages > 1 ? (
-							<Pagination>
-								<PageButton
-									disabled={!canGoPrev}
-									type="button"
-									onClick={() => setPage((current) => Math.max(1, current - 1))}
-								>
-									Назад
-								</PageButton>
-								<PageButton
-									disabled={!canGoNext}
-									type="button"
-									onClick={() =>
-										setPage((current) => Math.min(pages, current + 1))
-									}
-								>
-									Вперёд
-								</PageButton>
-							</Pagination>
+							<AppPagination count={pages} page={page} onChange={setPage} />
 						) : null}
 					</>
 				)}
@@ -242,36 +224,4 @@ const StateMessage = styled.p`
 	color: ${theme.colors.softForeground};
 	font-size: 1rem;
 	line-height: 1.5;
-`;
-
-const Pagination = styled.div`
-	display: flex;
-	justify-content: center;
-	gap: 0.75rem;
-	margin-top: 1.5rem;
-`;
-
-const PageButton = styled.button`
-	border: 0.0625rem solid ${theme.colors.orangeDark};
-	border-radius: 62.4375rem;
-	background: ${theme.colors.transparent};
-	padding: 0.55rem 1rem;
-	color: ${theme.colors.orangeDark};
-	cursor: pointer;
-	font: inherit;
-	font-size: 0.95rem;
-	font-weight: 700;
-
-	&:not(:disabled):hover,
-	&:not(:disabled):focus-visible {
-		background: ${theme.colors.orangePrimary};
-		border-color: ${theme.colors.orangePrimary};
-		color: ${theme.colors.white};
-		outline: none;
-	}
-
-	&:disabled {
-		cursor: default;
-		opacity: 0.45;
-	}
 `;

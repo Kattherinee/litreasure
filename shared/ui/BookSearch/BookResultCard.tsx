@@ -1,0 +1,112 @@
+import type { ISearchBook } from "@/shared/api/search";
+
+import {
+	ResultAuthor,
+	ResultCover,
+	ResultCoverLink,
+	ResultItem,
+	ResultLink,
+	ResultMain,
+	ResultMeta,
+	ResultSeries,
+	ResultTitle,
+	WantButton,
+} from "./SearchResultCard.styles";
+import {
+	getSupplementalSearchMatch,
+	HighlightedText,
+	lineHasMatch,
+	SearchMatchBadge,
+} from "./SearchResultCard.utils";
+import Link from "next/link";
+import styled from "styled-components";
+
+interface IBookResultCardProps {
+	book: ISearchBook;
+	closeSearch: () => void;
+	query: string;
+	saveRecentSearch: () => void;
+}
+
+export const BookResultCard = ({
+	book,
+	closeSearch,
+	query,
+	saveRecentSearch,
+}: IBookResultCardProps) => {
+	const seriesLine = book.seriesTitle
+		? `${book.orderInSeries}/${book.bookCountInSeries} of  ${book.seriesTitle}`
+		: null;
+	const titleMatches = lineHasMatch(book.title, book.searchMatches, query, [
+		"book",
+		"title",
+	]);
+	const authorMatches = lineHasMatch(book.author, book.searchMatches, query, [
+		"author",
+		"authors",
+	]);
+	const seriesMatches = seriesLine
+		? lineHasMatch(seriesLine, book.searchMatches, query, [
+				"series",
+				"seriesTitle",
+			])
+		: false;
+	const supplementalMatch = getSupplementalSearchMatch(
+		book.searchMatches,
+		query,
+		{
+			author: authorMatches,
+			series: seriesMatches,
+			title: titleMatches,
+		},
+	);
+	const handleOpenResult = () => {
+		saveRecentSearch();
+		closeSearch();
+	};
+
+	return (
+		<ResultItem>
+			<ResultMain>
+				<ResultCoverLink href={`/books/${book.id}`} onClick={handleOpenResult}>
+					<ResultCover
+						alt=""
+						src={book.coverUrl ?? "/images/book-placeholder.svg"}
+					/>
+				</ResultCoverLink>
+				<ResultMeta>
+					<ResultLink href={`/books/${book.id}`} onClick={handleOpenResult}>
+						{seriesLine ? (
+							<ResultSeries>
+								<HighlightedText query={query} text={seriesLine} />
+							</ResultSeries>
+						) : null}
+						<ResultTitle>
+							<HighlightedText query={query} text={book.title} />
+						</ResultTitle>
+					</ResultLink>
+					<ResultAuthor>
+						<StyledResultLink
+							href={`/authors/${book.authorId}`}
+							onClick={handleOpenResult}
+						>
+							<HighlightedText query={query} text={book.author} />
+						</StyledResultLink>
+					</ResultAuthor>
+					<SearchMatchBadge match={supplementalMatch} query={query} />
+				</ResultMeta>
+			</ResultMain>
+			<WantButton buttonType="oxygenPill" type="button">
+				Want to read
+			</WantButton>
+		</ResultItem>
+	);
+};
+export const StyledResultLink = styled(Link)`
+	text-decoration: none;
+	color: inherit;
+
+	&:hover {
+		text-decoration: underline;
+	}
+`;

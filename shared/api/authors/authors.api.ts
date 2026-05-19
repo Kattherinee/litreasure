@@ -27,12 +27,41 @@ const normalizeAuthorsList = (
 const getAuthorsQuery = (params: IAuthorsListParams = {}) => {
 	const searchParams = new URLSearchParams();
 
-	if (params.limit) searchParams.set("limit", String(params.limit));
-	if (params.page) searchParams.set("page", String(params.page));
+	appendSearchParam(searchParams, "genreMode", params.genreMode);
+	appendSearchParam(searchParams, "genres", params.genres);
+	appendSearchParam(searchParams, "limit", params.limit);
+	appendSearchParam(searchParams, "maxBooks", params.maxBooks);
+	appendSearchParam(searchParams, "minBooks", params.minBooks);
+	appendSearchParam(searchParams, "page", params.page);
+	appendSearchParam(searchParams, "sort", params.sort);
 
 	const query = searchParams.toString();
 
 	return query ? `?${query}` : "";
+};
+
+const appendSearchParam = (
+	searchParams: URLSearchParams,
+	key: string,
+	value?: number | string | null,
+) => {
+	if (value === undefined || value === null) {
+		return;
+	}
+
+	if (typeof value === "number") {
+		if (!Number.isFinite(value) || value === 0) {
+			return;
+		}
+	}
+
+	const stringValue = String(value).trim();
+
+	if (!stringValue) {
+		return;
+	}
+
+	searchParams.set(key, stringValue);
 };
 
 export const getAuthors = async (

@@ -1,14 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import StarBorderIcon from "@mui/icons-material/StarBorder";
-import StarIcon from "@mui/icons-material/Star";
 import Rating from "@mui/material/Rating";
 import styled from "styled-components";
 
 import AuthModal, { type IAuthModalMode } from "@/components/pages/AuthModal";
 import type { IBook } from "@/shared/api/books";
-import { useAuthStore } from "@/shared/store/auth-store";
 import { theme } from "@/shared/theme";
 import GenrePill from "@/shared/ui/GenrePill/GenrePill";
 import { CoverPlaceholder } from "@/shared/ui/Skeleton";
@@ -66,29 +63,11 @@ const BookDetailContent = ({ book }: IBookDetailContentProps) => {
 	const bookMeta = getBookFacts(book).filter(
 		(item) => item.value.trim().toLowerCase() !== "unknown",
 	);
-	const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 	const [authModalMode, setAuthModalMode] = useState<IAuthModalMode | null>(
 		null,
 	);
 	const [quickRating, setQuickRating] = useState(0);
-	const [quickRatingStatus, setQuickRatingStatus] = useState("");
 	const [activeTab, setActiveTab] = useState<ITabId>("description");
-
-	const handleQuickRatingSubmit = () => {
-		if (!quickRating) {
-			setQuickRatingStatus("Выберите оценку.");
-			return;
-		}
-
-		if (!isAuthenticated) {
-			setAuthModalMode("login");
-			return;
-		}
-
-		setQuickRatingStatus(
-			"Оценка готова к отправке. Позже подключим метод API.",
-		);
-	};
 
 	return (
 		<ContentWrap>
@@ -151,7 +130,6 @@ const BookDetailContent = ({ book }: IBookDetailContentProps) => {
 								value={quickRating}
 								onChange={(_, value) => {
 									setQuickRating(value ?? 0);
-									setQuickRatingStatus("");
 								}}
 							/>
 							<QuickReviewLink

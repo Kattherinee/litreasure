@@ -393,17 +393,17 @@ const NavButton = styled(Link)<{ $active: boolean }>`
 		$active ? theme.colors.orangeLight : theme.colors.invertedText};
 	font: inherit;
 	font-family: ${theme.fonts.sans};
-	font-size: 1.04vw;
-	line-height: 1.35vw;
+	font-size: 1.14rem;
+	line-height: 1.35rem;
 	text-decoration: none;
 	text-transform: none;
 	transition: color 180ms ease;
 
 	&::after {
 		position: absolute;
-		right: 0.9rem;
+		right: 0.7rem;
 		bottom: -0.0625rem;
-		left: 0.9rem;
+		left: 0.7rem;
 		height: 0.1875rem;
 		border-radius: 62.4375rem;
 		background: ${theme.colors.orangeLight};

@@ -6,7 +6,12 @@ export interface IAuthorBookCard {
 	coverUrl?: string;
 	publishedYear?: number;
 	orderInSeries?: number;
-	seriesRelationType?: "collection" | "main" | "omnibus" | "spin_off" | "unknown";
+	seriesRelationType?:
+		| "collection"
+		| "main"
+		| "omnibus"
+		| "spin_off"
+		| "unknown";
 	seriesLabel?: string;
 }
 
@@ -25,6 +30,7 @@ export interface IAuthorPreview {
 	isPublic: boolean;
 	bookCount: number;
 	mainGenre?: IGenre;
+	topGenres?: IGenre[];
 }
 
 export interface IAuthorDetails extends IAuthorPreview {
@@ -33,9 +39,23 @@ export interface IAuthorDetails extends IAuthorPreview {
 }
 
 export interface IAuthorsListParams {
+	genreMode?: IAuthorsGenreMode;
+	genres?: string;
 	limit?: number;
+	maxBooks?: number;
+	minBooks?: number;
 	page?: number;
+	sort?: IAuthorsSort;
 }
+
+export type IAuthorsGenreMode = "all" | "any";
+
+export type IAuthorsSort =
+	| "books_asc"
+	| "books_desc"
+	| "name_asc"
+	| "name_desc"
+	| "popular";
 
 export interface IAuthorsListResponse {
 	items: IAuthorPreview[];

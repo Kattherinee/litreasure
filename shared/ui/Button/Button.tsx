@@ -108,7 +108,7 @@ const StyledButton = styled(MuiButton)<{
 		border: 1px solid ${theme.colors.transparent};
 		border-radius: 50px;
 		font-family: ${theme.fonts.serif};
-		font-size: 0.98vw;
+		font-size: 0.98rem;
 		font-weight: 500;
 		line-height: 1.15vw;
 		text-align: center;

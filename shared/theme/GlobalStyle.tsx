@@ -25,7 +25,7 @@ const GlobalStyle = createGlobalStyle`
 		margin: 0;
 		overflow-x: clip;
 		overscroll-behavior-x: none;
-		background: ${theme.colors.background};
+			background: ${theme.colors.background};
 		color: ${theme.colors.foreground};
 		font-family: ${theme.fonts.sans};
 		text-rendering: optimizeLegibility;
