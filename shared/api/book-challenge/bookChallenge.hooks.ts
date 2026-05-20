@@ -19,8 +19,12 @@ export const challengeQueryKeys = {
 	byId: (id: string) => ["book-challenge", id] as const,
 };
 
-export const useChallengesQuery = () =>
-	useQuery({ queryFn: getChallenges, queryKey: challengeQueryKeys.all });
+export const useChallengesQuery = (options?: { enabled?: boolean }) =>
+	useQuery({
+		enabled: options?.enabled ?? true,
+		queryFn: getChallenges,
+		queryKey: challengeQueryKeys.all,
+	});
 
 export const useChallengeByIdQuery = (id: string) =>
 	useQuery({

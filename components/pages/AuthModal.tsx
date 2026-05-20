@@ -14,6 +14,11 @@ import { useAuthStore } from "@/shared/store/auth-store";
 import { theme } from "@/shared/theme";
 import { InputField } from "@/shared/ui/InputField";
 
+import {
+	clearWelcomeOnboardingPending,
+	markWelcomeOnboardingPending,
+} from "./welcome/onboardingStorage";
+
 export type IAuthModalMode = "login" | "register";
 
 interface IAuthModalProps {
@@ -21,6 +26,7 @@ interface IAuthModalProps {
 	onClose: () => void;
 	onModeChange?: (mode: IAuthModalMode) => void;
 	redirectOnSuccess?: boolean;
+	message?: string;
 }
 
 interface IRegisterForm extends ILoginPayload {
@@ -38,6 +44,7 @@ const AuthModal = ({
 	onClose,
 	onModeChange,
 	redirectOnSuccess = true,
+	message,
 }: IAuthModalProps) => {
 	const router = useRouter();
 	const setSession = useAuthStore((state) => state.setSession);
@@ -92,6 +99,7 @@ const AuthModal = ({
 				});
 
 				setSession(session);
+				markWelcomeOnboardingPending(session.user);
 				onClose();
 				if (redirectOnSuccess) {
 					router.push("/welcome");
@@ -105,6 +113,7 @@ const AuthModal = ({
 			});
 
 			setSession(session);
+			clearWelcomeOnboardingPending(session.user);
 			onClose();
 			if (redirectOnSuccess) {
 				router.push("/");
@@ -164,11 +173,11 @@ const AuthModal = ({
 						<Title id="auth-modal-title">
 							{isRegister ? "Join Litreasure" : "Sign in your account"}
 						</Title>
-						{isRegister ? (
+						<SubtitleSlot $isRegister={isRegister}>
 							<Subtitle>
 								Sign up and start collecting yor paper treasures
 							</Subtitle>
-						) : null}
+						</SubtitleSlot>
 					</IntroCopy>
 					<DragonImage
 						alt=""
@@ -182,6 +191,8 @@ const AuthModal = ({
 				</Intro>
 
 				<AuthForm onSubmit={handleSubmit}>
+					{message ? <InfoText>{message}</InfoText> : null}
+
 					<Fields $isRegister={isRegister}>
 						<FieldGroup>
 							<Label htmlFor="auth-email">Email</Label>
@@ -226,14 +237,15 @@ const AuthModal = ({
 							) : null}
 						</FieldGroup>
 
-						{isRegister ? (
+						<CollapsibleField $isOpen={isRegister} aria-hidden={!isRegister}>
 							<FieldGroup>
 								<Label htmlFor="auth-confirm-password">Confirm Password</Label>
 								<StyledInput
 									id="auth-confirm-password"
 									autoComplete="new-password"
+									disabled={!isRegister}
 									minLength={6}
-									required
+									required={isRegister}
 									type="password"
 									value={form.confirmPassword}
 									onChange={(event) =>
@@ -248,7 +260,7 @@ const AuthModal = ({
 									<FieldError>{fieldErrors.confirmPassword}</FieldError>
 								) : null}
 							</FieldGroup>
-						) : null}
+						</CollapsibleField>
 					</Fields>
 
 					{formError ? <ErrorText role="alert">{formError}</ErrorText> : null}
@@ -285,6 +297,17 @@ const Overlay = styled.div`
 	place-items: center;
 	background: rgb(4 18 26 / 0.48);
 	padding: 1rem;
+	animation: auth-overlay-in 180ms ease both;
+
+	@keyframes auth-overlay-in {
+		from {
+			opacity: 0;
+		}
+
+		to {
+			opacity: 1;
+		}
+	}
 `;
 
 const Dialog = styled.section<{ $isRegister: boolean }>`
@@ -300,6 +323,23 @@ const Dialog = styled.section<{ $isRegister: boolean }>`
 	border-radius: 1rem;
 	background: #e8e2de;
 	padding: 1.5rem;
+	box-shadow: 0 1.25rem 3rem rgb(4 18 26 / 0.16);
+	animation: auth-dialog-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+	transition:
+		min-height 240ms ease,
+		padding 180ms ease;
+
+	@keyframes auth-dialog-in {
+		from {
+			opacity: 0;
+			transform: translateY(0.75rem) scale(0.985);
+		}
+
+		to {
+			opacity: 1;
+			transform: translateY(0) scale(1);
+		}
+	}
 
 	@media (max-width: 48rem) {
 		min-height: auto;
@@ -376,6 +416,9 @@ const TabButton = styled.button<{
 	font-weight: 700;
 	line-height: 1.25rem;
 	cursor: pointer;
+	transition:
+		width 220ms ease,
+		color 180ms ease;
 
 	@media (max-width: 48rem) {
 		width: 100%;
@@ -395,6 +438,9 @@ const TabLine = styled.span<{ $isActive: boolean }>`
 	flex: 0 0 0.1875rem;
 	border-radius: 999px;
 	background: ${({ $isActive }) => ($isActive ? "#da8e5b" : "#bab7b4")};
+	transition:
+		background-color 180ms ease,
+		opacity 180ms ease;
 `;
 
 const Intro = styled.div<{ $isRegister: boolean }>`
@@ -405,6 +451,10 @@ const Intro = styled.div<{ $isRegister: boolean }>`
 	justify-content: space-between;
 	padding: ${({ $isRegister }) =>
 		$isRegister ? "1.5rem 0.5rem 0" : "1rem 0.75rem 0 0"};
+	transition:
+		min-height 240ms ease,
+		align-items 180ms ease,
+		padding 220ms ease;
 
 	@media (max-width: 40rem) {
 		padding-inline: 0;
@@ -413,6 +463,19 @@ const Intro = styled.div<{ $isRegister: boolean }>`
 
 const IntroCopy = styled.div`
 	min-width: 0;
+	animation: auth-content-shift 180ms ease both;
+
+	@keyframes auth-content-shift {
+		from {
+			opacity: 0.9;
+			transform: translateY(0.15rem);
+		}
+
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
+	}
 `;
 
 const Title = styled.h2`
@@ -441,11 +504,32 @@ const Subtitle = styled.p`
 	}
 `;
 
+const SubtitleSlot = styled.div<{ $isRegister: boolean }>`
+	display: grid;
+	grid-template-rows: ${({ $isRegister }) => ($isRegister ? "1fr" : "0fr")};
+	opacity: ${({ $isRegister }) => ($isRegister ? 1 : 0)};
+	overflow: hidden;
+	transform: translateY(${({ $isRegister }) => ($isRegister ? "0" : "-0.25rem")});
+	transition:
+		grid-template-rows 220ms ease,
+		opacity 180ms ease,
+		transform 220ms ease;
+
+	& > ${Subtitle} {
+		min-height: 0;
+	}
+`;
+
 const DragonImage = styled.img<{ $isRegister: boolean }>`
 	width: ${({ $isRegister }) => ($isRegister ? "6.25rem" : "5.3125rem")};
 	height: ${({ $isRegister }) => ($isRegister ? "6.4375rem" : "5rem")};
 	flex: 0 0 auto;
 	object-fit: contain;
+	transition:
+		width 240ms ease,
+		height 240ms ease,
+		transform 220ms ease,
+		opacity 180ms ease;
 
 	@media (max-width: 40rem) {
 		width: 4.75rem;
@@ -466,6 +550,23 @@ const Fields = styled.div<{ $isRegister: boolean }>`
 	flex-direction: column;
 	gap: 0.75rem;
 	padding: 0 0 2rem;
+	transition: padding 220ms ease;
+`;
+
+const CollapsibleField = styled.div<{ $isOpen: boolean }>`
+	display: grid;
+	grid-template-rows: ${({ $isOpen }) => ($isOpen ? "1fr" : "0fr")};
+	opacity: ${({ $isOpen }) => ($isOpen ? 1 : 0)};
+	overflow: hidden;
+	transform: translateY(${({ $isOpen }) => ($isOpen ? "0" : "-0.35rem")});
+	transition:
+		grid-template-rows 240ms ease,
+		opacity 180ms ease,
+		transform 220ms ease;
+
+	& > * {
+		min-height: 0;
+	}
 `;
 
 const FieldGroup = styled.div`
@@ -512,6 +613,13 @@ const StyledInput = styled(InputField)`
 const ErrorText = styled.p`
 	margin: -1rem 0 0.75rem;
 	color: #d4641c;
+	font-size: 0.95rem;
+	line-height: 1.35;
+`;
+
+const InfoText = styled.p`
+	margin: 0 0 0.75rem;
+	color: #233d4d;
 	font-size: 0.95rem;
 	line-height: 1.35;
 `;

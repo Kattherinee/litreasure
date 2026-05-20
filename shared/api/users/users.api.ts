@@ -1,6 +1,7 @@
 import { requestAuth } from "../base";
 import type {
 	IUpdateUserGenresPayload,
+	IUpdateUserPasswordPayload,
 	IUpdateUserProfilePayload,
 } from "./users.types";
 
@@ -20,4 +21,18 @@ export const updateUserProfile = (
 	requestAuth<void>(`/users/${userId}`, {
 		body: JSON.stringify(payload),
 		method: "PATCH",
+	});
+
+export const updateUserPassword = (
+	userId: string,
+	payload: IUpdateUserPasswordPayload,
+): Promise<void> =>
+	requestAuth<void>(`/users/${userId}`, {
+		body: JSON.stringify(payload),
+		method: "PATCH",
+	});
+
+export const deleteUserAccount = (userId: string): Promise<void> =>
+	requestAuth<void>(`/users/${userId}`, {
+		method: "DELETE",
 	});

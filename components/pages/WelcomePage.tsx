@@ -14,6 +14,7 @@ const WelcomePage = () => {
 		activeStepConfig,
 		activeStepIndex,
 		avatarUrl,
+		canRenderWelcome,
 		formError,
 		hasUsernameError,
 		isCheckingUsername,
@@ -35,6 +36,10 @@ const WelcomePage = () => {
 		skipStep,
 		toggleGenre,
 	} = useWelcomeOnboarding();
+
+	if (!canRenderWelcome) {
+		return null;
+	}
 
 	return (
 		<WelcomeLayout activeStep={activeStep} activeStepIndex={activeStepIndex}>

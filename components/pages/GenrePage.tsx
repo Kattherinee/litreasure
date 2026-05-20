@@ -94,7 +94,7 @@ const BackLink = styled(Link)`
 const Title = styled.h1`
 	margin: 0;
 	font-family: ${theme.fonts.serif};
-	font-size: clamp(2.75rem, 6vw, 5rem);
+	font-size: 3vw;
 	font-weight: 600;
 	line-height: 1;
 `;
@@ -115,7 +115,7 @@ const StateMessage = styled.p`
 `;
 
 const BookGrid = styled.div`
-	--book-card-column: 12rem;
+	--book-card-column: 8rem;
 
 	display: grid;
 	gap: 1rem;

@@ -18,6 +18,7 @@ export interface IAuthorBookCard {
 export interface IAuthorSeries {
 	id: string;
 	title: string;
+	isSaved?: boolean;
 	openLibrarySeriesKey?: string;
 	books: IAuthorBookCard[];
 }
@@ -28,6 +29,7 @@ export interface IAuthorPreview {
 	bio?: string;
 	photoUrl?: string;
 	isPublic: boolean;
+	isSaved?: boolean;
 	bookCount: number;
 	mainGenre?: IGenre;
 	topGenres?: IGenre[];

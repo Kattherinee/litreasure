@@ -5,7 +5,8 @@ import Rating from "@mui/material/Rating";
 import styled from "styled-components";
 
 import AuthModal, { type IAuthModalMode } from "@/components/pages/AuthModal";
-import type { IBook } from "@/shared/api/books";
+import { useRateBookMutation, type IBook } from "@/shared/api/books";
+import { useAuthStore } from "@/shared/store/auth-store";
 import { theme } from "@/shared/theme";
 import GenrePill from "@/shared/ui/GenrePill/GenrePill";
 import { CoverPlaceholder } from "@/shared/ui/Skeleton";
@@ -66,8 +67,37 @@ const BookDetailContent = ({ book }: IBookDetailContentProps) => {
 	const [authModalMode, setAuthModalMode] = useState<IAuthModalMode | null>(
 		null,
 	);
+	const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+	const rateBookMutation = useRateBookMutation();
 	const [quickRating, setQuickRating] = useState(0);
+	const [quickRatingMessage, setQuickRatingMessage] = useState("");
 	const [activeTab, setActiveTab] = useState<ITabId>("description");
+
+	const handleQuickRatingChange = async (value: number | null) => {
+		const nextRating = value ?? 0;
+		setQuickRating(nextRating);
+		setQuickRatingMessage("");
+		if (!nextRating) return;
+
+		if (!isAuthenticated) {
+			setAuthModalMode("login");
+			setQuickRating(0);
+			return;
+		}
+
+		try {
+			await rateBookMutation.mutateAsync({
+				id: book.id,
+				rating: nextRating,
+			});
+			setQuickRatingMessage("Оценка сохранена");
+		} catch (error) {
+			setQuickRating(0);
+			setQuickRatingMessage(
+				error instanceof Error ? error.message : "Не удалось сохранить оценку",
+			);
+		}
+	};
 
 	return (
 		<ContentWrap>
@@ -127,11 +157,13 @@ const BookDetailContent = ({ book }: IBookDetailContentProps) => {
 							<QuickRatingTitle>Твоя оценка</QuickRatingTitle>
 							<QuickMuiRating
 								name="quick-book-rating"
+								disabled={rateBookMutation.isPending}
 								value={quickRating}
-								onChange={(_, value) => {
-									setQuickRating(value ?? 0);
-								}}
+								onChange={(_, value) => void handleQuickRatingChange(value)}
 							/>
+							{quickRatingMessage ? (
+								<QuickRatingMessage>{quickRatingMessage}</QuickRatingMessage>
+							) : null}
 							<QuickReviewLink
 								type="button"
 								onClick={() => setActiveTab("reviews")}
@@ -143,7 +175,10 @@ const BookDetailContent = ({ book }: IBookDetailContentProps) => {
 				</LeftColumn>
 
 				<RightColumn>
-					<BookDetailHero book={book} />
+					<BookDetailHero
+						book={book}
+						onAuthRequired={() => setAuthModalMode("login")}
+					/>
 					<BookDetailTabs
 						activeTab={activeTab}
 						book={book}
@@ -470,6 +505,15 @@ const QuickMuiRating = styled(Rating)`
 		height: 1.6vw;
 	}
 `;
+
+const QuickRatingMessage = styled.p`
+	margin: -0.15rem 0 0;
+	color: ${theme.colors.orangeDark};
+	font-family: ${theme.fonts.sans};
+	font-size: 0.76rem;
+	line-height: 1.25;
+`;
+
 const QuickReviewLink = styled.button`
 	align-self: flex-start;
 	border: 0;

@@ -1,9 +1,21 @@
 "use client";
 
+import BookmarkIcon from "@mui/icons-material/Bookmark";
 import Link from "next/link";
+import { useState } from "react";
 import styled from "styled-components";
 
-import { useAuthorQuery } from "@/shared/api/authors";
+import AuthModal, { type IAuthModalMode } from "@/components/pages/AuthModal";
+import {
+	useAuthorQuery,
+	useSaveAuthorMutation,
+	useUnsaveAuthorMutation,
+} from "@/shared/api/authors";
+import {
+	useSaveSeriesMutation,
+	useUnsaveSeriesMutation,
+} from "@/shared/api/series";
+import { useAuthStore } from "@/shared/store/auth-store";
 import { theme } from "@/shared/theme";
 import { BookCard } from "@/shared/ui/BookCard";
 import { BookCardSkeleton, SkeletonBlock } from "@/shared/ui/Skeleton";
@@ -13,7 +25,84 @@ interface IAuthorPageProps {
 }
 
 const AuthorPage = ({ id }: IAuthorPageProps) => {
+	const [authModalMode, setAuthModalMode] = useState<IAuthModalMode | null>(null);
+	const [authorSavedOverride, setAuthorSavedOverride] = useState<
+		boolean | null
+	>(null);
+	const [savedSeriesOverrides, setSavedSeriesOverrides] = useState<
+		Record<string, boolean>
+	>({});
 	const { data: author, error, isError, isLoading } = useAuthorQuery(id);
+	const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+	const saveAuthorMutation = useSaveAuthorMutation();
+	const unsaveAuthorMutation = useUnsaveAuthorMutation();
+	const saveSeriesMutation = useSaveSeriesMutation();
+	const unsaveSeriesMutation = useUnsaveSeriesMutation();
+	const isAuthorSavePending =
+		saveAuthorMutation.isPending || unsaveAuthorMutation.isPending;
+	const isSeriesSavePending =
+		saveSeriesMutation.isPending || unsaveSeriesMutation.isPending;
+	const isAuthorSaved = authorSavedOverride ?? author?.isSaved ?? false;
+
+	const getIsSeriesSaved = (seriesId: string, initialValue?: boolean) =>
+		savedSeriesOverrides[seriesId] ?? initialValue ?? false;
+
+	const requestAuth = () => {
+		setAuthModalMode("login");
+	};
+
+	const handleToggleAuthorSave = async () => {
+		if (!author) {
+			return;
+		}
+
+		if (!isAuthenticated) {
+			requestAuth();
+			return;
+		}
+
+		const wasSaved = isAuthorSaved;
+		setAuthorSavedOverride(!wasSaved);
+
+		try {
+			if (wasSaved) {
+				await unsaveAuthorMutation.mutateAsync(author.id);
+			} else {
+				await saveAuthorMutation.mutateAsync(author.id);
+			}
+		} catch {
+			setAuthorSavedOverride(wasSaved);
+		}
+	};
+
+	const handleToggleSeriesSave = async (
+		seriesId: string,
+		initialValue?: boolean,
+	) => {
+		if (!isAuthenticated) {
+			requestAuth();
+			return;
+		}
+
+		const wasSaved = getIsSeriesSaved(seriesId, initialValue);
+		setSavedSeriesOverrides((currentState) => ({
+			...currentState,
+			[seriesId]: !wasSaved,
+		}));
+
+		try {
+			if (wasSaved) {
+				await unsaveSeriesMutation.mutateAsync(seriesId);
+			} else {
+				await saveSeriesMutation.mutateAsync(seriesId);
+			}
+		} catch {
+			setSavedSeriesOverrides((currentState) => ({
+				...currentState,
+				[seriesId]: wasSaved,
+			}));
+		}
+	};
 
 	if (isLoading) {
 		return (
@@ -67,7 +156,28 @@ const AuthorPage = ({ id }: IAuthorPageProps) => {
 						{author.photoUrl ? null : author.name.charAt(0).toUpperCase()}
 					</AuthorPhoto>
 					<HeroCopy>
-						<Title>{author.name}</Title>
+						<TitleRow>
+							<Title>{author.name}</Title>
+							{isAuthorSaved ? (
+								<SavedActionButton
+									aria-label="Убрать автора из сохраненных"
+									disabled={isAuthorSavePending}
+									title="Убрать из сохраненных"
+									type="button"
+									onClick={() => void handleToggleAuthorSave()}
+								>
+									<BookmarkIcon aria-hidden="true" />
+								</SavedActionButton>
+							) : (
+								<SaveActionButton
+									disabled={isAuthorSavePending}
+									type="button"
+									onClick={() => void handleToggleAuthorSave()}
+								>
+									{isAuthorSavePending ? "Сохраняем..." : "Сохранить автора"}
+								</SaveActionButton>
+							)}
+						</TitleRow>
 						<Facts>
 							<span>{author.bookCount} книг</span>
 							{author.mainGenre ? (
@@ -86,7 +196,38 @@ const AuthorPage = ({ id }: IAuthorPageProps) => {
 						<SeriesList>
 							{author.series.map((series) => (
 								<SeriesCard key={series.id}>
-									<SeriesTitle>{series.title}</SeriesTitle>
+									<SeriesHeader>
+										<SeriesTitle>{series.title}</SeriesTitle>
+										{getIsSeriesSaved(series.id, series.isSaved) ? (
+											<SavedActionButton
+												aria-label="Убрать серию из сохраненных"
+												disabled={isSeriesSavePending}
+												title="Убрать из сохраненных"
+												type="button"
+												onClick={() =>
+													void handleToggleSeriesSave(
+														series.id,
+														series.isSaved,
+													)
+												}
+											>
+												<BookmarkIcon aria-hidden="true" />
+											</SavedActionButton>
+										) : (
+											<SaveActionButton
+												disabled={isSeriesSavePending}
+												type="button"
+												onClick={() =>
+													void handleToggleSeriesSave(
+														series.id,
+														series.isSaved,
+													)
+												}
+											>
+												{isSeriesSavePending ? "Сохраняем..." : "Сохранить серию"}
+											</SaveActionButton>
+										)}
+									</SeriesHeader>
 									<BookGrid>
 										{series.books.map((book) => (
 											<BookCard
@@ -121,6 +262,14 @@ const AuthorPage = ({ id }: IAuthorPageProps) => {
 							))}
 						</BookGrid>
 					</Section>
+				) : null}
+				{authModalMode ? (
+					<AuthModal
+						mode={authModalMode}
+						redirectOnSuccess={false}
+						onClose={() => setAuthModalMode(null)}
+						onModeChange={setAuthModalMode}
+					/>
 				) : null}
 			</Content>
 		</Page>
@@ -187,6 +336,17 @@ const HeroCopy = styled.div`
 	min-width: 0;
 `;
 
+const TitleRow = styled.div`
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 1rem;
+
+	@media (max-width: 38rem) {
+		flex-direction: column;
+	}
+`;
+
 const Title = styled.h1`
 	margin: 0;
 	color: ${theme.colors.foreground};
@@ -194,6 +354,69 @@ const Title = styled.h1`
 	font-size: clamp(2.25rem, 5vw, 4.5rem);
 	font-weight: 600;
 	line-height: 1;
+`;
+
+const SaveActionButton = styled.button`
+	flex: 0 0 auto;
+	border: 0;
+	border-radius: 999rem;
+	background: ${theme.colors.white};
+	padding: 0.56rem 1rem;
+	color: ${theme.colors.bluePrimary};
+	cursor: pointer;
+	font-family: ${theme.fonts.sans};
+	font-size: 0.9rem;
+	font-weight: 700;
+	line-height: 1.2;
+	transition:
+		background 180ms ease,
+		color 180ms ease;
+
+	&:hover,
+	&:focus-visible {
+		background: ${theme.colors.bluePrimary};
+		color: ${theme.colors.invertedText};
+		outline: none;
+	}
+
+	&:disabled {
+		cursor: progress;
+		opacity: 0.72;
+	}
+`;
+
+const SavedActionButton = styled.button`
+	display: inline-grid;
+	flex: 0 0 auto;
+	width: 2.5rem;
+	height: 2.5rem;
+	place-items: center;
+	border: 0;
+	border-radius: 50%;
+	background: ${theme.colors.white};
+	color: ${theme.colors.orangeLight};
+	cursor: pointer;
+	transition:
+		color 180ms ease,
+		transform 180ms ease;
+
+	svg {
+		width: 1.45rem;
+		height: 1.45rem;
+	}
+
+	&:hover,
+	&:focus-visible {
+		color: ${theme.colors.orangeDark};
+		outline: none;
+		transform: translateY(-0.0625rem);
+	}
+
+	&:disabled {
+		cursor: progress;
+		opacity: 0.72;
+		transform: none;
+	}
 `;
 
 const Facts = styled.div`
@@ -244,8 +467,16 @@ const SeriesCard = styled.section`
 	padding: 1rem;
 `;
 
+const SeriesHeader = styled.div`
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+	margin-bottom: 1rem;
+`;
+
 const SeriesTitle = styled.h3`
-	margin: 0 0 1rem;
+	margin: 0;
 	color: ${theme.colors.foreground};
 	font-family: ${theme.fonts.serif};
 	font-size: 1.35rem;

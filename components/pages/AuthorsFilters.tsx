@@ -316,7 +316,7 @@ const Filters = styled.div`
 	}
 `;
 
-export const ResultsBadge = styled.div`
+const ResultsBadge = styled.div`
 	display: inline-flex;
 	min-height: 2.35rem;
 	align-items: baseline;

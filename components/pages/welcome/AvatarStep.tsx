@@ -1,12 +1,18 @@
 "use client";
 
-import { useEffect } from "react";
+import type { ChangeEvent } from "react";
+import { useEffect, useRef, useState } from "react";
+import MuiAvatar from "@mui/material/Avatar";
+import type { CropperRef } from "react-advanced-cropper";
+import { CircleStencil, Cropper } from "react-advanced-cropper";
+import { createPortal } from "react-dom";
 import styled from "styled-components";
 
 import {
 	getAvatarAssetUrl,
 	useAvatarsQuery,
 } from "@/shared/api/avatarsRepository";
+import { useUploadImageMutation } from "@/shared/api/images";
 import { theme } from "@/shared/theme";
 
 import { StepBody, StepDescription, StepTitle } from "./stepStyles";
@@ -16,39 +22,166 @@ interface IAvatarStepProps {
 	onAvatarChange: (url: string) => void;
 }
 
-export const AvatarStep = ({ avatarUrl, onAvatarChange }: IAvatarStepProps) => {
-	const { data } = useAvatarsQuery();
-	const avatars = data ?? [];
-	const selectedAvatar = avatars.find((a) => a.url === avatarUrl) ?? avatars[0];
+const AVATAR_SIZE = 512;
 
-	// Set default avatar as soon as the list loads
+export const AvatarStep = ({ avatarUrl, onAvatarChange }: IAvatarStepProps) => {
+	const fileInputRef = useRef<HTMLInputElement>(null);
+	const cropperRef = useRef<CropperRef>(null);
+	const { data } = useAvatarsQuery();
+	const uploadImageMutation = useUploadImageMutation();
+	const [uploadedPreviewUrl, setUploadedPreviewUrl] = useState("");
+	const [uploadedFile, setUploadedFile] = useState<Blob | null>(null);
+	const [isCropModalOpen, setIsCropModalOpen] = useState(false);
+	const [uploadError, setUploadError] = useState("");
+	const avatars = data ?? [];
+	const selectedAvatar = avatars.find((avatar) => avatar.url === avatarUrl);
+	const previewUrl = uploadedPreviewUrl || getAvatarAssetUrl(avatarUrl);
+
 	useEffect(() => {
-		if (!avatarUrl && avatars.length > 0) {
-			onAvatarChange(avatars[0].url);
+		return () => {
+			if (uploadedPreviewUrl) URL.revokeObjectURL(uploadedPreviewUrl);
+		};
+	}, [uploadedPreviewUrl]);
+
+	const openFileDialog = () => {
+		fileInputRef.current?.click();
+	};
+
+	const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+		const file = event.target.files?.[0];
+		event.target.value = "";
+		if (!file) return;
+
+		if (uploadedPreviewUrl) URL.revokeObjectURL(uploadedPreviewUrl);
+		setUploadedFile(file);
+		setUploadedPreviewUrl(URL.createObjectURL(file));
+		setIsCropModalOpen(true);
+		setUploadError("");
+	};
+
+	const clearAvatar = () => {
+		if (uploadedPreviewUrl) URL.revokeObjectURL(uploadedPreviewUrl);
+		setUploadedPreviewUrl("");
+		setUploadedFile(null);
+		setIsCropModalOpen(false);
+		setUploadError("");
+		onAvatarChange("");
+	};
+
+	const selectPresetAvatar = (url: string) => {
+		if (uploadedPreviewUrl) URL.revokeObjectURL(uploadedPreviewUrl);
+		setUploadedPreviewUrl("");
+		setUploadedFile(null);
+		setIsCropModalOpen(false);
+		setUploadError("");
+		onAvatarChange(url);
+	};
+
+	const cancelCrop = () => {
+		if (uploadedPreviewUrl) URL.revokeObjectURL(uploadedPreviewUrl);
+		setUploadedPreviewUrl("");
+		setUploadedFile(null);
+		setIsCropModalOpen(false);
+	};
+
+	const applyCrop = async () => {
+		try {
+			const blob = await getCroppedAvatarBlob(cropperRef.current);
+			if (uploadedPreviewUrl) URL.revokeObjectURL(uploadedPreviewUrl);
+			setUploadedFile(blob);
+			setUploadedPreviewUrl(URL.createObjectURL(blob));
+			setIsCropModalOpen(false);
+			setUploadError("");
+		} catch (error) {
+			setUploadError(
+				error instanceof Error
+					? error.message
+					: "Не удалось подготовить изображение",
+			);
 		}
-	}, [avatarUrl, avatars, onAvatarChange]);
+	};
+
+	const applyUploadedAvatar = async () => {
+		if (!uploadedFile || !uploadedPreviewUrl) return;
+
+		try {
+			setUploadError("");
+			const response = await uploadImageMutation.mutateAsync({
+				file: uploadedFile,
+				purpose: "avatar",
+			});
+			onAvatarChange(response.url);
+			setUploadedFile(null);
+			URL.revokeObjectURL(uploadedPreviewUrl);
+			setUploadedPreviewUrl("");
+		} catch (error) {
+			setUploadError(
+				error instanceof Error
+					? error.message
+					: "Не удалось загрузить изображение",
+			);
+		}
+	};
 
 	return (
 		<StepBody>
 			<StepTitle>Выбери аватар</StepTitle>
 			<StepDescription>
-				Выбери дракончика, который будет представлять тебя. Не волнуйся, ты
-				всегда сможешь сменить его позже!
+				Вы можете загрузить свое фото. Нажмите на круг и поправьте
+				кадрирование.
 			</StepDescription>
+
 			<AvatarLayout>
-				<AvatarPreviewLarge>
-					{selectedAvatar ? (
-						<AvatarPreviewImage
-							alt=""
-							src={getAvatarAssetUrl(selectedAvatar.url)}
-						/>
-					) : (
-						<AvatarPreviewFallback>L</AvatarPreviewFallback>
-					)}
-				</AvatarPreviewLarge>
+				<AvatarUpload
+					role="button"
+					tabIndex={0}
+					aria-label="Выбрать фото профиля"
+					src={previewUrl}
+					onClick={openFileDialog}
+					onKeyDown={(event) => {
+						if (event.key === "Enter" || event.key === " ") {
+							event.preventDefault();
+							openFileDialog();
+						}
+					}}
+				>
+					{previewUrl ? null : <AvatarPlaceholder>Фото</AvatarPlaceholder>}
+				</AvatarUpload>
+				<HiddenFileInput
+					ref={fileInputRef}
+					accept="image/*"
+					type="file"
+					onChange={handleFileChange}
+				/>
+
+				<Tools>
+					<ToolButton type="button" onClick={openFileDialog}>
+						{previewUrl ? "Изменить" : "Выбрать фото"}
+					</ToolButton>
+					{previewUrl ? (
+						<ToolButton type="button" onClick={clearAvatar}>
+							Удалить
+						</ToolButton>
+					) : null}
+					{uploadedPreviewUrl ? (
+						<PrimaryToolButton
+							disabled={uploadImageMutation.isPending}
+							type="button"
+							onClick={applyUploadedAvatar}
+						>
+							{uploadImageMutation.isPending ? "Загружаем..." : "Готово"}
+						</PrimaryToolButton>
+					) : null}
+				</Tools>
+				{uploadError ? <UploadError>{uploadError}</UploadError> : null}
+
+				<AvatarChoiceTitle>
+					Или выберите аватар своего персонажа тут
+				</AvatarChoiceTitle>
 				<AvatarScrollStrip>
 					{avatars.map((avatar) => {
-						const isSelected = avatar.url === selectedAvatar?.url;
+						const isSelected =
+							!uploadedPreviewUrl && avatar.url === selectedAvatar?.url;
 						return (
 							<AvatarOption
 								key={avatar.id}
@@ -56,7 +189,7 @@ export const AvatarStep = ({ avatarUrl, onAvatarChange }: IAvatarStepProps) => {
 								aria-pressed={isSelected}
 								type="button"
 								$isSelected={isSelected}
-								onClick={() => onAvatarChange(avatar.url)}
+								onClick={() => selectPresetAvatar(avatar.url)}
 							>
 								<AvatarOptionImage alt="" src={getAvatarAssetUrl(avatar.url)} />
 							</AvatarOption>
@@ -64,40 +197,204 @@ export const AvatarStep = ({ avatarUrl, onAvatarChange }: IAvatarStepProps) => {
 					})}
 				</AvatarScrollStrip>
 			</AvatarLayout>
+
+			{typeof document !== "undefined" && uploadedPreviewUrl && isCropModalOpen
+				? createPortal(
+						<CropModalOverlay role="presentation" onMouseDown={cancelCrop}>
+							<CropModal
+								aria-modal="true"
+								role="dialog"
+								aria-label="Обрезать фото"
+								onMouseDown={(event) => event.stopPropagation()}
+							>
+								<CropModalTitle>Обрезать фото</CropModalTitle>
+								<CropperShell>
+									<StyledCropper
+										ref={cropperRef}
+										src={uploadedPreviewUrl}
+										stencilComponent={CircleStencil}
+									/>
+								</CropperShell>
+								<CropModalActions>
+									<ToolButton type="button" onClick={cancelCrop}>
+										Отмена
+									</ToolButton>
+									<PrimaryToolButton type="button" onClick={applyCrop}>
+										Применить
+									</PrimaryToolButton>
+								</CropModalActions>
+							</CropModal>
+						</CropModalOverlay>,
+						document.body,
+					)
+				: null}
 		</StepBody>
 	);
+};
+
+const getCroppedAvatarBlob = async (cropper: CropperRef | null) => {
+	const canvas = cropper?.getCanvas({
+		height: AVATAR_SIZE,
+		imageSmoothingQuality: "high",
+		width: AVATAR_SIZE,
+	});
+	if (!canvas) throw new Error("Не удалось подготовить изображение");
+
+	return new Promise<Blob>((resolve, reject) => {
+		canvas.toBlob(
+			(blob) => {
+				if (blob) resolve(blob);
+				else reject(new Error("Не удалось подготовить изображение"));
+			},
+			"image/webp",
+			0.92,
+		);
+	});
 };
 
 const AvatarLayout = styled.div`
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	gap: 1.5rem;
+	gap: 1rem;
 	margin-top: 1.5rem;
 `;
 
-const AvatarPreviewLarge = styled.div`
-	display: grid;
-	width: 8.5rem;
-	height: 8.5rem;
-	place-items: center;
-	overflow: hidden;
-	border-radius: 50%;
-	background: ${theme.alpha.blueWash};
-	box-shadow: 0 0 0 0.3rem rgb(218 142 91 / 0.15);
+const AvatarUpload = styled(MuiAvatar)`
+	&& {
+		width: 8.5rem;
+		height: 8.5rem;
+		border: 0.35rem solid rgb(218 142 91 / 0.18);
+		background: ${theme.alpha.blueWash};
+		color: ${theme.colors.bluePrimary};
+		cursor: pointer;
+		font-family: ${theme.fonts.sans};
+		font-weight: 700;
+		transition:
+			border-color 160ms,
+			transform 160ms;
+	}
+
+	&&:hover,
+	&&:focus-visible {
+		border-color: rgb(218 142 91 / 0.42);
+		outline: none;
+		transform: translateY(-0.0625rem);
+	}
 `;
 
-const AvatarPreviewImage = styled.img`
-	width: 100%;
-	height: 100%;
-	object-fit: cover;
-`;
-
-const AvatarPreviewFallback = styled.span`
-	color: ${theme.colors.bluePrimary};
-	font-size: 3rem;
+const AvatarPlaceholder = styled.span`
+	font-size: 1rem;
 	font-weight: 700;
 	line-height: 1;
+`;
+
+const HiddenFileInput = styled.input`
+	position: absolute;
+	width: 0.0625rem;
+	height: 0.0625rem;
+	overflow: hidden;
+	clip: rect(0 0 0 0);
+	white-space: nowrap;
+`;
+
+const CropperShell = styled.div`
+	width: min(100%, 25rem);
+	height: 20rem;
+	overflow: hidden;
+	border: 0.0625rem solid rgb(212 100 28 / 0.18);
+	border-radius: 1rem;
+	background: rgb(242 239 237 / 0.7);
+`;
+
+const StyledCropper = styled(Cropper)`
+	width: 100%;
+	height: 100%;
+`;
+
+const CropModalOverlay = styled.div`
+	position: fixed;
+	z-index: 80;
+	inset: 0;
+	display: grid;
+	place-items: center;
+	background: rgb(4 18 26 / 0.52);
+	padding: 1rem;
+`;
+
+const CropModal = styled.section`
+	width: min(100%, 29rem);
+	border: 0.0625rem solid #eeb38d;
+	border-radius: 1rem;
+	background: #e8e2de;
+	padding: 1rem;
+	box-shadow: 0 1.25rem 3rem rgb(4 18 26 / 0.18);
+`;
+
+const CropModalTitle = styled.h3`
+	margin: 0 0 0.8rem;
+	color: ${theme.colors.foreground};
+	font-family: ${theme.fonts.serif};
+	font-size: 1.25rem;
+	line-height: 1.2;
+`;
+
+const CropModalActions = styled.div`
+	display: flex;
+	justify-content: flex-end;
+	gap: 0.75rem;
+	margin-top: 1rem;
+`;
+
+const Tools = styled.div`
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	gap: 0.6rem;
+`;
+
+const ToolButton = styled.button`
+	border: 0.0625rem solid rgb(212 100 28 / 0.24);
+	border-radius: 999px;
+	background: rgb(255 255 255 / 0.44);
+	padding: 0.45rem 0.85rem;
+	color: ${theme.colors.orangeDark};
+	cursor: pointer;
+	font: inherit;
+	font-size: 0.88rem;
+	font-weight: 700;
+
+	&:hover,
+	&:focus-visible {
+		background: rgb(218 142 91 / 0.14);
+		outline: none;
+	}
+`;
+
+const PrimaryToolButton = styled(ToolButton)`
+	border-color: transparent;
+	background: ${theme.colors.orangeLight};
+	color: ${theme.colors.invertedText};
+
+	&:disabled {
+		cursor: default;
+		opacity: 0.6;
+	}
+`;
+
+const UploadError = styled.p`
+	margin: 0;
+	color: ${theme.colors.orangeDark};
+	font-size: 0.85rem;
+	text-align: center;
+`;
+
+const AvatarChoiceTitle = styled.p`
+	margin: 0.35rem 0 -0.25rem;
+	color: ${theme.colors.softForeground};
+	font-size: 0.9rem;
+	line-height: 1.35;
+	text-align: center;
 `;
 
 const AvatarScrollStrip = styled.div`
@@ -150,9 +447,11 @@ const AvatarOption = styled.button<{ $isSelected: boolean }>`
 	}
 `;
 
-const AvatarOptionImage = styled.img`
-	width: 100%;
-	height: 100%;
-	border-radius: 50%;
-	object-fit: cover;
+const AvatarOptionImage = styled(MuiAvatar)`
+	&& {
+		width: 100%;
+		height: 100%;
+		border-radius: 50%;
+		object-fit: cover;
+	}
 `;

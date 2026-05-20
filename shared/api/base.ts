@@ -41,6 +41,26 @@ const handleResponse = async <T>(response: Response): Promise<T> => {
 	return response.json() as Promise<T>;
 };
 
+const buildHeaders = (
+	options: RequestInit,
+	authHeader?: string,
+): Headers => {
+	const headers = new Headers(options.headers);
+	const hasBody = typeof options.body !== "undefined";
+	const isFormData =
+		typeof FormData !== "undefined" && options.body instanceof FormData;
+
+	if (hasBody && !isFormData && !headers.has("Content-Type")) {
+		headers.set("Content-Type", "application/json");
+	}
+
+	if (authHeader) {
+		headers.set("Authorization", authHeader);
+	}
+
+	return headers;
+};
+
 /** Public request — no Authorization header. */
 export const request = async <T>(
 	path: string,
@@ -48,10 +68,7 @@ export const request = async <T>(
 ): Promise<T> => {
 	const response = await fetch(`${API_BASE_URL}${path}`, {
 		...options,
-		headers: {
-			"Content-Type": "application/json",
-			...options.headers,
-		},
+		headers: buildHeaders(options),
 	});
 	return handleResponse<T>(response);
 };
@@ -64,11 +81,7 @@ export const requestOptionalAuth = async <T>(
 	const token = getStoredAccessToken();
 	const response = await fetch(`${API_BASE_URL}${path}`, {
 		...options,
-		headers: {
-			"Content-Type": "application/json",
-			...(token ? { Authorization: `Bearer ${token}` } : {}),
-			...options.headers,
-		},
+		headers: buildHeaders(options, token ? `Bearer ${token}` : undefined),
 	});
 	return handleResponse<T>(response);
 };
@@ -85,11 +98,7 @@ export const requestAuth = async <T>(
 	if (!token) throw new Error("Требуется авторизация");
 	const response = await fetch(`${API_BASE_URL}${path}`, {
 		...options,
-		headers: {
-			"Content-Type": "application/json",
-			Authorization: `Bearer ${token}`,
-			...options.headers,
-		},
+		headers: buildHeaders(options, `Bearer ${token}`),
 	});
 	return handleResponse<T>(response);
 };

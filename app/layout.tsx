@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Providers from "@/app/providers";
 import { Header } from "@/shared/ui/Header";
 
+import "react-advanced-cropper/dist/style.css";
 import "./globals.css";
 
 export const metadata: Metadata = {

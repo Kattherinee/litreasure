@@ -1,9 +1,12 @@
-import { request } from "../base";
+import { request, requestAuth, requestOptionalAuth } from "../base";
+import type { IBookCollectionPreview } from "../collections";
 import type {
 	IBook,
 	IBookCardsParams,
 	IBookCardsResponse,
 	ICreateBookPayload,
+	IRateBookPayload,
+	IRateBookResponse,
 	IUpdateBookPayload,
 } from "./books.types";
 
@@ -29,7 +32,7 @@ export const getBookCards = async ({
 }: {
 	params: IBookCardsParams;
 }): Promise<IBookCardsResponse> => {
-	const response = await request<IBookCardsResponse | IBook[]>(
+	const response = await requestOptionalAuth<IBookCardsResponse | IBook[]>(
 		`/books/cards${getBookCardsQuery(params)}`,
 	);
 
@@ -47,7 +50,7 @@ export const getBookCards = async ({
 };
 
 export const getBook = (id: string): Promise<IBook> =>
-	request<IBook>(`/books/${id}`);
+	requestOptionalAuth<IBook>(`/books/${id}`);
 
 export const createBook = (payload: ICreateBookPayload): Promise<IBook> =>
 	request<IBook>("/books", {
@@ -66,3 +69,17 @@ export const updateBook = (
 
 export const deleteBook = (id: string): Promise<void> =>
 	request<void>(`/books/${id}`, { method: "DELETE" });
+
+export const rateBook = (
+	id: string,
+	payload: IRateBookPayload,
+): Promise<IRateBookResponse> =>
+	requestAuth<IRateBookResponse>(`/books/${id}/rating`, {
+		body: JSON.stringify(payload),
+		method: "POST",
+	});
+
+export const getBookCollections = (
+	id: string,
+): Promise<IBookCollectionPreview[]> =>
+	requestOptionalAuth<IBookCollectionPreview[]>(`/books/${id}/collections`);

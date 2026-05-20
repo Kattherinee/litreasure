@@ -96,3 +96,9 @@ export const updateAuthor = (
 
 export const deleteAuthor = (id: string): Promise<IAuthorDetails> =>
 	requestAuth<IAuthorDetails>(`/authors/${id}`, { method: "DELETE" });
+
+export const saveAuthor = (id: string): Promise<unknown> =>
+	requestAuth(`/authors/${id}/save`, { method: "POST" });
+
+export const unsaveAuthor = (id: string): Promise<unknown> =>
+	requestAuth(`/authors/${id}/save`, { method: "DELETE" });

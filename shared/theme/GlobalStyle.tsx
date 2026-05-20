@@ -7,6 +7,32 @@ import { theme } from "@/shared/theme";
 const GlobalStyle = createGlobalStyle`
 	* {
 		box-sizing: border-box;
+		scrollbar-color: ${theme.colors.orangeLight} rgb(242 239 237 / 0.72);
+		scrollbar-width: thin;
+	}
+
+	*::-webkit-scrollbar {
+		width: 0.625rem;
+		height: 0.625rem;
+	}
+
+	*::-webkit-scrollbar-track {
+		border-radius: 999px;
+		background: rgb(242 239 237 / 0.72);
+	}
+
+	*::-webkit-scrollbar-thumb {
+		border: 0.1875rem solid rgb(242 239 237 / 0.72);
+		border-radius: 999px;
+		background: ${theme.colors.orangeLight};
+	}
+
+	*::-webkit-scrollbar-thumb:hover {
+		background: ${theme.colors.orangeDark};
+	}
+
+	*::-webkit-scrollbar-corner {
+		background: transparent;
 	}
 
 	html {

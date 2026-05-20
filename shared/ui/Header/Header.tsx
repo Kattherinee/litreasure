@@ -4,7 +4,7 @@ import AppBar from "@mui/material/AppBar";
 import Box from "@mui/material/Box";
 import Toolbar from "@mui/material/Toolbar";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState, useSyncExternalStore } from "react";
 import styled from "styled-components";
 
@@ -41,14 +41,23 @@ const navItems = [
 	},
 ];
 
-const profileItems = ["Профиль", "Мои сокровища", "Книжный вызов"];
+const profileItems = [
+	{ href: "/treasures", label: "Мои сокровища" },
+	{ label: "Книжный вызов" },
+];
 
 const emptySubscribe = () => () => undefined;
 const getClientSnapshot = () => true;
 const getServerSnapshot = () => false;
+const AUTH_REQUIRED_MESSAGE =
+	"Для данного действия, пожалуйста, авторизируйтесь.";
+const isAuthRequiredRedirect = () =>
+	typeof window !== "undefined" &&
+	new URLSearchParams(window.location.search).get("auth") === "required";
 
 const Header = () => {
 	const pathname = usePathname();
+	const router = useRouter();
 	const isMounted = useSyncExternalStore(
 		emptySubscribe,
 		getClientSnapshot,
@@ -65,11 +74,21 @@ const Header = () => {
 	const { data: genres = [], isLoading: isGenresLoading } = useGenresQuery();
 	const user = session?.user;
 	const displayName = user?.name || user?.username || user?.email;
+	const profileName = user?.name || user?.username || user?.email;
+	const profileMeta = user?.username
+		? `@${user.username}`
+		: user?.email && user.email !== profileName
+			? user.email
+			: undefined;
 	const avatarUrl = getAvatarAssetUrl(user?.avatarUrl);
 	const isWelcomePage = pathname === "/welcome";
 	const topGenres = [...genres]
 		.slice(0, 30)
 		.sort((a, b) => a.name.localeCompare(b.name, "ru"));
+	const showAuthRequiredModal =
+		isMounted && !user && isAuthRequiredRedirect();
+	const visibleAuthModalMode = authModalMode ?? (showAuthRequiredModal ? "login" : null);
+	const authModalMessage = showAuthRequiredModal ? AUTH_REQUIRED_MESSAGE : "";
 
 	const closeProfileMenu = () => setIsProfileMenuOpen(false);
 
@@ -78,6 +97,13 @@ const Header = () => {
 		setAuthModalMode(mode);
 
 		closeProfileMenu();
+	};
+	const closeAuthModal = () => {
+		setAuthModalMode(null);
+
+		if (isAuthRequiredRedirect()) {
+			router.replace(pathname || "/", { scroll: false });
+		}
 	};
 	const openLogoutConfirm = () => {
 		setIsLogoutConfirmOpen(true);
@@ -174,7 +200,6 @@ const Header = () => {
 									<Avatar $avatarUrl={avatarUrl}>
 										{avatarUrl ? null : getInitials(displayName)}
 									</Avatar>
-									<UserName>{displayName}</UserName>
 								</UserChip>
 								<ProfileMenu
 									id="profile-navigation"
@@ -182,18 +207,35 @@ const Header = () => {
 									$isOpen={isProfileMenuOpen}
 									aria-label="Меню профиля"
 								>
-									{profileItems.map((item) => (
-										<ProfileMenuItem
-											key={item}
-											type="button"
-											onClick={closeProfileMenu}
-										>
-											{item}
-											{item === "Профиль" ? (
-												<ProfileMenuHint>Редактирование</ProfileMenuHint>
-											) : null}
-										</ProfileMenuItem>
-									))}
+									<ProfileMenuUser>
+										<ProfileMenuName>{profileName}</ProfileMenuName>
+										{profileMeta ? (
+											<ProfileMenuEmail>{profileMeta}</ProfileMenuEmail>
+										) : null}
+									</ProfileMenuUser>
+									<ProfileMenuLink href="/profile" onClick={closeProfileMenu}>
+										Профиль
+										<ProfileMenuHint>Редактирование</ProfileMenuHint>
+									</ProfileMenuLink>
+									{profileItems.map((item) =>
+										item.href ? (
+											<ProfileMenuLink
+												key={item.label}
+												href={item.href}
+												onClick={closeProfileMenu}
+											>
+												{item.label}
+											</ProfileMenuLink>
+										) : (
+											<ProfileMenuItem
+												key={item.label}
+												type="button"
+												onClick={closeProfileMenu}
+											>
+												{item.label}
+											</ProfileMenuItem>
+										),
+									)}
 									<ProfileMenuDivider />
 									<ProfileLogoutItem type="button" onClick={openLogoutConfirm}>
 										Выйти
@@ -221,10 +263,11 @@ const Header = () => {
 					</AuthActions>
 				</HeaderToolbar>
 			</HeaderBar>
-			{authModalMode ? (
+			{visibleAuthModalMode ? (
 				<AuthModal
-					mode={authModalMode}
-					onClose={() => setAuthModalMode(null)}
+					mode={visibleAuthModalMode}
+					message={authModalMessage}
+					onClose={closeAuthModal}
 					onModeChange={setAuthModalMode}
 				/>
 			) : null}
@@ -619,22 +662,6 @@ const Avatar = styled.span<{ $avatarUrl?: string }>`
 	line-height: 1;
 `;
 
-const UserName = styled.span`
-	display: inline-block;
-	max-width: 8rem;
-	overflow: hidden;
-	color: ${theme.colors.invertedText};
-	font-size: 1.175rem;
-	line-height: 1.2;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-	font-family: ${theme.fonts.serif};
-
-	@media (max-width: 66rem) {
-		display: none;
-	}
-`;
-
 const ProfileMenu = styled.div<{ $isOpen: boolean }>`
 	position: absolute;
 	z-index: 4;
@@ -654,6 +681,31 @@ const ProfileMenu = styled.div<{ $isOpen: boolean }>`
 		transform 180ms ease;
 `;
 
+const ProfileMenuUser = styled.div`
+	padding: 0.65rem 0.75rem 0.7rem;
+`;
+
+const ProfileMenuName = styled.div`
+	overflow: hidden;
+	color: ${theme.colors.foreground};
+	font-family: ${theme.fonts.serif};
+	font-size: 1.05rem;
+	font-weight: 600;
+	line-height: 1.2;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+`;
+
+const ProfileMenuEmail = styled.div`
+	overflow: hidden;
+	margin-top: 0.18rem;
+	color: ${theme.colors.softForeground};
+	font-size: 0.76rem;
+	line-height: 1.2;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+`;
+
 const ProfileMenuItem = styled.button`
 	display: flex;
 	width: 100%;
@@ -668,6 +720,29 @@ const ProfileMenuItem = styled.button`
 	font-size: 0.95rem;
 	font-weight: 600;
 	text-align: left;
+	cursor: pointer;
+
+	&:hover,
+	&:focus-visible {
+		background: rgb(218 142 91 / 0.12);
+		color: #d4641c;
+		outline: none;
+	}
+`;
+
+const ProfileMenuLink = styled(Link)`
+	display: flex;
+	width: 100%;
+	flex-direction: column;
+	align-items: flex-start;
+	border-radius: 0.625rem;
+	padding: 0.65rem 0.75rem;
+	color: #233d4d;
+	font: inherit;
+	font-size: 0.95rem;
+	font-weight: 600;
+	text-align: left;
+	text-decoration: none;
 	cursor: pointer;
 
 	&:hover,

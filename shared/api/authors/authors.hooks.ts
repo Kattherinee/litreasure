@@ -7,6 +7,8 @@ import {
 	deleteAuthor,
 	getAuthor,
 	getAuthors,
+	saveAuthor,
+	unsaveAuthor,
 	updateAuthor,
 } from "./authors.api";
 import type {
@@ -68,6 +70,30 @@ export const useDeleteAuthorMutation = () => {
 
 	return useMutation({
 		mutationFn: (id: string) => deleteAuthor(id),
+		onSuccess: (_data, id) => {
+			queryClient.invalidateQueries({ queryKey: authorsQueryKeys.byId(id) });
+			queryClient.invalidateQueries({ queryKey: authorsQueryKeys.all });
+		},
+	});
+};
+
+export const useSaveAuthorMutation = () => {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: (id: string) => saveAuthor(id),
+		onSuccess: (_data, id) => {
+			queryClient.invalidateQueries({ queryKey: authorsQueryKeys.byId(id) });
+			queryClient.invalidateQueries({ queryKey: authorsQueryKeys.all });
+		},
+	});
+};
+
+export const useUnsaveAuthorMutation = () => {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: (id: string) => unsaveAuthor(id),
 		onSuccess: (_data, id) => {
 			queryClient.invalidateQueries({ queryKey: authorsQueryKeys.byId(id) });
 			queryClient.invalidateQueries({ queryKey: authorsQueryKeys.all });

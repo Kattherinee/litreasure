@@ -7,6 +7,11 @@ import { useState } from "react";
 import styled from "styled-components";
 
 import type { IAuthorShort, IBookSeriesRelationType } from "@/shared/api/books";
+import {
+	type IUserBookStatus,
+	useUpdateBookTrackingMutation,
+} from "@/shared/api/user-books";
+import { useAuthStore } from "@/shared/store/auth-store";
 import { theme } from "@/shared/theme";
 import { PlusIcon } from "@/shared/ui/PlusIcon";
 import { CoverPlaceholder } from "@/shared/ui/Skeleton";
@@ -21,6 +26,8 @@ export interface IBookCardData {
 	orderInSeries?: number;
 	relationType?: IBookSeriesRelationType;
 	seriesLabel?: string;
+	isTracked?: boolean;
+	myStatus?: IUserBookStatus | null;
 }
 
 export type IBookCardSize = "default" | "compact";
@@ -41,6 +48,8 @@ const BookCard = ({
 		authorId,
 		authors,
 		coverUrl,
+		isTracked,
+		myStatus,
 		orderInSeries,
 		relationType,
 		seriesLabel,
@@ -58,7 +67,14 @@ const BookCard = ({
 	const [coverWidth, setCoverWidth] = useState<number | null>(null);
 	const [loadedCoverSrc, setLoadedCoverSrc] = useState("");
 	const router = useRouter();
+	const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+	const updateTrackingMutation = useUpdateBookTrackingMutation();
+	const [addStatus, setAddStatus] = useState("");
+	const [localStatus, setLocalStatus] = useState<IUserBookStatus | null>(
+		myStatus ?? null,
+	);
 	const isCoverLoaded = loadedCoverSrc === coverSrc;
+	const isBookTracked = Boolean(isTracked || localStatus);
 
 	const openBookPage = () => {
 		router.push(`/books/${book.id}`, { scroll: true });
@@ -73,8 +89,31 @@ const BookCard = ({
 		openBookPage();
 	};
 
-	const handleAddButtonClick = (event: MouseEvent<HTMLButtonElement>) => {
+	const handleAddButtonClick = async (event: MouseEvent<HTMLButtonElement>) => {
 		event.stopPropagation();
+		setAddStatus("");
+
+		if (!isAuthenticated) {
+			router.push("/auth/login");
+			return;
+		}
+
+		try {
+			const nextTracking = await updateTrackingMutation.mutateAsync({
+				bookId: book.id,
+				payload: {
+					isRereading: false,
+					readCount: 0,
+					status: "planned",
+				},
+			});
+			setLocalStatus(nextTracking.status);
+			setAddStatus("Добавлено");
+		} catch (error) {
+			setAddStatus(
+				error instanceof Error ? error.message : "Не удалось добавить книгу",
+			);
+		}
 	};
 
 	const handleAddButtonKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
@@ -125,13 +164,16 @@ const BookCard = ({
 				/>
 
 				<BookAddButton
+					$isTracked={isBookTracked}
 					type="button"
-					aria-label="Добавить в коллекцию"
+					aria-label="Добавить в библиотеку"
+					disabled={updateTrackingMutation.isPending}
 					onClick={handleAddButtonClick}
 					onKeyDown={handleAddButtonKeyDown}
 				>
 					<PlusIcon />
 				</BookAddButton>
+				{addStatus ? <AddStatus>{addStatus}</AddStatus> : null}
 			</BookCover>
 
 			<BookMeta $coverWidth={coverWidth}>
@@ -309,7 +351,7 @@ const SeriesBadge = styled.span`
 	text-transform: lowercase;
 `;
 
-const BookAddButton = styled.button`
+const BookAddButton = styled.button<{ $isTracked: boolean }>`
 	position: absolute;
 	right: 0.5rem;
 	bottom: 0.5rem;
@@ -318,14 +360,17 @@ const BookAddButton = styled.button`
 	justify-content: center;
 	width: 1.85rem;
 	height: 1.85rem;
-	border: 0.0625rem solid ${theme.alpha.coverActionBorder};
+	border: 0.0625rem solid
+		${({ $isTracked }) =>
+			$isTracked ? theme.colors.orangePrimary : theme.alpha.coverActionBorder};
 	border-radius: 50%;
-	background: ${theme.alpha.coverActionBackground};
+	background: ${({ $isTracked }) =>
+		$isTracked ? theme.colors.orangePrimary : theme.alpha.coverActionBackground};
 	padding: 0;
 	color: ${theme.colors.invertedText};
 	cursor: pointer;
-	opacity: 0;
-	transform: translateY(0.25rem);
+	opacity: ${({ $isTracked }) => ($isTracked ? 1 : 0)};
+	transform: translateY(${({ $isTracked }) => ($isTracked ? "0" : "0.25rem")});
 	transition:
 		background 0.2s ease,
 		border-color 0.2s ease,
@@ -358,4 +403,22 @@ const BookAddButton = styled.button`
 		opacity: 1;
 		transform: translateY(0);
 	}
+`;
+
+const AddStatus = styled.span`
+	position: absolute;
+	right: 0.45rem;
+	bottom: 2.65rem;
+	z-index: 2;
+	max-width: calc(100% - 0.9rem);
+	overflow: hidden;
+	border-radius: 999px;
+	background: rgb(242 239 237 / 0.92);
+	padding: 0.25rem 0.5rem;
+	color: ${theme.colors.orangeDark};
+	font-size: 0.68rem;
+	font-weight: 700;
+	line-height: 1;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 `;

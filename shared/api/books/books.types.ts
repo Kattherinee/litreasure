@@ -1,4 +1,5 @@
 import { IGenre } from "../genres";
+import type { IUserBookStatus } from "../user-books";
 
 export interface IBook {
 	id: string;
@@ -30,6 +31,7 @@ export interface IBook {
 	series?: {
 		id?: string;
 		title?: string;
+		isSaved?: boolean;
 		openLibrarySeriesKey?: string;
 		seriesId: string;
 		orderInSeries?: number;
@@ -45,6 +47,14 @@ export interface IBook {
 			seriesLabel?: string;
 		}>;
 	};
+	myTracking?: {
+		status: IUserBookStatus;
+		currentPage?: number;
+		readCount?: number;
+	} | null;
+	isTracked?: boolean;
+	myStatus?: IUserBookStatus | null;
+	myCollectionIds?: string[];
 	createdAt: string;
 	updatedAt: string;
 }
@@ -104,4 +114,16 @@ export interface IBookCardsResponse {
 	page: number;
 	pages: number;
 	total: number;
+}
+
+export interface IRateBookPayload {
+	rating: number;
+}
+
+export interface IRateBookResponse {
+	bookId: string;
+	userRating: number;
+	ratingAvg: number;
+	ratingsCount: number;
+	ratingsByStars: number[];
 }

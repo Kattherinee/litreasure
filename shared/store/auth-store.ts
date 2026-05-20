@@ -21,6 +21,7 @@ interface IAuthStoreState {
 	session: IAuthSession | null;
 	isAuthenticated: boolean;
 	setSession: (session: IAuthSession) => void;
+	updateUser: (user: Partial<IAuthUser>) => void;
 	logout: () => void;
 }
 
@@ -35,6 +36,20 @@ export const useAuthStore = create<IAuthStoreState>()(
 				set({
 					session,
 					isAuthenticated: true,
+				}),
+			updateUser: (user) =>
+				set((state) => {
+					if (!state.session) return state;
+
+					return {
+						session: {
+							...state.session,
+							user: {
+								...state.session.user,
+								...user,
+							},
+						},
+					};
 				}),
 			logout: () =>
 				set({

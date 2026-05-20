@@ -1,16 +1,27 @@
 "use client";
 
+import BookmarkIcon from "@mui/icons-material/Bookmark";
 import StarBorderIcon from "@mui/icons-material/StarBorder";
 import StarIcon from "@mui/icons-material/Star";
 import Rating from "@mui/material/Rating";
 import type { FormEvent } from "react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import styled from "styled-components";
 
 import AuthModal, { type IAuthModalMode } from "@/components/pages/AuthModal";
-import type { IBook } from "@/shared/api/books";
+import {
+	useBookCollectionsQuery,
+	type IBook,
+} from "@/shared/api/books";
+import {
+	useSaveCollectionMutation,
+	useUnsaveCollectionMutation,
+	type IBookCollectionPreview,
+} from "@/shared/api/collections";
 import { useAuthStore } from "@/shared/store/auth-store";
 import { theme } from "@/shared/theme";
+import { Button } from "@/shared/ui/Button";
 
 interface IBookDetailTabsProps {
 	activeTab?: ITabId;
@@ -18,7 +29,7 @@ interface IBookDetailTabsProps {
 	onActiveTabChange?: (tab: ITabId) => void;
 }
 
-export type ITabId = "description" | "quotes" | "reviews";
+export type ITabId = "collections" | "description" | "quotes" | "reviews";
 
 const tabs: Array<{
 	count?: number;
@@ -26,9 +37,20 @@ const tabs: Array<{
 	label: string;
 }> = [
 	{ id: "description", label: "Description" },
+	{ id: "collections", label: "In collections" },
 	{ id: "quotes", label: "Quotes" },
 	{ id: "reviews", label: "Reviews" },
 ];
+
+const getCollectionOwnerLabel = (collection: IBookCollectionPreview) =>
+	collection.source === "open_library"
+		? "Litreasure"
+		: collection.owner.username || collection.owner.name;
+
+const getCollectionOwnerAvatar = (collection: IBookCollectionPreview) =>
+	collection.source === "open_library"
+		? "/favicon.ico"
+		: collection.owner.avatarUrl || "/favicon.ico";
 
 const BookDetailTabs = ({
 	activeTab: controlledActiveTab,
@@ -43,7 +65,14 @@ const BookDetailTabs = ({
 	const [reviewRating, setReviewRating] = useState(0);
 	const [reviewText, setReviewText] = useState("");
 	const [reviewStatus, setReviewStatus] = useState("");
+	const [showOnlySavedCollections, setShowOnlySavedCollections] =
+		useState(false);
+	const [savedCollectionOverrides, setSavedCollectionOverrides] = useState<
+		Record<string, boolean>
+	>({});
 	const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+	const saveCollectionMutation = useSaveCollectionMutation();
+	const unsaveCollectionMutation = useUnsaveCollectionMutation();
 	const descriptionRef = useRef<HTMLParagraphElement | null>(null);
 	const description =
 		book.description ??
@@ -51,6 +80,27 @@ const BookDetailTabs = ({
 
 	const activeTab = controlledActiveTab ?? internalActiveTab;
 	const setActiveTab = onActiveTabChange ?? setInternalActiveTab;
+	const {
+		data: bookCollections = [],
+		isError: isCollectionsError,
+		isLoading: isCollectionsLoading,
+	} = useBookCollectionsQuery(book.id, { enabled: activeTab === "collections" });
+	const [savingCollectionId, setSavingCollectionId] = useState("");
+	const [collectionStatus, setCollectionStatus] = useState("");
+	const isCollectionMutationPending =
+		saveCollectionMutation.isPending || unsaveCollectionMutation.isPending;
+	const getIsCollectionSaved = useCallback(
+		(collection: IBookCollectionPreview) =>
+			savedCollectionOverrides[collection.id] ?? collection.isSaved ?? false,
+		[savedCollectionOverrides],
+	);
+	const visibleCollections = useMemo(
+		() =>
+			showOnlySavedCollections
+				? bookCollections.filter((collection) => getIsCollectionSaved(collection))
+				: bookCollections,
+		[bookCollections, getIsCollectionSaved, showOnlySavedCollections],
+	);
 
 	useEffect(() => {
 		const descriptionNode = descriptionRef.current;
@@ -109,6 +159,47 @@ const BookDetailTabs = ({
 		setReviewStatus("Отзыв готов к отправке. Позже подключим метод API.");
 	};
 
+	const handleToggleCollectionSave = async (
+		collection: IBookCollectionPreview,
+	) => {
+		setCollectionStatus("");
+
+		if (!isAuthenticated) {
+			requestAuth();
+			return;
+		}
+
+		const wasSaved = getIsCollectionSaved(collection);
+
+		try {
+			setSavingCollectionId(collection.id);
+			setSavedCollectionOverrides((currentState) => ({
+				...currentState,
+				[collection.id]: !wasSaved,
+			}));
+
+			if (wasSaved) {
+				await unsaveCollectionMutation.mutateAsync(collection.id);
+				setCollectionStatus("Подборка убрана из сохраненных");
+			} else {
+				await saveCollectionMutation.mutateAsync(collection.id);
+				setCollectionStatus("Подборка сохранена");
+			}
+		} catch (error) {
+			setSavedCollectionOverrides((currentState) => ({
+				...currentState,
+				[collection.id]: wasSaved,
+			}));
+			setCollectionStatus(
+				error instanceof Error
+					? error.message
+					: "Не удалось изменить сохранение подборки",
+			);
+		} finally {
+			setSavingCollectionId("");
+		}
+	};
+
 	return (
 		<TabsBlock>
 			<Tabs role="tablist" aria-label="Разделы книги">
@@ -164,6 +255,114 @@ const BookDetailTabs = ({
 					<PlaceholderText>
 						Цитаты для этой книги пока не добавлены.
 					</PlaceholderText>
+				) : null}
+
+				{activeTab === "collections" ? (
+					<CollectionsPanel>
+						{bookCollections.length > 0 ? (
+							<CollectionsFilter aria-label="Фильтр подборок">
+								<CollectionsFilterButton
+									$isActive={!showOnlySavedCollections}
+									type="button"
+									onClick={() => setShowOnlySavedCollections(false)}
+								>
+									Все
+								</CollectionsFilterButton>
+								<CollectionsFilterButton
+									$isActive={showOnlySavedCollections}
+									type="button"
+									onClick={() => setShowOnlySavedCollections(true)}
+								>
+									Мои подборки
+								</CollectionsFilterButton>
+							</CollectionsFilter>
+						) : null}
+						{isCollectionsLoading ? (
+							<PlaceholderText>Загружаем подборки...</PlaceholderText>
+						) : null}
+						{isCollectionsError ? (
+							<PlaceholderText>Не удалось загрузить подборки.</PlaceholderText>
+						) : null}
+						{!isCollectionsLoading &&
+						!isCollectionsError &&
+						bookCollections.length === 0 ? (
+							<PlaceholderText>
+								Эта книга пока не добавлена в публичные подборки.
+							</PlaceholderText>
+						) : null}
+						{showOnlySavedCollections &&
+						!isCollectionsLoading &&
+						!isCollectionsError &&
+						bookCollections.length > 0 &&
+						visibleCollections.length === 0 ? (
+							<PlaceholderText>
+								Эта книга пока не сохранена в ваших подборках.
+							</PlaceholderText>
+						) : null}
+						{visibleCollections.length > 0 ? (
+							<CollectionsList>
+								{visibleCollections.map((collection) => {
+									const isSaved = getIsCollectionSaved(collection);
+									const isPending =
+										isCollectionMutationPending &&
+										savingCollectionId === collection.id;
+
+									return (
+										<CompactCollectionCard key={collection.id}>
+											<CompactCollectionLink href={`/collections/${collection.id}`}>
+												<CompactCollectionTitle>
+													{collection.title}
+												</CompactCollectionTitle>
+												<CompactCollectionMeta>
+													<OwnerAvatar
+														alt=""
+														src={getCollectionOwnerAvatar(collection)}
+													/>
+													<span>{getCollectionOwnerLabel(collection)}</span>
+													<MetaDot />
+													<span>{collection.bookCount} книг</span>
+												</CompactCollectionMeta>
+												{collection.description ? (
+													<CompactDescription>
+														{collection.description}
+													</CompactDescription>
+												) : null}
+											</CompactCollectionLink>
+											{isSaved ? (
+												<CompactBookmarkButton
+													aria-label="Убрать подборку из сохраненных"
+													disabled={isPending}
+													title="Убрать из сохраненных"
+													type="button"
+													onClick={() =>
+														void handleToggleCollectionSave(collection)
+													}
+												>
+													<BookmarkIcon aria-hidden="true" />
+												</CompactBookmarkButton>
+											) : (
+												<CompactSaveButton
+													buttonType="containedInverted"
+													disabled={isPending}
+													type="button"
+													onClick={() =>
+														void handleToggleCollectionSave(collection)
+													}
+												>
+													<span>
+														{isPending ? "Сохраняем..." : "Сохранить"}
+													</span>
+												</CompactSaveButton>
+											)}
+										</CompactCollectionCard>
+									);
+								})}
+							</CollectionsList>
+						) : null}
+						{collectionStatus ? (
+							<CollectionStatus role="status">{collectionStatus}</CollectionStatus>
+						) : null}
+					</CollectionsPanel>
 				) : null}
 
 				{activeTab === "reviews" ? (
@@ -383,6 +582,186 @@ const PlaceholderText = styled.p`
 	font-family: ${theme.fonts.sans};
 	font-size: 1rem;
 	line-height: 1.5;
+`;
+
+const CollectionsPanel = styled.div`
+	max-width: 48rem;
+	margin-top: 1.2rem;
+`;
+
+const CollectionsFilter = styled.div`
+	display: inline-flex;
+	gap: 0.2rem;
+	border: 0.0625rem solid rgb(218 142 91 / 0.24);
+	border-radius: 999rem;
+	background: rgb(242 239 237 / 0.72);
+	margin-bottom: 0.9rem;
+	padding: 0.2rem;
+`;
+
+const CollectionsFilterButton = styled.button<{ $isActive: boolean }>`
+	border: 0;
+	border-radius: 999rem;
+	background: ${({ $isActive }) =>
+		$isActive ? theme.colors.bluePrimary : theme.colors.transparent};
+	padding: 0.38rem 0.85rem;
+	color: ${({ $isActive }) =>
+		$isActive ? theme.colors.invertedText : theme.colors.softForeground};
+	cursor: pointer;
+	font-family: ${theme.fonts.sans};
+	font-size: 0.84rem;
+	line-height: 1.2;
+	transition:
+		background 180ms ease,
+		color 180ms ease;
+
+	&:hover,
+	&:focus-visible {
+		background: ${({ $isActive }) =>
+			$isActive ? theme.colors.bluePrimary : theme.alpha.blueWash};
+		color: ${({ $isActive }) =>
+			$isActive ? theme.colors.invertedText : theme.colors.foreground};
+		outline: none;
+	}
+`;
+
+const CollectionsList = styled.div`
+	display: flex;
+	flex-direction: column;
+	gap: 0.8rem;
+`;
+
+const CompactCollectionCard = styled.article`
+	display: grid;
+	align-items: center;
+	gap: 1rem;
+	grid-template-columns: minmax(0, 1fr) auto;
+	border: 0.0625rem solid rgb(218 142 91 / 0.18);
+	border-radius: 0.9rem;
+	background: rgb(242 239 237 / 0.58);
+	padding: 1rem;
+
+	@media (max-width: 36rem) {
+		grid-template-columns: 1fr;
+	}
+`;
+
+const CompactCollectionLink = styled(Link)`
+	min-width: 0;
+	color: inherit;
+	text-decoration: none;
+
+	&:hover h3,
+	&:focus-visible h3 {
+		color: ${theme.colors.orangeDark};
+		text-decoration: underline;
+		text-underline-offset: 0.16rem;
+	}
+`;
+
+const CompactCollectionTitle = styled.h3`
+	margin: 0;
+	overflow: hidden;
+	color: ${theme.colors.foreground};
+	font-family: ${theme.fonts.serif};
+	font-size: 1.2rem;
+	font-weight: 600;
+	line-height: 1.2;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+`;
+
+const CompactCollectionMeta = styled.div`
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.4rem;
+	margin-top: 0.4rem;
+	color: ${theme.colors.softForeground};
+	font-size: 0.82rem;
+	line-height: 1.25;
+`;
+
+const OwnerAvatar = styled.img`
+	width: 1.25rem;
+	height: 1.25rem;
+	border-radius: 50%;
+	object-fit: cover;
+`;
+
+const MetaDot = styled.span`
+	width: 0.25rem;
+	height: 0.25rem;
+	border-radius: 50%;
+	background: ${theme.colors.muted};
+`;
+
+const CompactDescription = styled.p`
+	display: -webkit-box;
+	margin: 0.45rem 0 0;
+	overflow: hidden;
+	color: ${theme.colors.softForeground};
+	font-size: 0.88rem;
+	line-height: 1.4;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
+`;
+
+const CompactSaveButton = styled(Button)`
+	&& {
+		gap: 0.35rem;
+		padding: 0.5rem 0.9rem;
+		font-family: ${theme.fonts.sans};
+		font-size: 0.86rem;
+		white-space: nowrap;
+
+		svg {
+			width: 1rem;
+			height: 1rem;
+		}
+	}
+`;
+
+const CompactBookmarkButton = styled.button`
+	display: inline-grid;
+	width: 2.4rem;
+	height: 2.4rem;
+	place-items: center;
+	border: 0;
+	border-radius: 50%;
+	background: rgb(255 255 255 / 0.86);
+	color: ${theme.colors.orangeLight};
+	cursor: pointer;
+	transition:
+		background 180ms ease,
+		color 180ms ease,
+		transform 180ms ease;
+
+	svg {
+		width: 1.35rem;
+		height: 1.35rem;
+	}
+
+	&:hover,
+	&:focus-visible {
+		background: ${theme.colors.white};
+		color: ${theme.colors.orangeDark};
+		outline: none;
+		transform: translateY(-0.0625rem);
+	}
+
+	&:disabled {
+		cursor: progress;
+		opacity: 0.72;
+		transform: none;
+	}
+`;
+
+const CollectionStatus = styled.p`
+	margin: 0.7rem 0 0;
+	color: ${theme.colors.orangeDark};
+	font-size: 0.86rem;
+	line-height: 1.35;
 `;
 
 const ReviewsPanel = styled.div`

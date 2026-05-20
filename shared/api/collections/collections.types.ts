@@ -9,6 +9,12 @@ export interface ICollectionBookCard {
 	orderInSeries?: number;
 }
 
+export interface ICollectionTagSuggestion {
+	label: string;
+	source: "default" | "user";
+	usageCount: number;
+}
+
 export interface ICollectionOwner {
 	id: string;
 	name: string;
@@ -22,11 +28,28 @@ export interface ICollectionPreview {
 	id: string;
 	title: string;
 	description: string;
+	coverUrl?: string;
+	tags?: string[];
 	isPublic: boolean;
+	isSaved?: boolean;
 	topGenres: IGenre[];
 	owner: ICollectionOwner;
 	bookCount: number;
 	previewBooks: ICollectionBookCard[];
+	source: ICollectionSource;
+	sourceUrl?: string;
+	createdAt: string;
+	updatedAt: string;
+}
+
+export interface IBookCollectionPreview {
+	id: string;
+	title: string;
+	description: string;
+	isPublic: boolean;
+	isSaved?: boolean;
+	owner: ICollectionOwner;
+	bookCount: number;
 	source: ICollectionSource;
 	sourceUrl?: string;
 	createdAt: string;
@@ -53,6 +76,8 @@ export interface ICollectionDetails extends ICollectionPreview {
 export interface ICreateCollectionPayload {
 	title: string;
 	description?: string;
+	coverUrl?: string;
+	tags?: string[];
 	isPublic?: boolean;
 	bookIds?: string[];
 }

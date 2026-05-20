@@ -16,9 +16,11 @@ import { PreviewRail, RowCopy } from "./CollectionsPage";
 export const CollectionRow = ({
 	collection,
 	onAuthRequired,
+	showSaveButton = true,
 }: {
 	collection: ICollectionPreview;
 	onAuthRequired: () => void;
+	showSaveButton?: boolean;
 }) => {
 	const router = useRouter();
 	const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -96,15 +98,17 @@ export const CollectionRow = ({
 					<BookCount>{collection.bookCount} книг</BookCount>
 				</RowMeta>
 
-				<SaveButton
-					buttonType="containedInverted"
-					disabled={createCollectionMutation.isPending}
-					title="Сохранить себе"
-					onClick={handleSaveClick}
-				>
-					<PlusIcon />
-					<span> {saveStatus ? "Добавлено" : "Сохранить"}</span>
-				</SaveButton>
+				{showSaveButton ? (
+					<SaveButton
+						buttonType="containedInverted"
+						disabled={createCollectionMutation.isPending}
+						title="Сохранить себе"
+						onClick={handleSaveClick}
+					>
+						<PlusIcon />
+						<span> {saveStatus ? "Добавлено" : "Сохранить"}</span>
+					</SaveButton>
+				) : null}
 			</RowCopy>
 
 			<PreviewRail aria-label={`Книги из подборки ${collection.title}`}>

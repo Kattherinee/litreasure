@@ -1,6 +1,7 @@
 import { request, requestAuth, requestOptionalAuth } from "../base";
 import type {
 	ICollectionDetails,
+	ICollectionTagSuggestion,
 	ICollectionsListParams,
 	ICollectionsListResponse,
 	ICreateCollectionPayload,
@@ -57,6 +58,23 @@ export const getMyCollections = async (
 export const getCollection = (id: string): Promise<ICollectionDetails> =>
 	requestOptionalAuth<ICollectionDetails>(`/collections/${id}`);
 
+export const getCollectionTags = ({
+	limit,
+	search,
+}: {
+	limit?: number;
+	search?: string;
+} = {}): Promise<ICollectionTagSuggestion[]> => {
+	const searchParams = new URLSearchParams();
+	if (search) searchParams.set("search", search);
+	if (limit) searchParams.set("limit", String(limit));
+	const query = searchParams.toString();
+
+	return request<ICollectionTagSuggestion[]>(
+		`/collections/tags${query ? `?${query}` : ""}`,
+	);
+};
+
 export const createCollection = (
 	payload: ICreateCollectionPayload,
 ): Promise<ICollectionDetails> =>
@@ -76,3 +94,25 @@ export const updateCollection = (
 
 export const deleteCollection = (id: string): Promise<ICollectionDetails> =>
 	requestAuth<ICollectionDetails>(`/collections/${id}`, { method: "DELETE" });
+
+export const saveCollection = (id: string): Promise<unknown> =>
+	requestAuth(`/collections/${id}/save`, { method: "POST" });
+
+export const unsaveCollection = (id: string): Promise<unknown> =>
+	requestAuth(`/collections/${id}/save`, { method: "DELETE" });
+
+export const addBookToCollection = (
+	id: string,
+	bookId: string,
+): Promise<ICollectionDetails> =>
+	requestAuth<ICollectionDetails>(`/collections/${id}/books/${bookId}`, {
+		method: "POST",
+	});
+
+export const removeBookFromCollection = (
+	id: string,
+	bookId: string,
+): Promise<ICollectionDetails> =>
+	requestAuth<ICollectionDetails>(`/collections/${id}/books/${bookId}`, {
+		method: "DELETE",
+	});

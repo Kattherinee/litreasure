@@ -64,7 +64,7 @@ export const BookResultCard = ({
 		saveRecentSearch();
 		closeSearch();
 	};
-
+	
 	return (
 		<ResultItem>
 			<ResultMain>

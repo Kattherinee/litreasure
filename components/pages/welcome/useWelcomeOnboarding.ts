@@ -1,13 +1,17 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { createChallenge } from "@/shared/api/book-challenge";
 import { checkUsernameAvailability } from "@/shared/api/auth";
 import { updateUserGenres, updateUserProfile } from "@/shared/api/users";
 import { useAuthStore } from "@/shared/store/auth-store";
 
+import {
+	canOpenWelcomeOnboarding,
+	markWelcomeOnboardingCompleted,
+} from "./onboardingStorage";
 import { MIN_SELECTED_GENRES, STEPS, type IWelcomeStep } from "./types";
 
 export const useWelcomeOnboarding = () => {
@@ -15,6 +19,7 @@ export const useWelcomeOnboarding = () => {
 	const session = useAuthStore((state) => state.session);
 	const setSession = useAuthStore((state) => state.setSession);
 
+	const [canRenderWelcome, setCanRenderWelcome] = useState(false);
 	const [activeStep, setActiveStep] = useState<IWelcomeStep>("profile");
 	const [name, setName] = useState("");
 	const [username, setUsername] = useState("");
@@ -30,6 +35,20 @@ export const useWelcomeOnboarding = () => {
 	const userId = session?.user?.id;
 	const activeStepIndex = STEPS.findIndex((step) => step.id === activeStep);
 	const activeStepConfig = STEPS[activeStepIndex];
+
+	useEffect(() => {
+		if (!session) {
+			router.replace("/");
+			return;
+		}
+
+		if (!canOpenWelcomeOnboarding(session.user)) {
+			router.replace("/");
+			return;
+		}
+
+		setCanRenderWelcome(true);
+	}, [router, session]);
 
 	const isNextDisabled =
 		(activeStep === "profile" &&
@@ -223,7 +242,8 @@ export const useWelcomeOnboarding = () => {
 
 			await Promise.all([genresPromise, challengePromise]);
 
-			router.push("/");
+			markWelcomeOnboardingCompleted(session.user);
+			router.replace("/");
 		} catch (error) {
 			setFormError(
 				error instanceof Error
@@ -240,6 +260,7 @@ export const useWelcomeOnboarding = () => {
 		activeStepConfig,
 		activeStepIndex,
 		avatarUrl,
+		canRenderWelcome,
 		formError,
 		hasUsernameError,
 		isCheckingUsername,

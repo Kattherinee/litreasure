@@ -1,24 +1,140 @@
 "use client";
 
-import AddIcon from "@mui/icons-material/Add";
 import AutoStoriesOutlinedIcon from "@mui/icons-material/AutoStoriesOutlined";
+import CheckIcon from "@mui/icons-material/Check";
+import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import MoreHorizIcon from "@mui/icons-material/MoreHoriz";
 import Link from "next/link";
+import { useState } from "react";
 import styled from "styled-components";
 
 import type { IBook } from "@/shared/api/books";
+import {
+	type IUserBookStatus,
+	useDeleteBookTrackingMutation,
+	useUpdateBookTrackingMutation,
+} from "@/shared/api/user-books";
+import { useAuthStore } from "@/shared/store/auth-store";
 import { theme } from "@/shared/theme";
-import { Button } from "@/shared/ui/Button";
+
+import { BookCollectionModal } from "./BookCollectionModal";
 
 interface IBookDetailHeroProps {
 	book: IBook;
+	onAuthRequired?: () => void;
 }
 
-const BookDetailHero = ({ book }: IBookDetailHeroProps) => {
+const statusLabels: Record<IUserBookStatus, string> = {
+	dropped: "Dropped",
+	finished: "Finished",
+	paused: "Paused",
+	planned: "Planned",
+	reading: "Reading",
+	rereading: "Rereading",
+};
+
+const bookStatuses: Array<{ id: IUserBookStatus; label: string }> = [
+	{ id: "planned", label: statusLabels.planned },
+	{ id: "reading", label: statusLabels.reading },
+	{ id: "finished", label: statusLabels.finished },
+	{ id: "paused", label: statusLabels.paused },
+	{ id: "rereading", label: statusLabels.rereading },
+	{ id: "dropped", label: statusLabels.dropped },
+];
+
+const BookDetailHero = ({ book, onAuthRequired }: IBookDetailHeroProps) => {
+	const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+	const updateTrackingMutation = useUpdateBookTrackingMutation();
+	const deleteTrackingMutation = useDeleteBookTrackingMutation();
+	const [trackingOverride, setTrackingOverride] = useState<
+		IBook["myTracking"] | undefined
+	>();
+	const [collectionIdsOverride, setCollectionIdsOverride] = useState<
+		Set<string> | undefined
+	>();
+	const [trackingStatus, setTrackingStatus] = useState("");
+	const [isStatusMenuOpen, setIsStatusMenuOpen] = useState(false);
+	const [isCollectionModalOpen, setIsCollectionModalOpen] = useState(false);
 	const seriesTag = getSeriesTag(book);
 	const primaryAuthor = book.authors?.[0];
 	const authorName = primaryAuthor?.name ?? book.author;
 	const authorPhotoUrl = primaryAuthor?.photoUrl;
+	const trackingState =
+		trackingOverride === undefined ? (book.myTracking ?? null) : trackingOverride;
+	const collectionIds =
+		collectionIdsOverride ?? new Set(book.myCollectionIds ?? []);
+	const currentStatus = trackingState?.status;
+	const isBookTracked = Boolean(currentStatus);
+	const currentStatusLabel = currentStatus
+		? statusLabels[currentStatus]
+		: "Add to library";
+	const isTrackingPending =
+		updateTrackingMutation.isPending || deleteTrackingMutation.isPending;
+
+	const saveStatus = async (status: IUserBookStatus) => {
+		setTrackingStatus("");
+		setIsStatusMenuOpen(false);
+
+		if (!isAuthenticated) {
+			onAuthRequired?.();
+			return;
+		}
+
+		try {
+			const nextTracking = await updateTrackingMutation.mutateAsync({
+				bookId: book.id,
+				payload: {
+					currentPage: trackingState?.currentPage,
+					isRereading: status === "rereading",
+					readCount: trackingState?.readCount ?? 0,
+					status,
+				},
+			});
+			setTrackingOverride(nextTracking);
+			setTrackingStatus(`Status: ${statusLabels[status]}`);
+		} catch (error) {
+			setTrackingStatus(
+				error instanceof Error ? error.message : "Could not update the book.",
+			);
+		}
+	};
+
+	const handlePrimaryLibraryClick = () => {
+		if (isBookTracked) {
+			setIsStatusMenuOpen((current) => !current);
+			return;
+		}
+
+		void saveStatus("planned");
+	};
+
+	const handleRemoveFromLibrary = async () => {
+		setTrackingStatus("");
+
+		if (!isAuthenticated) {
+			onAuthRequired?.();
+			return;
+		}
+
+		try {
+			await deleteTrackingMutation.mutateAsync(book.id);
+			setTrackingOverride(null);
+			setTrackingStatus("Removed from library");
+		} catch (error) {
+			setTrackingStatus(
+				error instanceof Error ? error.message : "Could not remove the book.",
+			);
+		}
+	};
+
+	const openCollectionModal = () => {
+		if (!isAuthenticated) {
+			onAuthRequired?.();
+			return;
+		}
+
+		setIsCollectionModalOpen(true);
+	};
 
 	return (
 		<HeaderBlock>
@@ -27,9 +143,7 @@ const BookDetailHero = ({ book }: IBookDetailHeroProps) => {
 			{primaryAuthor ? (
 				<AuthorLink href={`/authors/${primaryAuthor.id}`}>
 					<AuthorBy>by</AuthorBy>
-					{authorPhotoUrl ? (
-						<AuthorPhoto $photoUrl={authorPhotoUrl} />
-					) : null}
+					{authorPhotoUrl ? <AuthorPhoto $photoUrl={authorPhotoUrl} /> : null}
 					<AuthorName>{authorName}</AuthorName>
 				</AuthorLink>
 			) : (
@@ -40,17 +154,85 @@ const BookDetailHero = ({ book }: IBookDetailHeroProps) => {
 			)}
 
 			<ActionRow>
-				<ActionButton buttonType="containedInverted">
-					<span>Add to library</span>
-					<AddIcon aria-hidden="true" />
-				</ActionButton>
-				<RoundAction type="button" aria-label="Книжные полки">
+				<LibraryAction
+					onBlur={(event) => {
+						if (!event.currentTarget.contains(event.relatedTarget)) {
+							setIsStatusMenuOpen(false);
+						}
+					}}
+				>
+					<LibraryMainButton
+						$isTracked={isBookTracked}
+						disabled={isTrackingPending}
+						type="button"
+						onClick={handlePrimaryLibraryClick}
+					>
+						{currentStatusLabel}
+					</LibraryMainButton>
+					<LibraryMenuButton
+						aria-expanded={isStatusMenuOpen}
+						aria-label="Change book status"
+						$isTracked={isBookTracked}
+						disabled={isTrackingPending}
+						type="button"
+						onClick={() => setIsStatusMenuOpen((current) => !current)}
+					>
+						<KeyboardArrowDownIcon aria-hidden="true" />
+					</LibraryMenuButton>
+					{isStatusMenuOpen ? (
+						<StatusMenu role="menu">
+							{bookStatuses.map((status) => (
+								<StatusMenuItem
+									key={status.id}
+									$isActive={currentStatus === status.id}
+									role="menuitem"
+									type="button"
+									onClick={() => void saveStatus(status.id)}
+								>
+									<span>{status.label}</span>
+									{currentStatus === status.id ? (
+										<CheckIcon aria-hidden="true" />
+									) : null}
+								</StatusMenuItem>
+							))}
+							{isBookTracked ? (
+								<>
+									<StatusMenuDivider />
+									<StatusMenuItem
+										$isActive={false}
+										role="menuitem"
+										type="button"
+										onClick={() => void handleRemoveFromLibrary()}
+									>
+										<span>Remove</span>
+									</StatusMenuItem>
+								</>
+							) : null}
+						</StatusMenu>
+					) : null}
+				</LibraryAction>
+				<RoundAction
+					type="button"
+					aria-label="Book shelves"
+					onClick={openCollectionModal}
+				>
 					<AutoStoriesOutlinedIcon aria-hidden="true" />
 				</RoundAction>
-				<RoundAction type="button" aria-label="Больше действий">
+				<RoundAction type="button" aria-label="More actions">
 					<MoreHorizIcon aria-hidden="true" />
 				</RoundAction>
 			</ActionRow>
+			{trackingStatus ? (
+				<VisuallyHidden role="status">{trackingStatus}</VisuallyHidden>
+			) : null}
+			{isCollectionModalOpen ? (
+				<BookCollectionModal
+					bookId={book.id}
+					collectionIds={collectionIds}
+					onCollectionIdsChange={setCollectionIdsOverride}
+					onClose={() => setIsCollectionModalOpen(false)}
+				/>
+			) : null}
 		</HeaderBlock>
 	);
 };
@@ -260,20 +442,150 @@ const ActionRow = styled.div`
 	}
 `;
 
-const ActionButton = styled(Button)`
-	&& {
-		margin-top: 0.1rem;
-		background: ${theme.colors.darkerOrangeLight};
-		border-color: ${theme.colors.darkerOrangeLight};
-		padding: 0.58rem 1.25rem;
-		font-size: 1.1rem;
-		gap: 0.45rem;
+const LibraryAction = styled.div`
+	position: relative;
+	display: inline-flex;
+	align-items: stretch;
+	margin-top: 0.1rem;
 
-		@media (max-width: 74.9375rem) {
-			padding: 0.5rem 1.05rem;
-			font-size: 0.95rem;
-		}
+	&:hover button,
+	&:focus-within button {
+		background: ${theme.colors.bluePrimary};
+		color: ${theme.colors.invertedText};
 	}
+`;
+
+const LibraryButtonBase = styled.button<{ $isTracked: boolean }>`
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 2.65rem;
+	border: 0;
+	background: ${theme.colors.surface};
+	color: ${({ $isTracked }) =>
+		$isTracked ? theme.colors.bluePrimary : theme.colors.darkerOrangeLight};
+	cursor: pointer;
+	font-family: ${theme.fonts.serif};
+	font-size: 1.1rem;
+	font-weight: 700;
+	line-height: 1.2;
+	transition:
+		background 180ms ease,
+		color 180ms ease,
+		transform 180ms ease;
+
+	&:hover,
+	&:focus-visible {
+		background: ${theme.colors.bluePrimary};
+		color: ${theme.colors.invertedText};
+		outline: none;
+	}
+
+	&:disabled {
+		cursor: wait;
+		opacity: 0.72;
+	}
+
+	@media (max-width: 74.9375rem) {
+		min-height: 2.35rem;
+		font-size: 0.95rem;
+	}
+`;
+
+const LibraryMainButton = styled(LibraryButtonBase)`
+	min-width: ${({ $isTracked }) => ($isTracked ? "0" : "10.5rem")};
+	border-radius: 62.4375rem 0 0 62.4375rem;
+	padding: 0.58rem 0.9rem 0.58rem 1.2rem;
+
+	@media (max-width: 74.9375rem) {
+		min-width: ${({ $isTracked }) => ($isTracked ? "0" : "8.6rem")};
+		padding: 0.5rem 0.8rem 0.5rem 1rem;
+	}
+`;
+
+const LibraryMenuButton = styled(LibraryButtonBase)`
+	width: 2.55rem;
+	border-radius: 0 62.4375rem 62.4375rem 0;
+	padding: 0;
+
+	& svg {
+		width: 1.45rem;
+		height: 1.45rem;
+		transition: transform 160ms ease;
+	}
+
+	&[aria-expanded="true"] svg {
+		transform: rotate(180deg);
+	}
+
+	@media (max-width: 74.9375rem) {
+		width: 2.35rem;
+	}
+`;
+
+const StatusMenu = styled.div`
+	position: absolute;
+	top: calc(100% + 0.55rem);
+	left: 0;
+	z-index: 20;
+	display: grid;
+	width: 13.5rem;
+	overflow: hidden;
+	border: 0.0625rem solid ${theme.colors.orangeLight};
+	border-radius: 0.9rem;
+	background: #f2efed;
+	box-shadow: 0 1rem 2rem rgb(4 18 26 / 0.16);
+	padding: 0.35rem;
+	text-align: left;
+`;
+
+const StatusMenuItem = styled.button<{ $isActive: boolean }>`
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.75rem;
+	border: 0;
+	border-radius: 0.65rem;
+	background: ${({ $isActive }) =>
+		$isActive ? "rgb(218 142 91 / 0.16)" : "transparent"} !important;
+	padding: 0.65rem 0.75rem;
+	color: ${({ $isActive }) =>
+		$isActive ? theme.colors.orangeDark : theme.colors.foreground} !important;
+	cursor: pointer;
+	font: inherit;
+	font-size: 0.95rem;
+	font-weight: ${({ $isActive }) => ($isActive ? 700 : 500)};
+
+	& svg {
+		width: 1.1rem;
+		height: 1.1rem;
+		color: ${theme.colors.orangeDark};
+	}
+
+	&:hover,
+	&:focus-visible {
+		background: ${({ $isActive }) =>
+			$isActive
+				? "rgb(218 142 91 / 0.22)"
+				: "rgb(238 179 141 / 0.16)"} !important;
+		color: ${theme.colors.orangeDark} !important;
+		outline: none;
+	}
+`;
+
+const StatusMenuDivider = styled.div`
+	height: 0.0625rem;
+	margin: 0.25rem;
+	background: rgb(238 179 141 / 0.55);
+`;
+
+const VisuallyHidden = styled.span`
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	clip: rect(0 0 0 0);
+	white-space: nowrap;
 `;
 
 const RoundAction = styled.button`
