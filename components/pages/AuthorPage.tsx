@@ -1,11 +1,17 @@
 "use client";
 
 import BookmarkIcon from "@mui/icons-material/Bookmark";
+import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import styled from "styled-components";
 
 import AuthModal, { type IAuthModalMode } from "@/components/pages/AuthModal";
+import {
+	ResultsBadge as BaseResultsBadge,
+	ResultsNumber as TotalNumber,
+	ResultsText as TotalText,
+} from "@/components/pages/AuthorsFilters";
 import {
 	useAuthorQuery,
 	useSaveAuthorMutation,
@@ -18,6 +24,7 @@ import {
 import { useAuthStore } from "@/shared/store/auth-store";
 import { theme } from "@/shared/theme";
 import { BookCard } from "@/shared/ui/BookCard";
+import { GenrePill } from "@/shared/ui/GenrePill";
 import { BookCardSkeleton, SkeletonBlock } from "@/shared/ui/Skeleton";
 
 interface IAuthorPageProps {
@@ -32,6 +39,12 @@ const AuthorPage = ({ id }: IAuthorPageProps) => {
 	const [savedSeriesOverrides, setSavedSeriesOverrides] = useState<
 		Record<string, boolean>
 	>({});
+	const [isBioExpanded, setIsBioExpanded] = useState(false);
+	const [canExpandBio, setCanExpandBio] = useState(false);
+	const [expandedSeries, setExpandedSeries] = useState<Record<string, boolean>>(
+		{},
+	);
+	const bioRef = useRef<HTMLParagraphElement | null>(null);
 	const { data: author, error, isError, isLoading } = useAuthorQuery(id);
 	const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 	const saveAuthorMutation = useSaveAuthorMutation();
@@ -47,8 +60,40 @@ const AuthorPage = ({ id }: IAuthorPageProps) => {
 	const getIsSeriesSaved = (seriesId: string, initialValue?: boolean) =>
 		savedSeriesOverrides[seriesId] ?? initialValue ?? false;
 
+	useEffect(() => {
+		const bioNode = bioRef.current;
+
+		if (!bioNode) {
+			return;
+		}
+
+		const updateBioOverflow = () => {
+			if (isBioExpanded) {
+				return;
+			}
+
+			setCanExpandBio(bioNode.scrollHeight > bioNode.clientHeight + 1);
+		};
+
+		updateBioOverflow();
+
+		const resizeObserver = new ResizeObserver(updateBioOverflow);
+		resizeObserver.observe(bioNode);
+
+		return () => {
+			resizeObserver.disconnect();
+		};
+	}, [author?.bio, isBioExpanded]);
+
 	const requestAuth = () => {
 		setAuthModalMode("login");
+	};
+
+	const toggleSeriesExpanded = (seriesId: string) => {
+		setExpandedSeries((currentState) => ({
+			...currentState,
+			[seriesId]: !currentState[seriesId],
+		}));
 	};
 
 	const handleToggleAuthorSave = async () => {
@@ -167,6 +212,7 @@ const AuthorPage = ({ id }: IAuthorPageProps) => {
 									onClick={() => void handleToggleAuthorSave()}
 								>
 									<BookmarkIcon aria-hidden="true" />
+									<span>{isAuthorSavePending ? "Сохраняем..." : "Вы подписаны"}</span>
 								</SavedActionButton>
 							) : (
 								<SaveActionButton
@@ -174,30 +220,78 @@ const AuthorPage = ({ id }: IAuthorPageProps) => {
 									type="button"
 									onClick={() => void handleToggleAuthorSave()}
 								>
-									{isAuthorSavePending ? "Сохраняем..." : "Сохранить автора"}
+									{isAuthorSavePending ? "Сохраняем..." : "Подписаться"}
 								</SaveActionButton>
 							)}
 						</TitleRow>
 						<Facts>
-							<span>{author.bookCount} книг</span>
-							{author.mainGenre ? (
-								<Link href={`/genres/${author.mainGenre.slug}`}>
-									{author.mainGenre.name}
-								</Link>
+							<TotalBadge aria-label={`Всего книг автора: ${author.bookCount}`}>
+								<TotalNumber>{author.bookCount}</TotalNumber>
+								<TotalText>всего книг</TotalText>
+							</TotalBadge>
+							{author.topGenres && author.topGenres.length > 0 ? (
+								<GenreChips aria-label="Жанры автора">
+									{author.topGenres.map((genre) => (
+										<AuthorGenrePill key={genre.id} href={`/genres/${genre.slug}`}>
+											{genre.name}
+										</AuthorGenrePill>
+									))}
+								</GenreChips>
 							) : null}
 						</Facts>
-						{author.bio ? <Bio>{author.bio}</Bio> : null}
+						{author.bio ? (
+							<BioWrap>
+								<Bio ref={bioRef} $isExpanded={isBioExpanded}>
+									{author.bio}
+								</Bio>
+								{canExpandBio || isBioExpanded ? (
+									<BioToggle
+										$isExpanded={isBioExpanded}
+										type="button"
+										onClick={() =>
+											setIsBioExpanded((currentState) => !currentState)
+										}
+									>
+										{isBioExpanded ? "Свернуть" : "Показать больше"}
+									</BioToggle>
+								) : null}
+							</BioWrap>
+						) : null}
 					</HeroCopy>
 				</Hero>
 
 				{author.series.length > 0 ? (
 					<Section>
-						<SectionTitle>Серии</SectionTitle>
+						<SectionHeader>
+							<SectionTitle>Серии</SectionTitle>
+							<SectionStats>
+								<TotalBadge aria-label={`Всего серий: ${author.series.length}`}>
+									<TotalNumber>{author.series.length}</TotalNumber>
+									<TotalText>всего</TotalText>
+								</TotalBadge>
+								<SectionHint>книги можно пролистать горизонтально</SectionHint>
+							</SectionStats>
+						</SectionHeader>
 						<SeriesList>
-							{author.series.map((series) => (
-								<SeriesCard key={series.id}>
-									<SeriesHeader>
-										<SeriesTitle>{series.title}</SeriesTitle>
+							{author.series.map((series) => {
+								const isExpanded = expandedSeries[series.id] ?? false;
+								const canExpandSeries = series.books.length > 8;
+								const visibleBooks = isExpanded
+									? series.books
+									: series.books.slice(0, 8);
+
+								return (
+									<SeriesCard key={series.id}>
+										<SeriesHeader>
+											<SeriesCopy>
+												<SeriesTitle>{series.title}</SeriesTitle>
+												<SeriesMeta
+													aria-label={`Всего книг в серии: ${series.books.length}`}
+												>
+													<TotalNumber>{series.books.length}</TotalNumber>
+													<TotalText>всего</TotalText>
+												</SeriesMeta>
+											</SeriesCopy>
 										{getIsSeriesSaved(series.id, series.isSaved) ? (
 											<SavedActionButton
 												aria-label="Убрать серию из сохраненных"
@@ -224,31 +318,52 @@ const AuthorPage = ({ id }: IAuthorPageProps) => {
 													)
 												}
 											>
-												{isSeriesSavePending ? "Сохраняем..." : "Сохранить серию"}
+												{isSeriesSavePending ? "Сохраняем..." : "Подписаться"}
 											</SaveActionButton>
 										)}
-									</SeriesHeader>
-									<BookGrid>
-										{series.books.map((book) => (
-											<BookCard
-												key={book.id}
-												book={{
-													...book,
-													author: author.name,
-													relationType: book.seriesRelationType,
-												}}
-											/>
-										))}
-									</BookGrid>
-								</SeriesCard>
-							))}
+										</SeriesHeader>
+										<SeriesBooksRail $isExpanded={isExpanded}>
+											{visibleBooks.map((book) => (
+												<BookCard
+													key={book.id}
+													book={{
+														...book,
+														author: author.name,
+														relationType: book.seriesRelationType,
+													}}
+												/>
+											))}
+										</SeriesBooksRail>
+										{canExpandSeries ? (
+											<SeriesExpandButton
+												$isExpanded={isExpanded}
+												type="button"
+												onClick={() => toggleSeriesExpanded(series.id)}
+											>
+												<span>
+													{isExpanded
+														? "Свернуть серию"
+														: `Показать всю серию (+${series.books.length - visibleBooks.length})`}
+												</span>
+												<KeyboardArrowDownIcon aria-hidden="true" />
+											</SeriesExpandButton>
+										) : null}
+									</SeriesCard>
+								);
+							})}
 						</SeriesList>
 					</Section>
 				) : null}
 
 				{author.books.length > 0 ? (
 					<Section>
-						<SectionTitle>Книги</SectionTitle>
+						<SectionHeader>
+							<SectionTitle>Книги</SectionTitle>
+							<TotalBadge aria-label={`Всего книг: ${author.books.length}`}>
+								<TotalNumber>{author.books.length}</TotalNumber>
+								<TotalText>всего</TotalText>
+							</TotalBadge>
+						</SectionHeader>
 						<BookGrid>
 							{author.books.map((book) => (
 								<BookCard
@@ -285,7 +400,7 @@ const Page = styled.div`
 `;
 
 const Content = styled.section`
-	width: min(100%, ${theme.layout.contentMaxWidth});
+	width: min(100%, 70rem);
 	margin: 0 auto;
 `;
 
@@ -304,11 +419,11 @@ const BackLink = styled(Link)`
 const Hero = styled.section`
 	display: grid;
 	align-items: center;
-	gap: 1.5rem;
-	grid-template-columns: 9rem minmax(0, 1fr);
+	gap: clamp(1rem, 2.2vw, 1.75rem);
+	grid-template-columns: 7rem minmax(0, 1fr);
 	border-radius: 1.25rem;
 	background: ${theme.colors.white};
-	padding: clamp(1rem, 3vw, 2rem);
+	padding: clamp(1.15rem, 2.45vw, 2rem);
 
 	@media (max-width: 38rem) {
 		grid-template-columns: 1fr;
@@ -317,8 +432,8 @@ const Hero = styled.section`
 
 const AuthorPhoto = styled.span<{ $photoUrl?: string }>`
 	display: inline-flex;
-	width: 9rem;
-	height: 9rem;
+	width: 7rem;
+	height: 7rem;
 	align-items: center;
 	justify-content: center;
 	border-radius: 50%;
@@ -328,7 +443,7 @@ const AuthorPhoto = styled.span<{ $photoUrl?: string }>`
 			: theme.colors.surface};
 	color: ${theme.colors.orangeDark};
 	font-family: ${theme.fonts.serif};
-	font-size: 3rem;
+	font-size: 2.5rem;
 	font-weight: 600;
 `;
 
@@ -351,18 +466,22 @@ const Title = styled.h1`
 	margin: 0;
 	color: ${theme.colors.foreground};
 	font-family: ${theme.fonts.serif};
-	font-size: clamp(2.25rem, 5vw, 4.5rem);
+	font-size: clamp(1.85rem, 3.1vw, 3rem);
 	font-weight: 600;
 	line-height: 1;
 `;
 
 const SaveActionButton = styled.button`
+	display: inline-flex;
 	flex: 0 0 auto;
-	border: 0;
+	align-items: center;
+	justify-content: center;
+	border: 0.0625rem solid ${theme.colors.orangeLight};
 	border-radius: 999rem;
-	background: ${theme.colors.white};
-	padding: 0.56rem 1rem;
-	color: ${theme.colors.bluePrimary};
+	background: ${theme.colors.orangeLight};
+	padding: 0.68rem 1.15rem;
+	box-shadow: 0 0.55rem 1.15rem rgb(218 142 91 / 0.18);
+	color: ${theme.colors.invertedText};
 	cursor: pointer;
 	font-family: ${theme.fonts.sans};
 	font-size: 0.9rem;
@@ -375,8 +494,10 @@ const SaveActionButton = styled.button`
 	&:hover,
 	&:focus-visible {
 		background: ${theme.colors.bluePrimary};
+		border-color: ${theme.colors.bluePrimary};
 		color: ${theme.colors.invertedText};
 		outline: none;
+		box-shadow: 0 0.65rem 1.35rem rgb(35 61 77 / 0.18);
 	}
 
 	&:disabled {
@@ -386,27 +507,34 @@ const SaveActionButton = styled.button`
 `;
 
 const SavedActionButton = styled.button`
-	display: inline-grid;
+	display: inline-flex;
 	flex: 0 0 auto;
-	width: 2.5rem;
-	height: 2.5rem;
-	place-items: center;
-	border: 0;
-	border-radius: 50%;
-	background: ${theme.colors.white};
-	color: ${theme.colors.orangeLight};
+	align-items: center;
+	justify-content: center;
+	gap: 0.45rem;
+	border: 0.0625rem solid rgb(218 142 91 / 0.6);
+	border-radius: 999rem;
+	background: rgb(218 142 91 / 0.14);
+	padding: 0.62rem 1rem;
+	color: ${theme.colors.orangeDark};
 	cursor: pointer;
+	font-family: ${theme.fonts.sans};
+	font-size: 0.9rem;
+	font-weight: 700;
+	line-height: 1.2;
 	transition:
+		background 180ms ease,
 		color 180ms ease,
 		transform 180ms ease;
 
 	svg {
-		width: 1.45rem;
-		height: 1.45rem;
+		width: 1.05rem;
+		height: 1.05rem;
 	}
 
 	&:hover,
 	&:focus-visible {
+		background: rgb(218 142 91 / 0.2);
 		color: ${theme.colors.orangeDark};
 		outline: none;
 		transform: translateY(-0.0625rem);
@@ -422,37 +550,124 @@ const SavedActionButton = styled.button`
 const Facts = styled.div`
 	display: flex;
 	flex-wrap: wrap;
-	gap: 0.75rem;
-	margin-top: 0.75rem;
+	align-items: center;
+	gap: 0.55rem;
+	margin-top: 0.95rem;
 	color: ${theme.colors.orangeDark};
 	font-size: 0.95rem;
 	line-height: 1.4;
-
-	a {
-		color: inherit;
-		text-decoration: underline;
-	}
 `;
 
-const Bio = styled.p`
-	max-width: 48rem;
+const GenreChips = styled.div`
+	display: inline-flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.4rem;
+`;
+
+const AuthorGenrePill = styled(GenrePill)`
+	min-height: 2rem;
+	padding: 0.42rem 0.78rem;
+	font-size: 0.84rem;
+	font-weight: 700;
+`;
+
+const BioWrap = styled.div`
+	position: relative;
+	max-width: 42rem;
+`;
+
+const Bio = styled.p<{ $isExpanded: boolean }>`
+	max-width: 42rem;
 	margin: 1rem 0 0;
+	overflow: hidden;
 	color: ${theme.colors.softForeground};
 	font-size: 1rem;
 	line-height: 1.6;
+	overflow-wrap: anywhere;
+	${({ $isExpanded }) =>
+		$isExpanded
+			? ""
+			: `
+				display: -webkit-box;
+				-webkit-box-orient: vertical;
+				-webkit-line-clamp: 4;
+			`}
+`;
+
+const BioToggle = styled.button<{ $isExpanded: boolean }>`
+	position: ${({ $isExpanded }) => ($isExpanded ? "static" : "absolute")};
+	right: 0;
+	bottom: 0.08rem;
+	display: block;
+	border: 0;
+	background: linear-gradient(
+		90deg,
+		rgb(255 255 255 / 0),
+		${theme.colors.white} 3rem,
+		${theme.colors.white}
+	);
+	margin-top: ${({ $isExpanded }) => ($isExpanded ? "0.45rem" : "0")};
+	margin-left: ${({ $isExpanded }) => ($isExpanded ? "auto" : "0")};
+	padding: 0 0 0 3.6rem;
+	color: ${theme.colors.orangeDark};
+	cursor: pointer;
+	font-family: ${theme.fonts.sans};
+	font-size: 0.95rem;
+	line-height: 1.6;
+
+	&:hover,
+	&:focus-visible {
+		color: ${theme.colors.orangePrimary};
+		outline: none;
+	}
 `;
 
 const Section = styled.section`
 	margin-top: 2rem;
 `;
 
+const SectionHeader = styled.div`
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+	margin-bottom: 1rem;
+
+	@media (max-width: 42rem) {
+		align-items: flex-start;
+		flex-direction: column;
+		gap: 0.25rem;
+	}
+`;
+
 const SectionTitle = styled.h2`
-	margin: 0 0 1rem;
+	margin: 0;
 	color: ${theme.colors.foreground};
 	font-family: ${theme.fonts.serif};
 	font-size: 1.75rem;
 	font-weight: 600;
 	line-height: 1.2;
+`;
+
+const SectionHint = styled.p`
+	margin: 0;
+	color: ${theme.colors.softForeground};
+	font-family: ${theme.fonts.sans};
+	font-size: 0.9rem;
+	line-height: 1.35;
+`;
+
+const SectionStats = styled.div`
+	display: inline-flex;
+	align-items: center;
+	gap: 0.65rem;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+`;
+
+const TotalBadge = styled(BaseResultsBadge)`
+	min-height: 2.25rem;
 `;
 
 const SeriesList = styled.div`
@@ -462,6 +677,7 @@ const SeriesList = styled.div`
 `;
 
 const SeriesCard = styled.section`
+	border: 0.0625rem solid rgb(218 142 91 / 0.16);
 	border-radius: 1rem;
 	background: rgb(242 239 237 / 0.58);
 	padding: 1rem;
@@ -469,10 +685,14 @@ const SeriesCard = styled.section`
 
 const SeriesHeader = styled.div`
 	display: flex;
-	align-items: center;
+	align-items: flex-start;
 	justify-content: space-between;
 	gap: 1rem;
 	margin-bottom: 1rem;
+`;
+
+const SeriesCopy = styled.div`
+	min-width: 0;
 `;
 
 const SeriesTitle = styled.h3`
@@ -482,6 +702,59 @@ const SeriesTitle = styled.h3`
 	font-size: 1.35rem;
 	font-weight: 500;
 	line-height: 1.2;
+`;
+
+const SeriesMeta = styled(TotalBadge)`
+	width: fit-content;
+	margin: 0.25rem 0 0;
+	min-height: 2rem;
+	padding: 0.36rem 0.7rem;
+`;
+
+const SeriesBooksRail = styled.div<{ $isExpanded: boolean }>`
+	display: flex;
+	flex-wrap: ${({ $isExpanded }) => ($isExpanded ? "wrap" : "nowrap")};
+	gap: 1rem;
+	overflow-x: ${({ $isExpanded }) => ($isExpanded ? "visible" : "auto")};
+	overflow-y: visible;
+	padding: 0.15rem 0 0.55rem;
+	scrollbar-color: ${theme.colors.orangeLight} rgb(242 239 237 / 0.72);
+	scrollbar-width: thin;
+
+	& > * {
+		flex: 0 0 auto;
+	}
+`;
+
+const SeriesExpandButton = styled.button<{ $isExpanded: boolean }>`
+	display: inline-flex;
+	align-items: center;
+	gap: 0.25rem;
+	border: 0.0625rem solid rgb(237 160 108 / 0.42);
+	border-radius: 62.4375rem;
+	background: rgb(242 239 237 / 0.78);
+	margin-top: 0.55rem;
+	padding: 0.42rem 0.78rem;
+	color: ${theme.colors.orangeDark};
+	cursor: pointer;
+	font-family: ${theme.fonts.sans};
+	font-size: 0.86rem;
+	font-weight: 700;
+	line-height: 1;
+
+	svg {
+		width: 1.1rem;
+		height: 1.1rem;
+		transform: rotate(${({ $isExpanded }) => ($isExpanded ? "180deg" : "0")});
+		transition: transform 160ms ease;
+	}
+
+	&:hover,
+	&:focus-visible {
+		background: ${theme.colors.orangeLight};
+		color: ${theme.colors.invertedText};
+		outline: none;
+	}
 `;
 
 const BookGrid = styled.div`

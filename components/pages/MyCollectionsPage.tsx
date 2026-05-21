@@ -6,25 +6,48 @@ import styled from "styled-components";
 
 import { CollectionRow } from "@/components/pages/ColectionsPage/CollectionsRow";
 import { CreateCollectionModal } from "@/components/pages/book-details/CreateCollectionModal";
-import { useMyCollectionsQuery } from "@/shared/api/collections";
+import {
+	useMyCollectionsQuery,
+	useSubscribedCollectionsQuery,
+} from "@/shared/api/collections";
 import { useAuthStore } from "@/shared/store/auth-store";
 import { theme } from "@/shared/theme";
 import { AppPagination } from "@/shared/ui/AppPagination";
 import { Button } from "@/shared/ui/Button";
 import { SkeletonBlock } from "@/shared/ui/Skeleton";
 
+const PAGE_SIZE = 20;
+
 const MyCollectionsPage = () => {
 	const router = useRouter();
 	const session = useAuthStore((state) => state.session);
-	const [page, setPage] = useState(1);
+	const [createdPage, setCreatedPage] = useState(1);
+	const [subscribedPage, setSubscribedPage] = useState(1);
 	const [isCreateCollectionOpen, setIsCreateCollectionOpen] = useState(false);
-	const { data, error, isError, isLoading } = useMyCollectionsQuery(
-		{ limit: 20, page },
+	const {
+		data: createdData,
+		error: createdError,
+		isError: isCreatedError,
+		isLoading: isCreatedLoading,
+	} = useMyCollectionsQuery(
+		{ limit: PAGE_SIZE, page: createdPage },
 		{ enabled: Boolean(session) },
 	);
-	const collections = data?.items ?? [];
-	const pages = data?.pages ?? 1;
-	const total = data?.total ?? 0;
+	const {
+		data: subscribedData,
+		error: subscribedError,
+		isError: isSubscribedError,
+		isLoading: isSubscribedLoading,
+	} = useSubscribedCollectionsQuery(
+		{ limit: PAGE_SIZE, page: subscribedPage },
+		{ enabled: Boolean(session) },
+	);
+	const createdCollections = createdData?.items ?? [];
+	const subscribedCollections = subscribedData?.items ?? [];
+	const createdPages = createdData?.pages ?? 1;
+	const subscribedPages = subscribedData?.pages ?? 1;
+	const createdTotal = createdData?.total ?? 0;
+	const subscribedTotal = subscribedData?.total ?? 0;
 
 	useEffect(() => {
 		if (!session) {
@@ -43,7 +66,7 @@ const MyCollectionsPage = () => {
 					<HeroCopy>
 						<PageTitle>Мои подборки</PageTitle>
 						<HeroText>
-							Ваши личные и публичные книжные полки в одном месте.
+							Созданные вами полки отдельно от подборок, на которые вы подписались.
 						</HeroText>
 					</HeroCopy>
 					<Button
@@ -57,59 +80,135 @@ const MyCollectionsPage = () => {
 			</Hero>
 
 			<Content>
-				{isLoading ? (
-					<CollectionList aria-label="Загружаем подборки">
-						{Array.from({ length: 4 }, (_, index) => (
-							<CollectionSkeleton key={index} />
-						))}
-					</CollectionList>
-				) : isError ? (
-					<StateMessage>
-						Не удалось загрузить подборки: {error.message}
-					</StateMessage>
-				) : collections.length === 0 ? (
-					<EmptyState>
-						<EmptyTitle>Подборок пока нет</EmptyTitle>
-						<EmptyText>
-							Создайте первую подборку для любимых книг, настроений и будущих
-							полок.
-						</EmptyText>
-						<Button
-							buttonType="containedInverted"
-							type="button"
-							onClick={() => setIsCreateCollectionOpen(true)}
-						>
-							Создать подборку
-						</Button>
-					</EmptyState>
-				) : (
-					<>
-						<ListSummary>
-							Всего подборок: {total}. Страница {page} из {pages}.
-						</ListSummary>
-						<CollectionList>
-							{collections.map((collection) => (
-								<CollectionRow
-									key={collection.id}
-									collection={collection}
-									showSaveButton={false}
-									onAuthRequired={() => undefined}
-								/>
-							))}
-						</CollectionList>
-						<AppPagination count={pages} page={page} onChange={setPage} />
-					</>
-				)}
+				<CollectionsSection
+					action={
+						createdCollections.length === 0 ? (
+							<Button
+								buttonType="containedInverted"
+								type="button"
+								onClick={() => setIsCreateCollectionOpen(true)}
+							>
+								Создать подборку
+							</Button>
+						) : undefined
+					}
+					emptyText="Создайте первую подборку для любимых книг, настроений и будущих полок."
+					emptyTitle="Созданных подборок пока нет"
+					error={createdError}
+					isError={isCreatedError}
+					isLoading={isCreatedLoading}
+					page={createdPage}
+					pages={createdPages}
+					title="Созданные мной"
+					total={createdTotal}
+					onPageChange={setCreatedPage}
+				>
+					{createdCollections.map((collection) => (
+						<CollectionRow
+							key={collection.id}
+							collection={collection}
+							showSaveButton={false}
+							onAuthRequired={() => undefined}
+						/>
+					))}
+				</CollectionsSection>
+
+				<CollectionsSection
+					emptyText="Подписывайтесь на публичные подборки, чтобы быстро возвращаться к ним без добавления всех книг в библиотеку."
+					emptyTitle="Подписок пока нет"
+					error={subscribedError}
+					isError={isSubscribedError}
+					isLoading={isSubscribedLoading}
+					page={subscribedPage}
+					pages={subscribedPages}
+					title="Подписки"
+					total={subscribedTotal}
+					onPageChange={setSubscribedPage}
+				>
+					{subscribedCollections.map((collection) => (
+						<CollectionRow
+							key={collection.id}
+							collection={collection}
+							showSaveButton={false}
+							onAuthRequired={() => undefined}
+						/>
+					))}
+				</CollectionsSection>
 			</Content>
 
 			{isCreateCollectionOpen ? (
-				<CreateCollectionModal onClose={() => setIsCreateCollectionOpen(false)} />
+				<CreateCollectionModal
+					onClose={() => setIsCreateCollectionOpen(false)}
+				/>
 			) : null}
 		</Page>
 	);
 };
 
 export default MyCollectionsPage;
+
+interface ICollectionsSectionProps {
+	action?: React.ReactNode;
+	children: React.ReactNode;
+	emptyText: string;
+	emptyTitle: string;
+	error: Error | null;
+	isError: boolean;
+	isLoading: boolean;
+	page: number;
+	pages: number;
+	title: string;
+	total: number;
+	onPageChange: (page: number) => void;
+}
+
+const CollectionsSection = ({
+	action,
+	children,
+	emptyText,
+	emptyTitle,
+	error,
+	isError,
+	isLoading,
+	page,
+	pages,
+	title,
+	total,
+	onPageChange,
+}: ICollectionsSectionProps) => (
+	<Section>
+		<SectionHeader>
+			<SectionTitle>{title}</SectionTitle>
+			<SectionSummary>
+				{total} всего{pages > 1 ? `. Страница ${page} из ${pages}.` : ""}
+			</SectionSummary>
+		</SectionHeader>
+		{isLoading ? (
+			<CollectionList aria-label={`Загружаем: ${title}`}>
+				{Array.from({ length: 4 }, (_, index) => (
+					<CollectionSkeleton key={index} />
+				))}
+			</CollectionList>
+		) : isError ? (
+			<StateMessage>
+				Не удалось загрузить подборки: {error?.message ?? "ошибка запроса"}
+			</StateMessage>
+		) : total === 0 ? (
+			<EmptyState>
+				<EmptyTitle>{emptyTitle}</EmptyTitle>
+				<EmptyText>{emptyText}</EmptyText>
+				{action}
+			</EmptyState>
+		) : (
+			<>
+				<CollectionList>{children}</CollectionList>
+				{pages > 1 ? (
+					<AppPagination count={pages} page={page} onChange={onPageChange} />
+				) : null}
+			</>
+		)}
+	</Section>
+);
 
 const CollectionSkeleton = () => (
 	<SkeletonRow aria-hidden="true">
@@ -203,17 +302,40 @@ const Content = styled.section`
 	padding-top: clamp(2.5rem, 5vw, 4rem);
 `;
 
+const Section = styled.section`
+	& + & {
+		margin-top: 2rem;
+	}
+`;
+
+const SectionHeader = styled.div`
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 1rem;
+	margin-bottom: 1rem;
+`;
+
+const SectionTitle = styled.h2`
+	margin: 0;
+	color: ${theme.colors.foreground};
+	font-family: ${theme.fonts.serif};
+	font-size: 1.75rem;
+	font-weight: 600;
+	line-height: 1.1;
+`;
+
+const SectionSummary = styled.p`
+	margin: 0;
+	color: ${theme.colors.softForeground};
+	font-size: 0.95rem;
+	line-height: 1.4;
+`;
+
 const CollectionList = styled.div`
 	display: flex;
 	flex-direction: column;
 	gap: 0.8rem;
-`;
-
-const ListSummary = styled.p`
-	margin: 0 0 1rem;
-	color: ${theme.colors.softForeground};
-	font-size: 0.95rem;
-	line-height: 1.4;
 `;
 
 const StateMessage = styled.p`
@@ -230,7 +352,7 @@ const EmptyState = styled.section`
 	padding: 1.5rem;
 `;
 
-const EmptyTitle = styled.h2`
+const EmptyTitle = styled.h3`
 	margin: 0;
 	color: ${theme.colors.foreground};
 	font-family: ${theme.fonts.serif};

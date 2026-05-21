@@ -293,7 +293,7 @@ export const AuthorsFilters = ({
 	);
 };
 
-const Filters = styled.div`
+export const Filters = styled.div`
 	position: sticky;
 	z-index: 15;
 	top: 4rem;
@@ -316,7 +316,7 @@ const Filters = styled.div`
 	}
 `;
 
-const ResultsBadge = styled.div`
+export const ResultsBadge = styled.div`
 	display: inline-flex;
 	min-height: 2.35rem;
 	align-items: baseline;
@@ -333,7 +333,7 @@ const ResultsBadge = styled.div`
 	}
 `;
 
-const ResultsNumber = styled.span`
+export const ResultsNumber = styled.span`
 	color: ${theme.colors.orangeDark};
 	font-family: ${theme.fonts.serif};
 	font-size: 1.18rem;
@@ -341,13 +341,13 @@ const ResultsNumber = styled.span`
 	line-height: 1;
 `;
 
-const ResultsText = styled.span`
+export const ResultsText = styled.span`
 	color: ${theme.colors.softForeground};
 	font-size: 0.86rem;
 	line-height: 1;
 `;
 
-const DropdownField = styled.div`
+export const DropdownField = styled.div`
 	position: relative;
 	display: flex;
 	min-width: 0;
@@ -355,14 +355,14 @@ const DropdownField = styled.div`
 	gap: 0.25rem;
 `;
 
-const FilterLabel = styled.label`
+export const FilterLabel = styled.label`
 	color: ${theme.colors.softForeground};
 	font-family: ${theme.fonts.sans};
 	font-size: 0.76rem;
 	line-height: 1.2;
 `;
 
-const DropdownButton = styled.button`
+export const DropdownButton = styled.button`
 	display: flex;
 	width: 100%;
 	min-height: 2.35rem;
@@ -387,13 +387,13 @@ const DropdownButton = styled.button`
 	}
 `;
 
-const DropdownValue = styled.span`
+export const DropdownValue = styled.span`
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
 `;
 
-const ChevronIcon = styled(KeyboardArrowDownIcon)<{ $isOpen: boolean }>`
+export const ChevronIcon = styled(KeyboardArrowDownIcon)<{ $isOpen: boolean }>`
 	&& {
 		width: 1.05rem;
 		height: 1.05rem;
@@ -404,7 +404,7 @@ const ChevronIcon = styled(KeyboardArrowDownIcon)<{ $isOpen: boolean }>`
 	}
 `;
 
-const DropdownMenu = styled.div<{ $isOpen: boolean }>`
+export const DropdownMenu = styled.div<{ $isOpen: boolean }>`
 	position: absolute;
 	z-index: 12;
 	top: calc(100% + 0.4rem);
@@ -423,7 +423,7 @@ const DropdownMenu = styled.div<{ $isOpen: boolean }>`
 		transform 180ms ease;
 `;
 
-const DropdownMenuItem = styled.button<{ $isSelected: boolean }>`
+export const DropdownMenuItem = styled.button<{ $isSelected: boolean }>`
 	display: flex;
 	width: 100%;
 	align-items: center;
@@ -451,7 +451,7 @@ const GenreMenu = styled(DropdownMenu)`
 	width: min(28rem, calc(100vw - 2rem));
 `;
 
-const GenreSearchInput = styled.input`
+export const GenreSearchInput = styled.input`
 	width: 100%;
 	min-height: 2.1rem;
 	border: 0.0625rem solid rgb(211 202 196 / 0.7);
@@ -648,14 +648,14 @@ const BooksSlider = styled(Slider)`
 	}
 `;
 
-const ModeField = styled.div`
+export const ModeField = styled.div`
 	display: flex;
 	min-width: 0;
 	flex-direction: column;
 	gap: 0.25rem;
 `;
 
-const ModeSwitch = styled.div`
+export const ModeSwitch = styled.div`
 	display: grid;
 	grid-template-columns: 1fr 1fr;
 	min-height: 2.35rem;
@@ -665,7 +665,7 @@ const ModeSwitch = styled.div`
 	padding: 0.2rem;
 `;
 
-const ModeButton = styled.button<{ $isActive: boolean }>`
+export const ModeButton = styled.button<{ $isActive: boolean }>`
 	border: 0;
 	border-radius: 0.55rem;
 	background: ${({ $isActive }) =>

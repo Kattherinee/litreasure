@@ -24,11 +24,20 @@ const normalizeCollectionsList = (
 	return response;
 };
 
+type ICollectionsListApiResponse =
+	| ICollectionsListResponse
+	| ICollectionsListResponse["items"];
+
 const getCollectionsQuery = (params: ICollectionsListParams = {}) => {
 	const searchParams = new URLSearchParams();
 
 	if (params.page) searchParams.set("page", String(params.page));
 	if (params.limit) searchParams.set("limit", String(params.limit));
+	if (params.tags) searchParams.set("tags", params.tags);
+	if (params.tagMode) searchParams.set("tagMode", params.tagMode);
+	if (params.genres) searchParams.set("genres", params.genres);
+	if (params.genreMode) searchParams.set("genreMode", params.genreMode);
+	if (params.sort) searchParams.set("sort", params.sort);
 
 	const query = searchParams.toString();
 
@@ -38,9 +47,9 @@ const getCollectionsQuery = (params: ICollectionsListParams = {}) => {
 export const getPublicCollections = async (
 	params: ICollectionsListParams = {},
 ): Promise<ICollectionsListResponse> => {
-	const response = await request<
-		ICollectionsListResponse | ICollectionsListResponse["items"]
-	>(`/collections${getCollectionsQuery(params)}`);
+	const response = await requestOptionalAuth<ICollectionsListApiResponse>(
+		`/collections${getCollectionsQuery(params)}`,
+	);
 
 	return normalizeCollectionsList(response);
 };
@@ -48,13 +57,23 @@ export const getPublicCollections = async (
 export const getMyCollections = async (
 	params: ICollectionsListParams = {},
 ): Promise<ICollectionsListResponse> => {
-	const response = await requestAuth<
-		ICollectionsListResponse | ICollectionsListResponse["items"]
-	>(`/collections/mine${getCollectionsQuery(params)}`);
+	const response = await requestAuth<ICollectionsListApiResponse>(
+		`/collections/mine${getCollectionsQuery(params)}`,
+	);
 
 	return normalizeCollectionsList(response);
 };
 
+
+export const getSubscribedCollections = async (
+	params: ICollectionsListParams = {},
+): Promise<ICollectionsListResponse> => {
+	const response = await requestAuth<ICollectionsListApiResponse>(
+		`/collections/subscribed${getCollectionsQuery(params)}`,
+	);
+
+	return normalizeCollectionsList(response);
+};
 export const getCollection = (id: string): Promise<ICollectionDetails> =>
 	requestOptionalAuth<ICollectionDetails>(`/collections/${id}`);
 

@@ -1,14 +1,12 @@
-import {
-	getCollection,
-	useCreateCollectionMutation,
-} from "@/shared/api/collections";
+import { useSaveCollectionMutation } from "@/shared/api/collections";
 import type { ICollectionPreview } from "@/shared/api/collections";
 import { useAuthStore } from "@/shared/store/auth-store";
+import BookmarkIcon from "@mui/icons-material/Bookmark";
 import { theme } from "@/shared/theme";
 import { Button } from "@/shared/ui/Button";
 import { PlusIcon } from "@/shared/ui/PlusIcon";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { KeyboardEvent, MouseEvent } from "react";
 import styled from "styled-components";
 import { PreviewRail, RowCopy } from "./CollectionsPage";
@@ -24,8 +22,15 @@ export const CollectionRow = ({
 }) => {
 	const router = useRouter();
 	const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-	const createCollectionMutation = useCreateCollectionMutation();
+	const currentUsername = useAuthStore(
+		(state) => state.session?.user?.username,
+	);
+	const saveCollectionMutation = useSaveCollectionMutation();
 	const [saveStatus, setSaveStatus] = useState("");
+	const [savedOverride, setSavedOverride] = useState<boolean | null>(null);
+	const [subscriberCountOverride, setSubscriberCountOverride] = useState<
+		number | null
+	>(null);
 
 	const hiddenBooksCount = Math.max(
 		collection.bookCount - collection.previewBooks.length,
@@ -35,6 +40,27 @@ export const CollectionRow = ({
 		collection.source === "open_library"
 			? "Litreasure"
 			: collection.owner.username || collection.owner.name;
+
+	const isMyCollection =
+		!!currentUsername && collection.owner?.username === currentUsername;
+	const isSaved = savedOverride ?? collection.isSaved ?? false;
+	const subscriberCount =
+		subscriberCountOverride ?? collection.subscriberCount ?? 0;
+	const collectionRelationLabel = isMyCollection
+		? "Моя подборка"
+		: isSaved
+			? "Подписка"
+			: null;
+
+	useEffect(() => {
+		if (!saveStatus) return;
+
+		const timeoutId = window.setTimeout(() => {
+			setSaveStatus("");
+		}, 2600);
+
+		return () => window.clearTimeout(timeoutId);
+	}, [saveStatus]);
 
 	const openCollection = () => {
 		router.push(`/collections/${collection.id}`);
@@ -58,18 +84,13 @@ export const CollectionRow = ({
 		}
 
 		try {
-			const details = await getCollection(collection.id);
-
-			await createCollectionMutation.mutateAsync({
-				bookIds: details.books.map((book) => book.id),
-				description: details.description,
-				isPublic: false,
-				title: details.title,
-			});
-			setSaveStatus("Сохранено");
+			await saveCollectionMutation.mutateAsync(collection.id);
+			setSavedOverride(true);
+			setSubscriberCountOverride((collection.subscriberCount ?? 0) + 1);
+			setSaveStatus("Подписка оформлена");
 		} catch (error) {
 			setSaveStatus(
-				error instanceof Error ? error.message : "Не удалось сохранить",
+				error instanceof Error ? error.message : "Не удалось подписаться",
 			);
 		}
 	};
@@ -96,17 +117,34 @@ export const CollectionRow = ({
 						<span>{ownerLabel}</span>
 					</OwnerLink>
 					<BookCount>{collection.bookCount} книг</BookCount>
+					<SubscriberCount>{subscriberCount} подписчиков</SubscriberCount>
+					{collectionRelationLabel ? (
+						<RelationChip
+							aria-label={
+								isMyCollection
+									? "Подборка создана вами"
+									: "Вы подписаны на подборку"
+							}
+						>
+							<BookmarkIcon aria-hidden="true" />
+							<span>{collectionRelationLabel}</span>
+						</RelationChip>
+					) : null}
 				</RowMeta>
 
-				{showSaveButton ? (
+				{showSaveButton && !collectionRelationLabel ? (
 					<SaveButton
 						buttonType="containedInverted"
-						disabled={createCollectionMutation.isPending}
-						title="Сохранить себе"
+						disabled={saveCollectionMutation.isPending}
+						title="Подписаться на подборку"
 						onClick={handleSaveClick}
 					>
 						<PlusIcon />
-						<span> {saveStatus ? "Добавлено" : "Сохранить"}</span>
+						<span>
+							{saveCollectionMutation.isPending
+								? "Подписываемся..."
+								: "Подписаться"}
+						</span>
 					</SaveButton>
 				) : null}
 			</RowCopy>
@@ -138,6 +176,8 @@ export const CollectionRow = ({
 					<MoreBooksBadge>+{hiddenBooksCount}</MoreBooksBadge>
 				) : null}
 			</PreviewRail>
+
+			{saveStatus ? <SaveToast role="status">{saveStatus}</SaveToast> : null}
 		</Row>
 	);
 };
@@ -169,10 +209,15 @@ const BookCount = styled.span`
 	line-height: 1rem;
 `;
 
+const SubscriberCount = styled(BookCount)`
+	color: ${theme.colors.softForeground};
+`;
+
 const RowMeta = styled.div`
 	display: flex;
 	min-height: 1rem;
 	align-items: center;
+	flex-wrap: wrap;
 	gap: 0.75rem;
 `;
 
@@ -217,6 +262,46 @@ const SaveButton = styled(Button)`
 	}
 `;
 
+const RelationChip = styled.span`
+	display: inline-flex;
+	flex: 0 0 auto;
+	align-items: center;
+	justify-content: center;
+	gap: 0.35rem;
+	border: 0.0625rem solid rgb(237 160 108 / 0.46);
+	border-radius: 62.4375rem;
+	background: rgb(242 239 237 / 0.72);
+	padding: 0.32rem 0.68rem 0.34rem;
+	color: ${theme.colors.orangeDark};
+	font-family: ${theme.fonts.sans};
+	font-size: 0.82rem;
+	font-weight: 600;
+	line-height: 1;
+
+	svg {
+		width: 0.95rem;
+		height: 0.95rem;
+	}
+`;
+
+const SaveToast = styled.div`
+	position: absolute;
+	left: 1.05vw;
+	bottom: 0.85rem;
+	z-index: 5;
+	border: 0.0625rem solid rgb(237 160 108 / 0.42);
+	border-radius: 62.4375rem;
+	background: ${theme.colors.surface};
+	padding: 0.45rem 0.8rem;
+	box-shadow: 0 0.75rem 1.5rem rgb(4 18 26 / 0.12);
+	color: ${theme.colors.orangeDark};
+	font-family: ${theme.fonts.sans};
+	font-size: 0.82rem;
+	font-weight: 600;
+	line-height: 1;
+	pointer-events: none;
+`;
+
 const Row = styled.article`
 	position: relative;
 	display: flex;
@@ -225,9 +310,9 @@ const Row = styled.article`
 	justify-content: space-between;
 	gap: 3.75rem;
 	overflow: visible;
-	border: 0;
+	border: 0.0625rem solid rgb(218 142 91 / 0.18);
 	border-radius: 1rem;
-	background: ${theme.colors.white};
+	background: rgb(242 239 237 / 0.58);
 	padding: 1.05vw;
 	color: inherit;
 	cursor: pointer;

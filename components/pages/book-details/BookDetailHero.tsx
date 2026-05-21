@@ -2,6 +2,7 @@
 
 import AutoStoriesOutlinedIcon from "@mui/icons-material/AutoStoriesOutlined";
 import CheckIcon from "@mui/icons-material/Check";
+import CheckCircleOutlinedIcon from "@mui/icons-material/CheckCircleOutlined";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import MoreHorizIcon from "@mui/icons-material/MoreHoriz";
 import Link from "next/link";
@@ -139,7 +140,15 @@ const BookDetailHero = ({ book, onAuthRequired }: IBookDetailHeroProps) => {
 	return (
 		<HeaderBlock>
 			{seriesTag ? <SeriesTag>{seriesTag}</SeriesTag> : null}
-			<Title>{book.title}</Title>
+			<Title>
+				<TitleText>{book.title}</TitleText>
+				{currentStatus === "finished" ? (
+					<FinishedMark aria-label="Finished">
+						<CheckCircleOutlinedIcon aria-hidden="true" />
+						<span>Finished</span>
+					</FinishedMark>
+				) : null}
+			</Title>
 			{primaryAuthor ? (
 				<AuthorLink href={`/authors/${primaryAuthor.id}`}>
 					<AuthorBy>by</AuthorBy>
@@ -163,22 +172,27 @@ const BookDetailHero = ({ book, onAuthRequired }: IBookDetailHeroProps) => {
 				>
 					<LibraryMainButton
 						$isTracked={isBookTracked}
+						aria-expanded={isBookTracked ? isStatusMenuOpen : undefined}
+						aria-haspopup={isBookTracked ? "menu" : undefined}
 						disabled={isTrackingPending}
 						type="button"
 						onClick={handlePrimaryLibraryClick}
 					>
-						{currentStatusLabel}
+						<span>{currentStatusLabel}</span>
+						{isBookTracked ? <KeyboardArrowDownIcon aria-hidden="true" /> : null}
 					</LibraryMainButton>
-					<LibraryMenuButton
-						aria-expanded={isStatusMenuOpen}
-						aria-label="Change book status"
-						$isTracked={isBookTracked}
-						disabled={isTrackingPending}
-						type="button"
-						onClick={() => setIsStatusMenuOpen((current) => !current)}
-					>
-						<KeyboardArrowDownIcon aria-hidden="true" />
-					</LibraryMenuButton>
+					{isBookTracked ? null : (
+						<LibraryMenuButton
+							aria-expanded={isStatusMenuOpen}
+							aria-label="Change book status"
+							$isTracked={isBookTracked}
+							disabled={isTrackingPending}
+							type="button"
+							onClick={() => setIsStatusMenuOpen((current) => !current)}
+						>
+							<KeyboardArrowDownIcon aria-hidden="true" />
+						</LibraryMenuButton>
+					)}
 					{isStatusMenuOpen ? (
 						<StatusMenu role="menu">
 							{bookStatuses.map((status) => (
@@ -315,11 +329,10 @@ const SeriesTag = styled.div`
 `;
 
 const Title = styled.h1`
-	display: -webkit-box;
+	display: flex;
+	align-items: center;
+	gap: 0.7rem;
 	max-width: 100%;
-	overflow: hidden;
-	-webkit-box-orient: vertical;
-	-webkit-line-clamp: 2;
 	margin: 1.1rem 0 0;
 	color: ${theme.colors.invertedText};
 	font-family: ${theme.fonts.serif};
@@ -334,6 +347,46 @@ const Title = styled.h1`
 
 	@media (max-width: 47.9375rem) {
 		font-size: 2rem;
+	}
+`;
+
+const TitleText = styled.span`
+	display: -webkit-box;
+	min-width: 0;
+	overflow: hidden;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
+`;
+
+const FinishedMark = styled.span`
+	display: inline-flex;
+	flex: 0 0 auto;
+	align-items: center;
+	justify-content: center;
+	gap: 0.35rem;
+	border: 0.0625rem solid rgb(242 239 237 / 0.22);
+	border-radius: 62.4375rem;
+	background: rgb(242 239 237 / 0.12);
+	padding: 0.42rem 0.78rem;
+	color: ${theme.colors.orangeLight};
+	font-family: ${theme.fonts.sans};
+	font-size: 0.82rem;
+	font-weight: 600;
+	line-height: 1;
+
+	& svg {
+		width: 1rem;
+		height: 1rem;
+	}
+
+	@media (max-width: 74.9375rem) {
+		padding: 0.36rem 0.64rem;
+		font-size: 0.72rem;
+
+		& svg {
+			width: 0.9rem;
+			height: 0.9rem;
+		}
 	}
 `;
 
@@ -447,12 +500,6 @@ const LibraryAction = styled.div`
 	display: inline-flex;
 	align-items: stretch;
 	margin-top: 0.1rem;
-
-	&:hover button,
-	&:focus-within button {
-		background: ${theme.colors.bluePrimary};
-		color: ${theme.colors.invertedText};
-	}
 `;
 
 const LibraryButtonBase = styled.button<{ $isTracked: boolean }>`
@@ -461,9 +508,10 @@ const LibraryButtonBase = styled.button<{ $isTracked: boolean }>`
 	justify-content: center;
 	min-height: 2.65rem;
 	border: 0;
-	background: ${theme.colors.surface};
+	background: ${({ $isTracked }) =>
+		$isTracked ? theme.colors.surface : theme.colors.orangeLight};
 	color: ${({ $isTracked }) =>
-		$isTracked ? theme.colors.bluePrimary : theme.colors.darkerOrangeLight};
+		$isTracked ? theme.colors.darkerOrangeLight : theme.colors.invertedText};
 	cursor: pointer;
 	font-family: ${theme.fonts.serif};
 	font-size: 1.1rem;
@@ -476,8 +524,10 @@ const LibraryButtonBase = styled.button<{ $isTracked: boolean }>`
 
 	&:hover,
 	&:focus-visible {
-		background: ${theme.colors.bluePrimary};
-		color: ${theme.colors.invertedText};
+		background: ${({ $isTracked }) =>
+			$isTracked ? theme.colors.orangeLight : theme.colors.surface};
+		color: ${({ $isTracked }) =>
+			$isTracked ? theme.colors.invertedText : theme.colors.darkerOrangeLight};
 		outline: none;
 	}
 
@@ -493,19 +543,36 @@ const LibraryButtonBase = styled.button<{ $isTracked: boolean }>`
 `;
 
 const LibraryMainButton = styled(LibraryButtonBase)`
-	min-width: ${({ $isTracked }) => ($isTracked ? "0" : "10.5rem")};
-	border-radius: 62.4375rem 0 0 62.4375rem;
-	padding: 0.58rem 0.9rem 0.58rem 1.2rem;
+	min-width: ${({ $isTracked }) => ($isTracked ? "7.8rem" : "10.5rem")};
+	gap: 0.35rem;
+	border-radius: ${({ $isTracked }) =>
+		$isTracked
+			? "62.4375rem"
+			: "62.4375rem 0 0 62.4375rem"};
+	padding: ${({ $isTracked }) =>
+		$isTracked ? "0.58rem 1.25rem" : "0.58rem 0.9rem 0.58rem 1.2rem"};
 
 	@media (max-width: 74.9375rem) {
-		min-width: ${({ $isTracked }) => ($isTracked ? "0" : "8.6rem")};
-		padding: 0.5rem 0.8rem 0.5rem 1rem;
+		min-width: ${({ $isTracked }) => ($isTracked ? "6.8rem" : "8.6rem")};
+		padding: ${({ $isTracked }) =>
+			$isTracked ? "0.5rem 1rem" : "0.5rem 0.8rem 0.5rem 1rem"};
+	}
+
+	& svg {
+		width: 1.35rem;
+		height: 1.35rem;
+		transition: transform 160ms ease;
+	}
+
+	&[aria-expanded="true"] svg {
+		transform: rotate(180deg);
 	}
 `;
 
 const LibraryMenuButton = styled(LibraryButtonBase)`
 	width: 2.55rem;
 	border-radius: 0 62.4375rem 62.4375rem 0;
+	border-left: 0.0625rem solid rgb(242 239 237 / 0.46);
 	padding: 0;
 
 	& svg {

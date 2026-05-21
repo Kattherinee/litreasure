@@ -4,14 +4,61 @@ import { useState } from "react";
 import styled from "styled-components";
 
 import AuthModal, { type IAuthModalMode } from "@/components/pages/AuthModal";
-import { usePublicCollectionsQuery } from "@/shared/api/collections";
+import {
+	ChevronIcon,
+	DropdownButton,
+	DropdownField,
+	DropdownMenu,
+	DropdownMenuItem,
+	DropdownValue,
+	FilterLabel,
+	Filters,
+	GenreSearchInput,
+	ModeButton,
+	ModeField,
+	ModeSwitch,
+	ResultsBadge,
+	ResultsNumber,
+	ResultsText,
+} from "@/components/pages/AuthorsFilters";
+import {
+	type ICollectionFilterMode,
+	type ICollectionSort,
+	usePublicCollectionsQuery,
+} from "@/shared/api/collections";
 import { theme } from "@/shared/theme";
 import { AppPagination } from "@/shared/ui/AppPagination";
 import { SkeletonBlock } from "@/shared/ui/Skeleton";
 import { CollectionRow } from "./CollectionsRow";
 
+const sortOptions: Array<{ label: string; value: ICollectionSort }> = [
+	{ label: "Сначала новые", value: "newest" },
+	{ label: "Сначала старые", value: "oldest" },
+	{ label: "Популярные", value: "popular" },
+	{ label: "Больше книг", value: "books_desc" },
+	{ label: "Меньше книг", value: "books_asc" },
+];
+
+const modeOptions: Array<{ label: string; value: ICollectionFilterMode }> = [
+	{ label: "Любой", value: "any" },
+	{ label: "Все", value: "all" },
+];
+
+const normalizeFilterValue = (value: string) =>
+	value
+		.split(",")
+		.map((item) => item.trim())
+		.filter(Boolean)
+		.join(",");
+
 const CollectionsPage = () => {
 	const [page, setPage] = useState(1);
+	const [tags, setTags] = useState("");
+	const [tagMode, setTagMode] = useState<ICollectionFilterMode>("any");
+	const [genres, setGenres] = useState("");
+	const [genreMode, setGenreMode] = useState<ICollectionFilterMode>("any");
+	const [sort, setSort] = useState<ICollectionSort>("newest");
+	const [isSortOpen, setIsSortOpen] = useState(false);
 	const [authModalMode, setAuthModalMode] = useState<IAuthModalMode | null>(
 		null,
 	);
@@ -20,10 +67,25 @@ const CollectionsPage = () => {
 		error,
 		isError,
 		isLoading,
-	} = usePublicCollectionsQuery({ limit: 20, page });
+	} = usePublicCollectionsQuery({
+		genreMode,
+		genres: normalizeFilterValue(genres),
+		limit: 20,
+		page,
+		sort,
+		tagMode,
+		tags: normalizeFilterValue(tags),
+	});
 	const collections = collectionsResponse?.items ?? [];
 	const pages = collectionsResponse?.pages ?? 1;
 	const total = collectionsResponse?.total ?? 0;
+	const selectedSortOption =
+		sortOptions.find((option) => option.value === sort) ?? sortOptions[0];
+
+	const handleFilterChange = (callback: () => void) => {
+		setPage(1);
+		callback();
+	};
 
 	return (
 		<Page>
@@ -37,6 +99,107 @@ const CollectionsPage = () => {
 			</Hero>
 
 			<Content>
+				<CollectionFilters
+					onBlur={(event) => {
+						if (
+							!event.currentTarget.contains(event.relatedTarget as Node | null)
+						) {
+							setIsSortOpen(false);
+						}
+					}}
+				>
+					<DropdownField>
+						<FilterLabel>Сортировка</FilterLabel>
+						<DropdownButton
+							aria-expanded={isSortOpen}
+							type="button"
+							onClick={() => setIsSortOpen((current) => !current)}
+						>
+							<DropdownValue>{selectedSortOption.label}</DropdownValue>
+							<ChevronIcon $isOpen={isSortOpen} aria-hidden="true" />
+						</DropdownButton>
+						<DropdownMenu $isOpen={isSortOpen}>
+							{sortOptions.map((option) => (
+								<DropdownMenuItem
+									key={option.value}
+									$isSelected={option.value === sort}
+									type="button"
+									onClick={() => {
+										handleFilterChange(() => setSort(option.value));
+										setIsSortOpen(false);
+									}}
+								>
+									{option.label}
+								</DropdownMenuItem>
+							))}
+						</DropdownMenu>
+					</DropdownField>
+
+					<DropdownField>
+						<FilterLabel htmlFor="collection-tags">Теги</FilterLabel>
+						<GenreSearchInput
+							id="collection-tags"
+							placeholder="booktok, romantasy"
+							value={tags}
+							onChange={(event) =>
+								handleFilterChange(() => setTags(event.target.value))
+							}
+						/>
+					</DropdownField>
+
+					<ModeField>
+						<FilterLabel>Режим тегов</FilterLabel>
+						<ModeSwitch>
+							{modeOptions.map((option) => (
+								<ModeButton
+									key={option.value}
+									$isActive={tagMode === option.value}
+									type="button"
+									onClick={() =>
+										handleFilterChange(() => setTagMode(option.value))
+									}
+								>
+									{option.label}
+								</ModeButton>
+							))}
+						</ModeSwitch>
+					</ModeField>
+
+					<DropdownField>
+						<FilterLabel htmlFor="collection-genres">Жанры</FilterLabel>
+						<GenreSearchInput
+							id="collection-genres"
+							placeholder="fantasy, romance"
+							value={genres}
+							onChange={(event) =>
+								handleFilterChange(() => setGenres(event.target.value))
+							}
+						/>
+					</DropdownField>
+
+					<ModeField>
+						<FilterLabel>Режим жанров</FilterLabel>
+						<ModeSwitch>
+							{modeOptions.map((option) => (
+								<ModeButton
+									key={option.value}
+									$isActive={genreMode === option.value}
+									type="button"
+									onClick={() =>
+										handleFilterChange(() => setGenreMode(option.value))
+									}
+								>
+									{option.label}
+								</ModeButton>
+							))}
+						</ModeSwitch>
+					</ModeField>
+
+					<ResultsBadge aria-label={`Найдено подборок: ${total}`}>
+						<ResultsNumber>{total}</ResultsNumber>
+						<ResultsText>подборок</ResultsText>
+					</ResultsBadge>
+				</CollectionFilters>
 				{isLoading ? (
 					<CollectionList aria-label="Загружаем подборки">
 						{Array.from({ length: 4 }, (_, index) => (
@@ -157,6 +320,21 @@ const Content = styled.section`
 	);
 	margin: 0 auto;
 	padding-top: clamp(2.5rem, 5vw, 4rem);
+`;
+
+const CollectionFilters = styled(Filters)`
+	grid-template-columns:
+		minmax(10rem, 0.85fr) minmax(11rem, 1fr) minmax(8.5rem, 0.75fr)
+		minmax(11rem, 1fr) minmax(8.5rem, 0.75fr) auto;
+	margin: 0 0 1rem;
+
+	@media (max-width: 76rem) {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+
+	@media (max-width: 40rem) {
+		grid-template-columns: 1fr;
+	}
 `;
 
 const CollectionList = styled.div`

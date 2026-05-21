@@ -10,13 +10,9 @@ import Link from "next/link";
 import styled from "styled-components";
 
 import AuthModal, { type IAuthModalMode } from "@/components/pages/AuthModal";
-import {
-	useBookCollectionsQuery,
-	type IBook,
-} from "@/shared/api/books";
+import { useBookCollectionsQuery, type IBook } from "@/shared/api/books";
 import {
 	useSaveCollectionMutation,
-	useUnsaveCollectionMutation,
 	type IBookCollectionPreview,
 } from "@/shared/api/collections";
 import { useAuthStore } from "@/shared/store/auth-store";
@@ -30,6 +26,7 @@ interface IBookDetailTabsProps {
 }
 
 export type ITabId = "collections" | "description" | "quotes" | "reviews";
+type ICollectionFilter = "all" | "saved" | "mine";
 
 const tabs: Array<{
 	count?: number;
@@ -57,22 +54,26 @@ const BookDetailTabs = ({
 	book,
 	onActiveTabChange,
 }: IBookDetailTabsProps) => {
+	const currentUsername = useAuthStore(
+		(state) => state.session?.user?.username,
+	);
 	const [internalActiveTab, setInternalActiveTab] =
 		useState<ITabId>("description");
 	const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
 	const [canExpandDescription, setCanExpandDescription] = useState(false);
-	const [authModalMode, setAuthModalMode] = useState<IAuthModalMode | null>(null);
+	const [authModalMode, setAuthModalMode] = useState<IAuthModalMode | null>(
+		null,
+	);
 	const [reviewRating, setReviewRating] = useState(0);
 	const [reviewText, setReviewText] = useState("");
 	const [reviewStatus, setReviewStatus] = useState("");
-	const [showOnlySavedCollections, setShowOnlySavedCollections] =
-		useState(false);
+	const [collectionsFilter, setCollectionsFilter] =
+		useState<ICollectionFilter>("all");
 	const [savedCollectionOverrides, setSavedCollectionOverrides] = useState<
 		Record<string, boolean>
 	>({});
 	const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 	const saveCollectionMutation = useSaveCollectionMutation();
-	const unsaveCollectionMutation = useUnsaveCollectionMutation();
 	const descriptionRef = useRef<HTMLParagraphElement | null>(null);
 	const description =
 		book.description ??
@@ -84,23 +85,40 @@ const BookDetailTabs = ({
 		data: bookCollections = [],
 		isError: isCollectionsError,
 		isLoading: isCollectionsLoading,
-	} = useBookCollectionsQuery(book.id, { enabled: activeTab === "collections" });
+	} = useBookCollectionsQuery(book.id, {
+		enabled: activeTab === "collections",
+	});
 	const [savingCollectionId, setSavingCollectionId] = useState("");
 	const [collectionStatus, setCollectionStatus] = useState("");
-	const isCollectionMutationPending =
-		saveCollectionMutation.isPending || unsaveCollectionMutation.isPending;
+	const isCollectionMutationPending = saveCollectionMutation.isPending;
 	const getIsCollectionSaved = useCallback(
 		(collection: IBookCollectionPreview) =>
 			savedCollectionOverrides[collection.id] ?? collection.isSaved ?? false,
 		[savedCollectionOverrides],
 	);
-	const visibleCollections = useMemo(
-		() =>
-			showOnlySavedCollections
-				? bookCollections.filter((collection) => getIsCollectionSaved(collection))
-				: bookCollections,
-		[bookCollections, getIsCollectionSaved, showOnlySavedCollections],
-	);
+	const visibleCollections = useMemo(() => {
+		let filtered = bookCollections;
+		if (collectionsFilter === "saved") {
+			filtered = filtered.filter((collection) =>
+				getIsCollectionSaved(collection),
+			);
+		}
+		if (collectionsFilter === "mine") {
+			if (currentUsername) {
+				filtered = filtered.filter(
+					(collection) => collection.owner?.username === currentUsername,
+				);
+			} else {
+				filtered = [];
+			}
+		}
+		return filtered;
+	}, [
+		bookCollections,
+		getIsCollectionSaved,
+		collectionsFilter,
+		currentUsername,
+	]);
 
 	useEffect(() => {
 		const descriptionNode = descriptionRef.current;
@@ -159,9 +177,7 @@ const BookDetailTabs = ({
 		setReviewStatus("Отзыв готов к отправке. Позже подключим метод API.");
 	};
 
-	const handleToggleCollectionSave = async (
-		collection: IBookCollectionPreview,
-	) => {
+	const handleSaveCollection = async (collection: IBookCollectionPreview) => {
 		setCollectionStatus("");
 
 		if (!isAuthenticated) {
@@ -169,26 +185,22 @@ const BookDetailTabs = ({
 			return;
 		}
 
-		const wasSaved = getIsCollectionSaved(collection);
+		if (getIsCollectionSaved(collection)) {
+			return;
+		}
 
 		try {
 			setSavingCollectionId(collection.id);
 			setSavedCollectionOverrides((currentState) => ({
 				...currentState,
-				[collection.id]: !wasSaved,
+				[collection.id]: true,
 			}));
-
-			if (wasSaved) {
-				await unsaveCollectionMutation.mutateAsync(collection.id);
-				setCollectionStatus("Подборка убрана из сохраненных");
-			} else {
-				await saveCollectionMutation.mutateAsync(collection.id);
-				setCollectionStatus("Подборка сохранена");
-			}
+			await saveCollectionMutation.mutateAsync(collection.id);
+			setCollectionStatus("Подборка сохранена");
 		} catch (error) {
 			setSavedCollectionOverrides((currentState) => ({
 				...currentState,
-				[collection.id]: wasSaved,
+				[collection.id]: collection.isSaved ?? false,
 			}));
 			setCollectionStatus(
 				error instanceof Error
@@ -262,18 +274,25 @@ const BookDetailTabs = ({
 						{bookCollections.length > 0 ? (
 							<CollectionsFilter aria-label="Фильтр подборок">
 								<CollectionsFilterButton
-									$isActive={!showOnlySavedCollections}
+									$isActive={collectionsFilter === "all"}
 									type="button"
-									onClick={() => setShowOnlySavedCollections(false)}
+									onClick={() => setCollectionsFilter("all")}
 								>
 									Все
 								</CollectionsFilterButton>
 								<CollectionsFilterButton
-									$isActive={showOnlySavedCollections}
+									$isActive={collectionsFilter === "saved"}
 									type="button"
-									onClick={() => setShowOnlySavedCollections(true)}
+									onClick={() => setCollectionsFilter("saved")}
 								>
-									Мои подборки
+									Сохранённые
+								</CollectionsFilterButton>
+								<CollectionsFilterButton
+									$isActive={collectionsFilter === "mine"}
+									type="button"
+									onClick={() => setCollectionsFilter("mine")}
+								>
+									Созданные мной
 								</CollectionsFilterButton>
 							</CollectionsFilter>
 						) : null}
@@ -290,26 +309,34 @@ const BookDetailTabs = ({
 								Эта книга пока не добавлена в публичные подборки.
 							</PlaceholderText>
 						) : null}
-						{showOnlySavedCollections &&
+						{collectionsFilter !== "all" &&
 						!isCollectionsLoading &&
 						!isCollectionsError &&
 						bookCollections.length > 0 &&
 						visibleCollections.length === 0 ? (
 							<PlaceholderText>
-								Эта книга пока не сохранена в ваших подборках.
+								{collectionsFilter === "mine"
+									? "Для этой книги пока нет подборок, созданных вами."
+									: "Эта книга пока не сохранена в ваших подборках."}
 							</PlaceholderText>
 						) : null}
 						{visibleCollections.length > 0 ? (
 							<CollectionsList>
 								{visibleCollections.map((collection) => {
 									const isSaved = getIsCollectionSaved(collection);
+									const isMyCollection =
+										!!currentUsername &&
+										collection.owner?.username === currentUsername;
+									const shouldShowSavedLikeFlag = isSaved || isMyCollection;
 									const isPending =
 										isCollectionMutationPending &&
 										savingCollectionId === collection.id;
 
 									return (
 										<CompactCollectionCard key={collection.id}>
-											<CompactCollectionLink href={`/collections/${collection.id}`}>
+											<CompactCollectionLink
+												href={`/collections/${collection.id}`}
+											>
 												<CompactCollectionTitle>
 													{collection.title}
 												</CompactCollectionTitle>
@@ -328,26 +355,23 @@ const BookDetailTabs = ({
 													</CompactDescription>
 												) : null}
 											</CompactCollectionLink>
-											{isSaved ? (
-												<CompactBookmarkButton
-													aria-label="Убрать подборку из сохраненных"
-													disabled={isPending}
-													title="Убрать из сохраненных"
-													type="button"
-													onClick={() =>
-														void handleToggleCollectionSave(collection)
+											{shouldShowSavedLikeFlag ? (
+												<CompactSavedFlag
+													aria-label={
+														isMyCollection
+															? "Подборка создана вами и сохранена"
+															: "Подборка сохранена"
 													}
+													title={isMyCollection ? "Создано вами" : "Сохранено"}
 												>
 													<BookmarkIcon aria-hidden="true" />
-												</CompactBookmarkButton>
+												</CompactSavedFlag>
 											) : (
 												<CompactSaveButton
 													buttonType="containedInverted"
 													disabled={isPending}
 													type="button"
-													onClick={() =>
-														void handleToggleCollectionSave(collection)
-													}
+													onClick={() => void handleSaveCollection(collection)}
 												>
 													<span>
 														{isPending ? "Сохраняем..." : "Сохранить"}
@@ -360,7 +384,9 @@ const BookDetailTabs = ({
 							</CollectionsList>
 						) : null}
 						{collectionStatus ? (
-							<CollectionStatus role="status">{collectionStatus}</CollectionStatus>
+							<CollectionStatus role="status">
+								{collectionStatus}
+							</CollectionStatus>
 						) : null}
 					</CollectionsPanel>
 				) : null}
@@ -722,38 +748,18 @@ const CompactSaveButton = styled(Button)`
 	}
 `;
 
-const CompactBookmarkButton = styled.button`
+const CompactSavedFlag = styled.span`
 	display: inline-grid;
 	width: 2.4rem;
 	height: 2.4rem;
 	place-items: center;
-	border: 0;
 	border-radius: 50%;
 	background: rgb(255 255 255 / 0.86);
-	color: ${theme.colors.orangeLight};
-	cursor: pointer;
-	transition:
-		background 180ms ease,
-		color 180ms ease,
-		transform 180ms ease;
+	color: ${theme.colors.orangePrimary};
 
 	svg {
 		width: 1.35rem;
 		height: 1.35rem;
-	}
-
-	&:hover,
-	&:focus-visible {
-		background: ${theme.colors.white};
-		color: ${theme.colors.orangeDark};
-		outline: none;
-		transform: translateY(-0.0625rem);
-	}
-
-	&:disabled {
-		cursor: progress;
-		opacity: 0.72;
-		transform: none;
 	}
 `;
 

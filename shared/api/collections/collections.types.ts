@@ -23,6 +23,13 @@ export interface ICollectionOwner {
 }
 
 export type ICollectionSource = "open_library" | "user";
+export type ICollectionFilterMode = "all" | "any";
+export type ICollectionSort =
+	| "books_asc"
+	| "books_desc"
+	| "newest"
+	| "oldest"
+	| "popular";
 
 export interface ICollectionPreview {
 	id: string;
@@ -35,6 +42,7 @@ export interface ICollectionPreview {
 	topGenres: IGenre[];
 	owner: ICollectionOwner;
 	bookCount: number;
+	subscriberCount: number;
 	previewBooks: ICollectionBookCard[];
 	source: ICollectionSource;
 	sourceUrl?: string;
@@ -50,6 +58,7 @@ export interface IBookCollectionPreview {
 	isSaved?: boolean;
 	owner: ICollectionOwner;
 	bookCount: number;
+	subscriberCount: number;
 	source: ICollectionSource;
 	sourceUrl?: string;
 	createdAt: string;
@@ -57,6 +66,11 @@ export interface IBookCollectionPreview {
 }
 
 export interface ICollectionsListParams {
+	genreMode?: ICollectionFilterMode;
+	genres?: string;
+	sort?: ICollectionSort;
+	tagMode?: ICollectionFilterMode;
+	tags?: string;
 	page?: number;
 	limit?: number;
 }

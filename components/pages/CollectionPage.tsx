@@ -53,9 +53,8 @@ const CollectionPage = ({ id }: ICollectionPageProps) => {
 							<span>
 								Автор: {collection.owner.name || collection.owner.username}
 							</span>
-							<span>
-								{collection.bookCount} {collection.bookCount}
-							</span>
+							<span>{collection.bookCount} книг</span>
+							<span>{collection.subscriberCount ?? 0} подписчиков</span>
 						</Meta>
 
 						{collection.books.length === 0 ? (

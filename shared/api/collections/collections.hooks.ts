@@ -11,6 +11,7 @@ import {
 	getCollectionTags,
 	getMyCollections,
 	getPublicCollections,
+	getSubscribedCollections,
 	removeBookFromCollection,
 	saveCollection,
 	unsaveCollection,
@@ -29,11 +30,15 @@ export const collectionsQueryKeys = {
 		["collections", "mine", params] as const,
 	public: (params: ICollectionsListParams) =>
 		["collections", "public", params] as const,
+	subscribed: (params: ICollectionsListParams) =>
+		["collections", "subscribed", params] as const,
 	tags: (search: string, limit: number) =>
 		["collections", "tags", search, limit] as const,
 };
 
-export const usePublicCollectionsQuery = (params: ICollectionsListParams = {}) =>
+export const usePublicCollectionsQuery = (
+	params: ICollectionsListParams = {},
+) =>
 	useQuery({
 		queryFn: () => getPublicCollections(params),
 		queryKey: collectionsQueryKeys.public(params),
@@ -49,6 +54,15 @@ export const useMyCollectionsQuery = (
 		queryKey: collectionsQueryKeys.mine(params),
 	});
 
+export const useSubscribedCollectionsQuery = (
+	params: ICollectionsListParams = {},
+	options?: { enabled?: boolean },
+) =>
+	useQuery({
+		enabled: options?.enabled ?? true,
+		queryFn: () => getSubscribedCollections(params),
+		queryKey: collectionsQueryKeys.subscribed(params),
+	});
 export const useCollectionQuery = (id: string) =>
 	useQuery({
 		enabled: Boolean(id),
@@ -91,7 +105,9 @@ export const useUpdateCollectionMutation = () => {
 			payload: IUpdateCollectionPayload;
 		}) => updateCollection(id, payload),
 		onSuccess: (_data, { id }) => {
-			queryClient.invalidateQueries({ queryKey: collectionsQueryKeys.byId(id) });
+			queryClient.invalidateQueries({
+				queryKey: collectionsQueryKeys.byId(id),
+			});
 			queryClient.invalidateQueries({ queryKey: collectionsQueryKeys.all });
 		},
 	});
@@ -103,7 +119,9 @@ export const useDeleteCollectionMutation = () => {
 	return useMutation({
 		mutationFn: (id: string) => deleteCollection(id),
 		onSuccess: (_data, id) => {
-			queryClient.invalidateQueries({ queryKey: collectionsQueryKeys.byId(id) });
+			queryClient.invalidateQueries({
+				queryKey: collectionsQueryKeys.byId(id),
+			});
 			queryClient.invalidateQueries({ queryKey: collectionsQueryKeys.all });
 		},
 	});
@@ -115,7 +133,9 @@ export const useSaveCollectionMutation = () => {
 	return useMutation({
 		mutationFn: (id: string) => saveCollection(id),
 		onSuccess: (_data, id) => {
-			queryClient.invalidateQueries({ queryKey: collectionsQueryKeys.byId(id) });
+			queryClient.invalidateQueries({
+				queryKey: collectionsQueryKeys.byId(id),
+			});
 			queryClient.invalidateQueries({ queryKey: collectionsQueryKeys.all });
 			queryClient.invalidateQueries({ queryKey: booksQueryKeys.all });
 		},
@@ -128,7 +148,9 @@ export const useUnsaveCollectionMutation = () => {
 	return useMutation({
 		mutationFn: (id: string) => unsaveCollection(id),
 		onSuccess: (_data, id) => {
-			queryClient.invalidateQueries({ queryKey: collectionsQueryKeys.byId(id) });
+			queryClient.invalidateQueries({
+				queryKey: collectionsQueryKeys.byId(id),
+			});
 			queryClient.invalidateQueries({ queryKey: collectionsQueryKeys.all });
 			queryClient.invalidateQueries({ queryKey: booksQueryKeys.all });
 		},
@@ -146,7 +168,9 @@ export const useAddBookToCollectionMutation = () => {
 
 			queryClient.invalidateQueries({ queryKey: collectionsQueryKeys.all });
 			for (const bookId of bookIds) {
-				queryClient.invalidateQueries({ queryKey: booksQueryKeys.byId(bookId) });
+				queryClient.invalidateQueries({
+					queryKey: booksQueryKeys.byId(bookId),
+				});
 			}
 			queryClient.setQueryData(collectionsQueryKeys.byId(id), data);
 		},

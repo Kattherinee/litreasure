@@ -103,7 +103,8 @@ const MyTreasuresPage = () => {
 	const myCollections = myCollectionsData?.items ?? [];
 	const myCollectionsTotal = myCollectionsData?.total ?? 0;
 	const shouldShowAllBooksLink =
-		(userBooksData?.total ?? 0) > trackedBooks.length || trackedBooks.length > 6;
+		(userBooksData?.total ?? 0) > trackedBooks.length ||
+		trackedBooks.length > 6;
 	const getStatusCount = (status: IUserBookStatus | "all") =>
 		status === "all"
 			? (statusCounts?.total ?? userBooksData?.total ?? 0)
@@ -166,7 +167,10 @@ const MyTreasuresPage = () => {
 							<ReadingList>
 								{readingBooks.map((item) => (
 									<ReadingItem key={item.id}>
-										<ReadingCover $coverUrl={item.book.coverUrl} aria-hidden="true" />
+										<ReadingCover
+											$coverUrl={item.book.coverUrl}
+											aria-hidden="true"
+										/>
 										<ReadingMeta>
 											<ReadingTitle href={`/books/${item.book.id}`}>
 												{item.book.title}
@@ -223,7 +227,7 @@ const MyTreasuresPage = () => {
 					}}
 				>
 					<PanelHeader>
-						<PanelTitle>Мои подборки</PanelTitle>
+						<PanelTitle>Созданные мной</PanelTitle>
 						<HeaderActions>
 							<SmallAction
 								href="/collections/_username"
@@ -251,14 +255,21 @@ const MyTreasuresPage = () => {
 						</CollectionText>
 					</CollectionSummary>
 					{isMyCollectionsLoading ? (
-						<CollectionPreviewText>Загружаем ваши подборки...</CollectionPreviewText>
+						<CollectionPreviewText>
+							Загружаем ваши подборки...
+						</CollectionPreviewText>
 					) : myCollections.length > 0 ? (
 						<MyCollectionsRail>
 							{myCollections.map((collection) => (
 								<MyCollectionChip key={collection.id}>
-									<CollectionCover $coverUrl={collection.coverUrl} aria-hidden="true" />
+									<CollectionCover
+										$coverUrl={collection.coverUrl}
+										aria-hidden="true"
+									/>
 									<CollectionChipMeta>
-										<CollectionChipTitle>{collection.title}</CollectionChipTitle>
+										<CollectionChipTitle>
+											{collection.title}
+										</CollectionChipTitle>
 										<CollectionChipText>
 											{collection.bookCount} книг
 										</CollectionChipText>
@@ -279,7 +290,9 @@ const MyTreasuresPage = () => {
 						<PanelTitle>Мои книги</PanelTitle>
 						<HeaderActions>
 							{shouldShowAllBooksLink ? (
-								<SmallAction href="/treasures/books">Посмотреть все</SmallAction>
+								<SmallAction href="/treasures/books">
+									Посмотреть все
+								</SmallAction>
 							) : null}
 							<SmallAction href="/search">Добавить книгу</SmallAction>
 						</HeaderActions>
@@ -347,13 +360,17 @@ const MyTreasuresPage = () => {
 							<ResourceText>{section.description}</ResourceText>
 							<ResourceFooter>
 								<ResourceCount>0</ResourceCount>
-								<ResourceLink href={section.href}>{section.action}</ResourceLink>
+								<ResourceLink href={section.href}>
+									{section.action}
+								</ResourceLink>
 							</ResourceFooter>
 						</ResourceCard>
 					))}
 				</SectionsGrid>
 				{isCreateCollectionOpen ? (
-					<CreateCollectionModal onClose={() => setIsCreateCollectionOpen(false)} />
+					<CreateCollectionModal
+						onClose={() => setIsCreateCollectionOpen(false)}
+					/>
 				) : null}
 			</Content>
 		</Page>
@@ -483,8 +500,8 @@ const ReadingCover = styled.div<{ $coverUrl?: string }>`
 	border-radius: 0.42rem;
 	background:
 		linear-gradient(rgb(4 18 26 / 0.1), rgb(4 18 26 / 0.1)),
-		url("${({ $coverUrl }) => $coverUrl || "/images/book-placeholder.svg"}") center /
-			cover;
+		url("${({ $coverUrl }) => $coverUrl || "/images/book-placeholder.svg"}")
+			center / cover;
 `;
 
 const ReadingMeta = styled.div`
@@ -606,8 +623,8 @@ const CollectionCover = styled.div<{ $coverUrl?: string }>`
 	border-radius: 0.6rem;
 	background:
 		linear-gradient(rgb(4 18 26 / 0.08), rgb(4 18 26 / 0.08)),
-		url("${({ $coverUrl }) => $coverUrl || "/images/book-placeholder.svg"}") center /
-			cover;
+		url("${({ $coverUrl }) => $coverUrl || "/images/book-placeholder.svg"}")
+			center / cover;
 `;
 
 const CollectionChipMeta = styled.div`
