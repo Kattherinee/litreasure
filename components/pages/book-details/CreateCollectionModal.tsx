@@ -4,19 +4,29 @@ import CloseIcon from "@mui/icons-material/Close";
 import { useMemo, useState } from "react";
 import styled from "styled-components";
 
-import { useMyCollectionsQuery } from "@/shared/api/collections";
+import {
+	type ICollectionPreview,
+	useMyCollectionsQuery,
+} from "@/shared/api/collections";
 import { theme } from "@/shared/theme";
 
 import { CreateCollectionModalContent } from "./CreateCollectionModalContent";
 
 interface ICreateCollectionModalProps {
+	collection?: ICollectionPreview;
 	onClose: () => void;
+	onSaved?: () => void;
 }
 
-export const CreateCollectionModal = ({ onClose }: ICreateCollectionModalProps) => {
+export const CreateCollectionModal = ({
+	collection,
+	onClose,
+	onSaved,
+}: ICreateCollectionModalProps) => {
 	const { data } = useMyCollectionsQuery({ limit: 50 });
 	const [message, setMessage] = useState("");
 	const collections = useMemo(() => data?.items ?? [], [data?.items]);
+	const title = collection ? "Edit collection" : "Create new collection";
 
 	return (
 		<ModalOverlay role="presentation" onMouseDown={onClose}>
@@ -26,14 +36,16 @@ export const CreateCollectionModal = ({ onClose }: ICreateCollectionModalProps) 
 				aria-labelledby="create-collection-title"
 				onMouseDown={(event) => event.stopPropagation()}
 			>
-				<Title id="create-collection-title">Create new collection</Title>
+				<Title id="create-collection-title">{title}</Title>
 				<CloseButton type="button" aria-label="Close modal" onClick={onClose}>
 					<CloseIcon aria-hidden="true" />
 				</CloseButton>
 				<CreateCollectionModalContent
 					collections={collections}
+					editingCollection={collection}
 					onBack={onClose}
 					onMessage={setMessage}
+					onSaved={onSaved}
 				/>
 				{message ? <Message role="status">{message}</Message> : null}
 			</Dialog>

@@ -5,6 +5,7 @@ export interface IAuthorBookCard {
 	title: string;
 	coverUrl?: string;
 	publishedYear?: number;
+	ratingsCount?: number;
 	orderInSeries?: number;
 	seriesRelationType?:
 		| "collection"
@@ -50,7 +51,17 @@ export interface IAuthorsListParams {
 	sort?: IAuthorsSort;
 }
 
+export interface IAuthorDetailsParams {
+	bookSort?: IAuthorBookSort;
+}
+
 export type IAuthorsGenreMode = "all" | "any";
+
+export type IAuthorBookSort =
+	| "popular"
+	| "series_order"
+	| "title_asc"
+	| "title_desc";
 
 export type IAuthorsSort =
 	| "books_asc"

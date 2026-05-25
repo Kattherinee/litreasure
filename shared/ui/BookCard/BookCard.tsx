@@ -1,12 +1,18 @@
 "use client";
 
 import BookmarkIcon from "@mui/icons-material/Bookmark";
+import AutoStoriesIcon from "@mui/icons-material/AutoStories";
+import CancelIcon from "@mui/icons-material/Cancel";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import PauseCircleIcon from "@mui/icons-material/PauseCircle";
+import ReplayIcon from "@mui/icons-material/Replay";
 import CheckIcon from "@mui/icons-material/Check";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { createPortal } from "react-dom";
 import type { KeyboardEvent, MouseEvent, SyntheticEvent } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import styled from "styled-components";
 
 import type { IAuthorShort, IBookSeriesRelationType } from "@/shared/api/books";
@@ -28,6 +34,32 @@ const statusLabels: Record<IUserBookStatus, string> = {
 	rereading: "Rereading",
 };
 
+const statusBadgeColors: Record<IUserBookStatus, string> = {
+	planned: "#fe7f2d",
+	reading: "#3d8b37",
+	finished: "#1b5e20",
+	paused: "#546e7a",
+	rereading: "#6a1b9a",
+	dropped: "#b34034",
+};
+
+const getStatusIcon = (status: IUserBookStatus) => {
+	switch (status) {
+		case "planned":
+			return <BookmarkIcon aria-hidden="true" />;
+		case "reading":
+			return <AutoStoriesIcon aria-hidden="true" />;
+		case "finished":
+			return <CheckCircleIcon aria-hidden="true" />;
+		case "paused":
+			return <PauseCircleIcon aria-hidden="true" />;
+		case "rereading":
+			return <ReplayIcon aria-hidden="true" />;
+		case "dropped":
+			return <CancelIcon aria-hidden="true" />;
+	}
+};
+
 const bookStatuses: Array<{ id: IUserBookStatus; label: string }> = [
 	{ id: "planned", label: statusLabels.planned },
 	{ id: "reading", label: statusLabels.reading },
@@ -46,7 +78,9 @@ export interface IBookCardData {
 	coverUrl?: string;
 	orderInSeries?: number;
 	relationType?: IBookSeriesRelationType;
+	seriesBookCount?: number;
 	seriesLabel?: string;
+	seriesTotal?: number;
 	isTracked?: boolean;
 	myStatus?: IUserBookStatus | null;
 }
@@ -73,7 +107,9 @@ const BookCard = ({
 		myStatus,
 		orderInSeries,
 		relationType,
+		seriesBookCount,
 		seriesLabel,
+		seriesTotal,
 		title,
 	} = book;
 	const primaryAuthor = authors?.[0];
@@ -83,6 +119,7 @@ const BookCard = ({
 		orderInSeries,
 		relationType,
 		seriesLabel,
+		seriesTotal: seriesTotal ?? seriesBookCount,
 	});
 	const coverSrc = coverUrl?.trim() ? coverUrl : "/images/book-placeholder.svg";
 	const [coverWidth, setCoverWidth] = useState<number | null>(null);
@@ -95,6 +132,12 @@ const BookCard = ({
 		myStatus ?? null,
 	);
 	const [isStatusMenuOpen, setIsStatusMenuOpen] = useState(false);
+	const actionRef = useRef<HTMLDivElement | null>(null);
+	const menuRef = useRef<HTMLDivElement | null>(null);
+	const [menuPosition, setMenuPosition] = useState<{
+		left: number;
+		top: number;
+	} | null>(null);
 	const isCoverLoaded = loadedCoverSrc === coverSrc;
 	const isBookTracked = Boolean(isTracked || localStatus);
 	const currentStatusLabel = localStatus ? statusLabels[localStatus] : "Saved";
@@ -108,6 +151,67 @@ const BookCard = ({
 
 		return () => window.clearTimeout(timeoutId);
 	}, [addStatus]);
+
+	useEffect(() => {
+		if (!isStatusMenuOpen) {
+			setMenuPosition(null);
+			return;
+		}
+
+		const updateMenuPosition = () => {
+			const action = actionRef.current;
+
+			if (!action) {
+				return;
+			}
+
+			const rect = action.getBoundingClientRect();
+			const menuWidth = 150;
+			const maxLeft = Math.max(8, window.innerWidth - menuWidth - 8);
+
+			setMenuPosition({
+				left: Math.min(Math.max(8, rect.right - menuWidth), maxLeft),
+				top: rect.bottom + 6,
+			});
+		};
+
+		updateMenuPosition();
+
+		const handlePointerDown = (event: PointerEvent) => {
+			const target = event.target;
+
+			if (!(target instanceof Node)) {
+				return;
+			}
+
+			if (
+				actionRef.current?.contains(target) ||
+				menuRef.current?.contains(target)
+			) {
+				return;
+			}
+
+			setIsStatusMenuOpen(false);
+		};
+
+		const handleKeyDown = (event: globalThis.KeyboardEvent) => {
+			if (event.key === "Escape") {
+				setIsStatusMenuOpen(false);
+			}
+		};
+
+		window.addEventListener("resize", updateMenuPosition);
+		window.addEventListener("scroll", updateMenuPosition, true);
+		document.addEventListener("pointerdown", handlePointerDown);
+		document.addEventListener("keydown", handleKeyDown);
+
+		return () => {
+			window.removeEventListener("resize", updateMenuPosition);
+			window.removeEventListener("scroll", updateMenuPosition, true);
+			document.removeEventListener("pointerdown", handlePointerDown);
+			document.removeEventListener("keydown", handleKeyDown);
+		};
+	}, [isStatusMenuOpen]);
 
 	const openBookPage = () => {
 		router.push(`/books/${book.id}`, { scroll: true });
@@ -160,7 +264,9 @@ const BookCard = ({
 		void saveStatus("planned");
 	};
 
-	const handleStatusMenuButtonClick = (event: MouseEvent<HTMLButtonElement>) => {
+	const handleStatusMenuButtonClick = (
+		event: MouseEvent<HTMLButtonElement>,
+	) => {
 		event.stopPropagation();
 		setIsStatusMenuOpen((current) => !current);
 	};
@@ -202,13 +308,21 @@ const BookCard = ({
 		>
 			<BookCover $size={size}>
 				{isCoverLoaded ? null : <CoverPlaceholder aria-hidden="true" />}
-				{seriesBadgeLabel ? (
-					<SeriesBadge>{seriesBadgeLabel}</SeriesBadge>
-				) : null}
 				{isBookTracked ? (
-					<SavedBookmark aria-label="Book is in your library">
-						<BookmarkIcon aria-hidden="true" />
-					</SavedBookmark>
+					<StatusBadge
+						$color={
+							localStatus
+								? statusBadgeColors[localStatus]
+								: statusBadgeColors.planned
+						}
+						aria-label={localStatus ? statusLabels[localStatus] : "In library"}
+					>
+						{localStatus ? (
+							getStatusIcon(localStatus)
+						) : (
+							<BookmarkIcon aria-hidden="true" />
+						)}
+					</StatusBadge>
 				) : null}
 				<BookCoverImage
 					$isLoaded={isCoverLoaded}
@@ -218,12 +332,8 @@ const BookCard = ({
 				/>
 
 				<CardLibraryAction
+					ref={actionRef}
 					$isTracked={isBookTracked}
-					onBlur={(event) => {
-						if (!event.currentTarget.contains(event.relatedTarget)) {
-							setIsStatusMenuOpen(false);
-						}
-					}}
 				>
 					<BookAddButton
 						$isTracked={isBookTracked}
@@ -231,9 +341,7 @@ const BookCard = ({
 						aria-expanded={isBookTracked ? isStatusMenuOpen : undefined}
 						aria-haspopup={isBookTracked ? "menu" : undefined}
 						aria-label={
-							isBookTracked
-								? "Change book status"
-								: "Add to library as planned"
+							isBookTracked ? "Change book status" : "Add to library as planned"
 						}
 						disabled={updateTrackingMutation.isPending}
 						onClick={handleAddButtonClick}
@@ -260,33 +368,47 @@ const BookCard = ({
 							<KeyboardArrowDownIcon aria-hidden="true" />
 						</BookStatusMenuButton>
 					)}
-					{isStatusMenuOpen ? (
-						<CardStatusMenu role="menu">
-							{bookStatuses.map((status) => (
-								<CardStatusMenuItem
-									key={status.id}
-									$isActive={localStatus === status.id}
-									role="menuitem"
-									type="button"
-									onClick={(event) => {
-										event.stopPropagation();
-										void saveStatus(status.id);
-									}}
+					{isStatusMenuOpen && menuPosition
+						? createPortal(
+								<CardStatusMenu
+									ref={menuRef}
+									$left={menuPosition.left}
+									$top={menuPosition.top}
+									role="menu"
+									onClick={(event) => event.stopPropagation()}
 								>
-									<span>{status.label}</span>
-									{localStatus === status.id ? (
-										<CheckIcon aria-hidden="true" />
-									) : null}
-								</CardStatusMenuItem>
-							))}
-						</CardStatusMenu>
-					) : null}
+									{bookStatuses.map((status) => (
+										<CardStatusMenuItem
+											key={status.id}
+											$isActive={localStatus === status.id}
+											role="menuitem"
+											type="button"
+											onClick={(event) => {
+												event.stopPropagation();
+												void saveStatus(status.id);
+											}}
+										>
+											<span>{status.label}</span>
+											{localStatus === status.id ? (
+												<CheckIcon aria-hidden="true" />
+											) : null}
+										</CardStatusMenuItem>
+									))}
+								</CardStatusMenu>,
+								document.body,
+							)
+						: null}
 				</CardLibraryAction>
 				{addStatus ? <AddStatus>{addStatus}</AddStatus> : null}
 			</BookCover>
 
 			<BookMeta $coverWidth={coverWidth}>
-				<BookTitle $size={size}>{title}</BookTitle>
+				<BookTitle $size={size}>
+					{seriesBadgeLabel ? (
+						<SeriesTitlePrefix>{seriesBadgeLabel} · </SeriesTitlePrefix>
+					) : null}
+					{title}
+				</BookTitle>
 				{resolvedAuthorId ? (
 					<BookAuthorLink
 						$size={size}
@@ -310,10 +432,12 @@ const getSeriesBadgeLabel = ({
 	orderInSeries,
 	relationType,
 	seriesLabel,
+	seriesTotal,
 }: {
 	orderInSeries?: number;
 	relationType?: IBookSeriesRelationType;
 	seriesLabel?: string;
+	seriesTotal?: number;
 }) => {
 	if (relationType === "spin_off") {
 		return "spin-off";
@@ -324,7 +448,9 @@ const getSeriesBadgeLabel = ({
 	}
 
 	if (orderInSeries && orderInSeries > 0) {
-		return String(orderInSeries);
+		return seriesTotal && seriesTotal > 0
+			? `${orderInSeries}/${seriesTotal}`
+			: String(orderInSeries);
 	}
 
 	return null;
@@ -350,13 +476,19 @@ const BookCardWrapper = styled.article<{
 		outline: 0.25rem solid ${theme.colors.orangeDark};
 		outline-offset: 0.25rem;
 	}
+
+	&:hover,
+	&:focus-within {
+		z-index: 30;
+	}
 `;
 
 const BookCover = styled.div<{ $size: IBookCardSize }>`
 	position: relative;
+	z-index: 2;
 	overflow: visible;
 	width: fit-content;
-	height: ${({ $size }) => ($size === "compact" ? "11.5rem" : "15.25rem")};
+	height: ${({ $size }) => ($size === "compact" ? "12.5rem" : "15.25rem")};
 
 	border-radius: 0.7rem;
 	transition:
@@ -385,7 +517,7 @@ const BookCoverImage = styled.img<{ $isLoaded: boolean }>`
 	transition: opacity 220ms ease;
 `;
 
-const SavedBookmark = styled.span`
+const StatusBadge = styled.span<{ $color: string }>`
 	position: absolute;
 	top: 0.45rem;
 	right: 0.45rem;
@@ -399,7 +531,7 @@ const SavedBookmark = styled.span`
 	border-radius: 50%;
 	background: rgb(242 239 237 / 0.9);
 	box-shadow: 0 0.25rem 0.75rem rgb(4 18 26 / 0.16);
-	color: ${theme.colors.orangePrimary};
+	color: ${({ $color }) => $color};
 
 	& svg {
 		width: 0.95rem;
@@ -408,6 +540,8 @@ const SavedBookmark = styled.span`
 `;
 
 const BookMeta = styled.div<{ $coverWidth: number | null }>`
+	position: relative;
+	z-index: 1;
 	display: flex;
 	flex-direction: column;
 	${({ $coverWidth }) =>
@@ -459,26 +593,11 @@ const BookAuthorLink = styled(Link)<{ $size: IBookCardSize }>`
 	}
 `;
 
-const SeriesBadge = styled.span`
-	position: absolute;
-	top: 0.45rem;
-	left: 0.45rem;
-	z-index: 1;
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	min-width: 1.5rem;
-	height: 1.5rem;
-	padding-inline: 0.5rem;
-	border: 0.0625rem solid rgb(242 239 237 / 0.55);
-	border-radius: 62.4375rem;
-	background: rgb(242 239 237 / 0.86);
-	box-shadow: 0 0.25rem 0.75rem rgb(4 18 26 / 0.16);
-	color: ${theme.colors.bluePrimary};
+const SeriesTitlePrefix = styled.span`
+	color: ${theme.colors.orangeDark};
 	font-family: ${theme.fonts.sans};
-	font-size: 0.68rem;
-	font-weight: 600;
-	line-height: 1;
+	font-size: 0.84em;
+	font-weight: 700;
 	text-transform: lowercase;
 `;
 
@@ -486,7 +605,7 @@ const CardLibraryAction = styled.div<{ $isTracked: boolean }>`
 	position: absolute;
 	right: 0.5rem;
 	bottom: 0.5rem;
-	z-index: 3;
+	z-index: 40;
 	display: inline-flex;
 	align-items: center;
 	opacity: 0;
@@ -576,11 +695,11 @@ const BookStatusMenuButton = styled(CoverActionButton)`
 	}
 `;
 
-const CardStatusMenu = styled.div`
-	position: absolute;
-	right: 0;
-	bottom: calc(100% + 0.45rem);
-	z-index: 4;
+const CardStatusMenu = styled.div<{ $left: number; $top: number }>`
+	position: fixed;
+	left: ${({ $left }) => $left}px;
+	top: ${({ $top }) => $top}px;
+	z-index: 1000;
 	display: grid;
 	width: 9.4rem;
 	overflow: hidden;

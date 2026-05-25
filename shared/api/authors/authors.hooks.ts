@@ -7,11 +7,13 @@ import {
 	deleteAuthor,
 	getAuthor,
 	getAuthors,
+	getMyAuthors,
 	saveAuthor,
 	unsaveAuthor,
 	updateAuthor,
 } from "./authors.api";
 import type {
+	IAuthorDetailsParams,
 	IAuthorsListParams,
 	ICreateAuthorPayload,
 	IUpdateAuthorPayload,
@@ -20,7 +22,10 @@ import type {
 export const authorsQueryKeys = {
 	all: ["authors"] as const,
 	byId: (id: string) => ["authors", id] as const,
+	details: (id: string, params: IAuthorDetailsParams) =>
+		["authors", id, params] as const,
 	list: (params: IAuthorsListParams) => ["authors", "list", params] as const,
+	mine: (params: IAuthorsListParams) => ["authors", "mine", params] as const,
 };
 
 export const useAuthorsQuery = (params: IAuthorsListParams = {}) =>
@@ -29,11 +34,24 @@ export const useAuthorsQuery = (params: IAuthorsListParams = {}) =>
 		queryKey: authorsQueryKeys.list(params),
 	});
 
-export const useAuthorQuery = (id: string) =>
+export const useMyAuthorsQuery = (
+	params: IAuthorsListParams = {},
+	options?: { enabled?: boolean },
+) =>
+	useQuery({
+		enabled: options?.enabled ?? true,
+		queryFn: () => getMyAuthors(params),
+		queryKey: authorsQueryKeys.mine(params),
+	});
+
+export const useAuthorQuery = (
+	id: string,
+	params: IAuthorDetailsParams = {},
+) =>
 	useQuery({
 		enabled: Boolean(id),
-		queryFn: () => getAuthor(id),
-		queryKey: authorsQueryKeys.byId(id),
+		queryFn: () => getAuthor(id, params),
+		queryKey: authorsQueryKeys.details(id, params),
 	});
 
 export const useCreateAuthorMutation = () => {

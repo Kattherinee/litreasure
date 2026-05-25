@@ -1,6 +1,7 @@
 import { requestAuth, requestOptionalAuth } from "../base";
 import type {
 	IAuthorDetails,
+	IAuthorDetailsParams,
 	IAuthorsListParams,
 	IAuthorsListResponse,
 	ICreateAuthorPayload,
@@ -34,6 +35,16 @@ const getAuthorsQuery = (params: IAuthorsListParams = {}) => {
 	appendSearchParam(searchParams, "minBooks", params.minBooks);
 	appendSearchParam(searchParams, "page", params.page);
 	appendSearchParam(searchParams, "sort", params.sort);
+
+	const query = searchParams.toString();
+
+	return query ? `?${query}` : "";
+};
+
+const getAuthorDetailsQuery = (params: IAuthorDetailsParams = {}) => {
+	const searchParams = new URLSearchParams();
+
+	appendSearchParam(searchParams, "bookSort", params.bookSort);
 
 	const query = searchParams.toString();
 
@@ -74,8 +85,23 @@ export const getAuthors = async (
 	return normalizeAuthorsList(response, params);
 };
 
-export const getAuthor = (id: string): Promise<IAuthorDetails> =>
-	requestOptionalAuth<IAuthorDetails>(`/authors/${id}`);
+export const getMyAuthors = async (
+	params: IAuthorsListParams = {},
+): Promise<IAuthorsListResponse> => {
+	const response = await requestAuth<
+		IAuthorsListResponse | IAuthorsListResponse["items"]
+	>(`/authors/mine${getAuthorsQuery(params)}`);
+
+	return normalizeAuthorsList(response, params);
+};
+
+export const getAuthor = (
+	id: string,
+	params: IAuthorDetailsParams = {},
+): Promise<IAuthorDetails> =>
+	requestOptionalAuth<IAuthorDetails>(
+		`/authors/${id}${getAuthorDetailsQuery(params)}`,
+	);
 
 export const createAuthor = (
 	payload: ICreateAuthorPayload,

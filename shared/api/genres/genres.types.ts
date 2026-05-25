@@ -2,22 +2,18 @@ export interface IGenre {
 	id: string;
 	name: string;
 	slug: string;
+	bookCount?: number;
 }
 
-export interface IGenreItem {
-	id: string;
+export interface IGenreGroup {
+	key: string;
 	name: string;
-	slug: string;
 	category: string;
-	subcategory: string;
+	bookCount: number;
+	genres: IGenre[];
 }
 
-export interface IGenreSubcategory {
-	subcategory: string;
-	genres: IGenreItem[];
-}
-
-export interface IGenreCategory {
-	category: string;
-	subcategories: IGenreSubcategory[];
+export interface IGenresByCategoryResponse {
+	groups: IGenreGroup[];
+	recommendations: IGenre[];
 }

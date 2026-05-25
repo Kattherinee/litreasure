@@ -2,12 +2,17 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import styled from "styled-components";
 
 import { CreateCollectionModal } from "@/components/pages/book-details/CreateCollectionModal";
+import { useMyAuthorsQuery } from "@/shared/api/authors";
 import { useChallengesQuery } from "@/shared/api/book-challenge";
-import { useMyCollectionsQuery } from "@/shared/api/collections";
+import {
+	useMyCollectionsQuery,
+	useSubscribedCollectionsQuery,
+} from "@/shared/api/collections";
+import { useMySeriesQuery } from "@/shared/api/series";
 import {
 	useDeleteBookTrackingMutation,
 	useUserBookStatusCountsQuery,
@@ -39,26 +44,40 @@ const statusLabels: Record<IUserBookStatus, string> = {
 	rereading: "Перечитываю",
 };
 
+type ICollectionTreasureFilter = "all" | "created" | "subscribed";
+
+const collectionFilterTabs: Array<{
+	id: ICollectionTreasureFilter;
+	label: string;
+}> = [
+	{ id: "all", label: "Все" },
+	{ id: "created", label: "Созданные" },
+	{ id: "subscribed", label: "Подписки" },
+];
+
 const sections = [
 	{
 		action: "Добавить автора",
+		countKey: "authors",
 		description: "Сохраненные авторы и личные авторские записи.",
 		href: "/authors",
 		title: "Мои авторы",
 	},
 	{
 		action: "Добавить серию",
+		countKey: "series",
 		description: "Серии, за которыми вы следите или добавили для себя.",
 		href: "/search?tab=series",
 		title: "Мои серии",
 	},
 	{
 		action: "Добавить цитату",
+		countKey: "quotes",
 		description: "Любимые цитаты и заметки по прочитанному.",
 		href: "/treasures",
 		title: "Мои цитаты",
 	},
-];
+] as const;
 
 const MyTreasuresPage = () => {
 	const router = useRouter();
@@ -67,7 +86,10 @@ const MyTreasuresPage = () => {
 	const [activeStatus, setActiveStatus] = useState<IUserBookStatus | "all">(
 		"all",
 	);
+	const [activeCollectionFilter, setActiveCollectionFilter] =
+		useState<ICollectionTreasureFilter>("all");
 	const [isCreateCollectionOpen, setIsCreateCollectionOpen] = useState(false);
+	const collectionsRailRef = useRef<HTMLDivElement | null>(null);
 	const isSessionReady = Boolean(session);
 	const activeStatusParam = activeStatus === "all" ? undefined : activeStatus;
 	const { data: challenges = [] } = useChallengesQuery({
@@ -97,11 +119,60 @@ const MyTreasuresPage = () => {
 	});
 	const { data: myCollectionsData, isLoading: isMyCollectionsLoading } =
 		useMyCollectionsQuery({ limit: 5 }, { enabled: isSessionReady });
+	const {
+		data: subscribedCollectionsData,
+		isLoading: isSubscribedCollectionsLoading,
+	} = useSubscribedCollectionsQuery({ limit: 5 }, { enabled: isSessionReady });
+	const { data: myAuthorsData } = useMyAuthorsQuery(
+		{ limit: 1 },
+		{ enabled: isSessionReady },
+	);
+	const { data: mySeriesData } = useMySeriesQuery({ enabled: isSessionReady });
 	const activeChallenge = challenges.find((challenge) => challenge.isActive);
 	const readingBooks = readingBooksData?.items ?? [];
 	const trackedBooks = userBooksData?.items ?? [];
 	const myCollections = myCollectionsData?.items ?? [];
 	const myCollectionsTotal = myCollectionsData?.total ?? 0;
+	const subscribedCollections = subscribedCollectionsData?.items ?? [];
+	const subscribedCollectionsTotal = subscribedCollectionsData?.total ?? 0;
+	const visibleCollections =
+		activeCollectionFilter === "created"
+			? myCollections
+			: activeCollectionFilter === "subscribed"
+				? subscribedCollections
+				: Array.from(
+						new Map(
+							[...myCollections, ...subscribedCollections].map((collection) => [
+								collection.id,
+								collection,
+							]),
+						).values(),
+					);
+	const visibleCollectionsTotal =
+		activeCollectionFilter === "created"
+			? myCollectionsTotal
+			: activeCollectionFilter === "subscribed"
+				? subscribedCollectionsTotal
+				: myCollectionsTotal + subscribedCollectionsTotal;
+	const isCollectionsLoading =
+		isMyCollectionsLoading || isSubscribedCollectionsLoading;
+	const scrollCollectionsRail = (direction: "next" | "prev") => {
+		const rail = collectionsRailRef.current;
+		if (!rail) return;
+
+		rail.scrollBy({
+			behavior: "smooth",
+			left:
+				direction === "next"
+					? rail.clientWidth * 0.82
+					: -rail.clientWidth * 0.82,
+		});
+	};
+	const resourceCounts = {
+		authors: myAuthorsData?.total ?? 0,
+		quotes: 0,
+		series: mySeriesData?.total ?? 0,
+	};
 	const shouldShowAllBooksLink =
 		(userBooksData?.total ?? 0) > trackedBooks.length ||
 		trackedBooks.length > 6;
@@ -227,8 +298,32 @@ const MyTreasuresPage = () => {
 					}}
 				>
 					<PanelHeader>
-						<PanelTitle>Созданные мной</PanelTitle>
+						<PanelTitle>Мои подборки</PanelTitle>
 						<HeaderActions>
+							{visibleCollections.length > 1 ? (
+								<RailControls aria-label="Scroll my collections">
+									<RailControlButton
+										aria-label="Previous collections"
+										type="button"
+										onClick={(event) => {
+											event.stopPropagation();
+											scrollCollectionsRail("prev");
+										}}
+									>
+										{"<"}
+									</RailControlButton>
+									<RailControlButton
+										aria-label="Next collections"
+										type="button"
+										onClick={(event) => {
+											event.stopPropagation();
+											scrollCollectionsRail("next");
+										}}
+									>
+										{">"}
+									</RailControlButton>
+								</RailControls>
+							) : null}
 							<SmallAction
 								href="/collections/_username"
 								onClick={(event) => event.stopPropagation()}
@@ -246,22 +341,55 @@ const MyTreasuresPage = () => {
 							</InlineAction>
 						</HeaderActions>
 					</PanelHeader>
+					<CollectionFilterTabs aria-label="Фильтр подборок">
+						{collectionFilterTabs.map((filter) => (
+							<CollectionFilterTab
+								key={filter.id}
+								$isActive={activeCollectionFilter === filter.id}
+								type="button"
+								onClick={(event) => {
+									event.stopPropagation();
+									setActiveCollectionFilter(filter.id);
+								}}
+								onKeyDown={(event) => event.stopPropagation()}
+							>
+								{filter.label}
+							</CollectionFilterTab>
+						))}
+					</CollectionFilterTabs>
 					<CollectionSummary>
-						<CollectionCount>{myCollectionsTotal}</CollectionCount>
+						<CollectionCount>{visibleCollectionsTotal}</CollectionCount>
 						<CollectionText>
-							{myCollectionsTotal === 1
+							{visibleCollectionsTotal === 1
 								? "подборка в ваших сокровищах"
 								: "подборок в ваших сокровищах"}
 						</CollectionText>
 					</CollectionSummary>
-					{isMyCollectionsLoading ? (
+					{isCollectionsLoading ? (
 						<CollectionPreviewText>
 							Загружаем ваши подборки...
 						</CollectionPreviewText>
-					) : myCollections.length > 0 ? (
-						<MyCollectionsRail>
-							{myCollections.map((collection) => (
-								<MyCollectionChip key={collection.id}>
+					) : visibleCollections.length > 0 ? (
+						<MyCollectionsRail ref={collectionsRailRef}>
+							{visibleCollections.map((collection) => (
+								<MyCollectionChip
+									key={collection.id}
+									aria-label={`Открыть подборку ${collection.title}`}
+									role="link"
+									tabIndex={0}
+									onClick={(event) => {
+										event.stopPropagation();
+										router.push(`/collections/${collection.id}`);
+									}}
+									onKeyDown={(event) => {
+										event.stopPropagation();
+
+										if (event.key !== "Enter" && event.key !== " ") return;
+
+										event.preventDefault();
+										router.push(`/collections/${collection.id}`);
+									}}
+								>
 									<CollectionCover
 										$coverUrl={collection.coverUrl}
 										aria-hidden="true"
@@ -359,7 +487,7 @@ const MyTreasuresPage = () => {
 							<ResourceTitle>{section.title}</ResourceTitle>
 							<ResourceText>{section.description}</ResourceText>
 							<ResourceFooter>
-								<ResourceCount>0</ResourceCount>
+								<ResourceCount>{resourceCounts[section.countKey]}</ResourceCount>
 								<ResourceLink href={section.href}>
 									{section.action}
 								</ResourceLink>
@@ -580,6 +708,36 @@ const CollectionSummary = styled.div`
 	margin-bottom: 1rem;
 `;
 
+const CollectionFilterTabs = styled.div`
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.45rem;
+	margin-bottom: 1rem;
+`;
+
+const CollectionFilterTab = styled.button<{ $isActive: boolean }>`
+	border: 0.0625rem solid
+		${({ $isActive }) =>
+			$isActive ? theme.colors.orangeLight : "rgb(211 202 196 / 0.82)"};
+	border-radius: 999px;
+	background: ${({ $isActive }) =>
+		$isActive ? "rgb(218 142 91 / 0.14)" : theme.colors.surface};
+	padding: 0.38rem 0.72rem;
+	color: ${({ $isActive }) =>
+		$isActive ? theme.colors.orangeDark : theme.colors.foreground};
+	cursor: pointer;
+	font: inherit;
+	font-size: 0.84rem;
+	font-weight: ${({ $isActive }) => ($isActive ? 700 : 400)};
+
+	&:hover,
+	&:focus-visible {
+		border-color: ${theme.colors.orangeLight};
+		color: ${theme.colors.orangeDark};
+		outline: none;
+	}
+`;
+
 const CollectionCount = styled.span`
 	color: ${theme.colors.orangeDark};
 	font-family: ${theme.fonts.serif};
@@ -614,7 +772,18 @@ const MyCollectionChip = styled.article`
 	border-radius: 0.75rem;
 	background: rgb(255 255 255 / 0.64);
 	padding: 0.55rem;
+	cursor: pointer;
 	scroll-snap-align: start;
+	transition:
+		border-color 180ms ease,
+		transform 180ms ease;
+
+	&:hover,
+	&:focus-visible {
+		border-color: ${theme.colors.orangeLight};
+		outline: none;
+		transform: translateY(-0.0625rem);
+	}
 `;
 
 const CollectionCover = styled.div<{ $coverUrl?: string }>`
@@ -672,6 +841,36 @@ const HeaderActions = styled.div`
 	align-items: center;
 	justify-content: flex-end;
 	gap: 0.75rem;
+`;
+
+const RailControls = styled.div`
+	display: inline-flex;
+	align-items: center;
+	gap: 0.45rem;
+`;
+
+const RailControlButton = styled.button`
+	display: inline-flex;
+	width: 1.8rem;
+	height: 1.8rem;
+	align-items: center;
+	justify-content: center;
+	border: 0.0625rem solid ${theme.colors.orangeDark};
+	border-radius: 999px;
+	background: ${theme.colors.transparent};
+	color: ${theme.colors.orangeDark};
+	cursor: pointer;
+	font-family: ${theme.fonts.serif};
+	font-size: 1.9rem;
+	line-height: 1;
+
+	&:hover,
+	&:focus-visible {
+		background: ${theme.colors.orangeLight};
+		border-color: ${theme.colors.orangeLight};
+		color: ${theme.colors.invertedText};
+		outline: none;
+	}
 `;
 
 const PanelTitle = styled.h2`

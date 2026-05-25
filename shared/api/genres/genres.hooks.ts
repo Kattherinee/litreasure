@@ -7,8 +7,16 @@ import { getGenres, getGenresByCategory } from "./genres.api";
 export const useGenresQuery = () =>
 	useQuery({ queryFn: getGenres, queryKey: ["genres"] });
 
-export const useGenresByCategoryQuery = () =>
+interface IUseGenresByCategoryQueryParams {
+	includeCounts?: boolean;
+	selected?: string[];
+}
+
+export const useGenresByCategoryQuery = ({
+	includeCounts = false,
+	selected = [],
+}: IUseGenresByCategoryQueryParams = {}) =>
 	useQuery({
-		queryFn: getGenresByCategory,
-		queryKey: ["genres", "byCategory"],
+		queryFn: () => getGenresByCategory({ includeCounts, selected }),
+		queryKey: ["genres", "byCategory", includeCounts, selected.join(",")],
 	});

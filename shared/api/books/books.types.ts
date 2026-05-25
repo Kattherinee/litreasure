@@ -24,6 +24,7 @@ export interface IBook {
 	orderInSeries?: number;
 	relationType?: IBookSeriesRelationType;
 	searchMatches?: IBookSearchMatch[];
+	seriesBookCount?: number;
 	seriesLabel?: string;
 	seriesRelationType?: IBookSeriesRelationType;
 	seriesTitle?: string;
@@ -44,6 +45,7 @@ export interface IBook {
 			coverUrl?: string;
 			orderInSeries?: number;
 			relationType?: IBookSeriesRelationType;
+			seriesBookCount?: number;
 			seriesLabel?: string;
 		}>;
 	};

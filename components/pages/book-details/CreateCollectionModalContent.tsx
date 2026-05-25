@@ -5,57 +5,65 @@ import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import PublicIcon from "@mui/icons-material/Public";
 import type { ChangeEvent, KeyboardEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { CropperRef } from "react-advanced-cropper";
-import { CircleStencil, Cropper } from "react-advanced-cropper";
-import { createPortal } from "react-dom";
 import styled from "styled-components";
 
 import {
 	type ICollectionPreview,
 	useCollectionTagsQuery,
 	useCreateCollectionMutation,
+	useUpdateCollectionMutation,
 } from "@/shared/api/collections";
 import { useUploadImageMutation } from "@/shared/api/images";
 import { theme } from "@/shared/theme";
-
-const COLLECTION_COVER_SIZE = 512;
 
 interface ICreateCollectionModalContentProps {
 	bookId?: string;
 	collectionIds?: Set<string>;
 	collections: ICollectionPreview[];
+	editingCollection?: ICollectionPreview;
 	onBack: () => void;
 	onCollectionIdsChange?: (ids: Set<string>) => void;
 	onMessage: (message: string) => void;
+	onSaved?: () => void;
 }
 
 export const CreateCollectionModalContent = ({
 	bookId,
 	collectionIds,
 	collections,
+	editingCollection,
 	onBack,
 	onCollectionIdsChange,
 	onMessage,
+	onSaved,
 }: ICreateCollectionModalContentProps) => {
 	const fileInputRef = useRef<HTMLInputElement>(null);
-	const cropperRef = useRef<CropperRef>(null);
 	const createCollectionMutation = useCreateCollectionMutation();
+	const updateCollectionMutation = useUpdateCollectionMutation();
 	const uploadImageMutation = useUploadImageMutation();
-	const [newTitle, setNewTitle] = useState("");
-	const [newDescription, setNewDescription] = useState("");
-	const [newCoverUrl, setNewCoverUrl] = useState("");
+	const isEditing = Boolean(editingCollection);
+	const [newTitle, setNewTitle] = useState(editingCollection?.title ?? "");
+	const [newDescription, setNewDescription] = useState(
+		editingCollection?.description ?? "",
+	);
+	const [newCoverUrl, setNewCoverUrl] = useState(
+		editingCollection?.coverUrl ?? "",
+	);
 	const [coverPreviewUrl, setCoverPreviewUrl] = useState("");
-	const [isCoverCropOpen, setIsCoverCropOpen] = useState(false);
 	const [newTagsInput, setNewTagsInput] = useState("");
-	const [newTags, setNewTags] = useState<string[]>([]);
-	const [isNewCollectionPublic, setIsNewCollectionPublic] = useState(false);
+	const [newTags, setNewTags] = useState<string[]>(editingCollection?.tags ?? []);
+	const [isNewCollectionPublic, setIsNewCollectionPublic] = useState(
+		editingCollection?.isPublic ?? false,
+	);
 	const normalizedTagSearch = newTagsInput.trim();
 	const { data: tagSuggestions = [] } = useCollectionTagsQuery(
 		normalizedTagSearch,
 		10,
 	);
 	const isSaving =
-		createCollectionMutation.isPending || uploadImageMutation.isPending;
+		createCollectionMutation.isPending ||
+		updateCollectionMutation.isPending ||
+		uploadImageMutation.isPending;
 	const suggestedTags = useMemo(
 		() => {
 			const apiTags = tagSuggestions.map((tag) => tag.label);
@@ -81,48 +89,39 @@ export const CreateCollectionModalContent = ({
 		fileInputRef.current?.click();
 	};
 
-	const handleCoverFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+	const handleCoverFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
 		const file = event.target.files?.[0];
 		event.target.value = "";
 		if (!file) return;
 
 		if (coverPreviewUrl) URL.revokeObjectURL(coverPreviewUrl);
-		setCoverPreviewUrl(URL.createObjectURL(file));
+		const nextPreviewUrl = URL.createObjectURL(file);
+
+		setCoverPreviewUrl(nextPreviewUrl);
 		setNewCoverUrl("");
-		setIsCoverCropOpen(true);
 		onMessage("");
+
+		try {
+			const uploadedCover = await uploadImageMutation.mutateAsync({
+				file,
+				purpose: "collection-cover",
+			});
+			URL.revokeObjectURL(nextPreviewUrl);
+			setCoverPreviewUrl("");
+			setNewCoverUrl(uploadedCover.url);
+		} catch (error) {
+			URL.revokeObjectURL(nextPreviewUrl);
+			setCoverPreviewUrl("");
+			onMessage(
+				error instanceof Error ? error.message : "Could not upload cover",
+			);
+		}
 	};
 
 	const clearCover = () => {
 		if (coverPreviewUrl) URL.revokeObjectURL(coverPreviewUrl);
 		setCoverPreviewUrl("");
 		setNewCoverUrl("");
-		setIsCoverCropOpen(false);
-	};
-
-	const cancelCoverCrop = () => {
-		if (coverPreviewUrl) URL.revokeObjectURL(coverPreviewUrl);
-		setCoverPreviewUrl("");
-		setIsCoverCropOpen(false);
-	};
-
-	const applyCoverCrop = async () => {
-		try {
-			const blob = await getCroppedCoverBlob(cropperRef.current);
-			const uploadedCover = await uploadImageMutation.mutateAsync({
-				file: blob,
-				purpose: "collection-cover",
-			});
-			if (coverPreviewUrl) URL.revokeObjectURL(coverPreviewUrl);
-			setCoverPreviewUrl("");
-			setNewCoverUrl(uploadedCover.url);
-			setIsCoverCropOpen(false);
-			onMessage("");
-		} catch (error) {
-			onMessage(
-				error instanceof Error ? error.message : "Could not prepare cover",
-			);
-		}
 	};
 
 	const addTag = (rawTag: string) => {
@@ -144,7 +143,7 @@ export const CreateCollectionModalContent = ({
 		}
 	};
 
-	const createCollection = async () => {
+	const saveCollection = async () => {
 		onMessage("");
 		const title = newTitle.trim();
 
@@ -154,14 +153,27 @@ export const CreateCollectionModalContent = ({
 		}
 
 		try {
-			const created = await createCollectionMutation.mutateAsync({
+			const payload = {
 				bookIds: bookId ? [bookId] : undefined,
 				coverUrl: newCoverUrl.trim() || undefined,
 				description: newDescription.trim() || undefined,
 				isPublic: isNewCollectionPublic,
 				tags: newTags,
 				title,
-			});
+			};
+
+			if (editingCollection) {
+				await updateCollectionMutation.mutateAsync({
+					id: editingCollection.id,
+					payload,
+				});
+				onMessage("Collection updated");
+				onSaved?.();
+				onBack();
+				return;
+			}
+
+			const created = await createCollectionMutation.mutateAsync(payload);
 			if (bookId && collectionIds && onCollectionIdsChange) {
 				const nextIds = new Set(collectionIds);
 				nextIds.add(created.id);
@@ -186,7 +198,9 @@ export const CreateCollectionModalContent = ({
 						<CoverPlaceholder>
 							<AutoStoriesOutlinedIcon aria-hidden="true" />
 							<CoverPlaceholderTitle>
-								Add a cover for the collection
+								{isEditing
+									? "Change the collection cover"
+									: "Add a cover for the collection"}
 							</CoverPlaceholderTitle>
 							<CoverChoiceRow>
 								<CoverControlButton type="button" onClick={openCoverDialog}>
@@ -207,7 +221,7 @@ export const CreateCollectionModalContent = ({
 					{coverPreviewUrl || newCoverUrl ? (
 						<CoverControls>
 							<CoverControlButton type="button" onClick={openCoverDialog}>
-								Change cover
+								{uploadImageMutation.isPending ? "Uploading..." : "Change cover"}
 							</CoverControlButton>
 							<CoverControlButton type="button" onClick={clearCover}>
 								Remove
@@ -305,89 +319,15 @@ export const CreateCollectionModalContent = ({
 						<CreatePrimaryButton
 							disabled={isSaving}
 							type="button"
-							onClick={() => void createCollection()}
+							onClick={() => void saveCollection()}
 						>
-							Create collection
+							{isEditing ? "Save changes" : "Create collection"}
 						</CreatePrimaryButton>
 					</CreateActions>
 				</NewCollectionFields>
 			</CreateCollectionForm>
-			{typeof document !== "undefined" && coverPreviewUrl && isCoverCropOpen
-				? createPortal(
-						<CropModalOverlay role="presentation" onMouseDown={cancelCoverCrop}>
-							<CropModal
-								aria-modal="true"
-								role="dialog"
-								aria-label="Crop collection cover"
-								onMouseDown={(event) => event.stopPropagation()}
-							>
-								<CropModalTitle>Crop cover</CropModalTitle>
-								<CropperShell>
-									<StyledCropper
-										ref={cropperRef}
-										src={coverPreviewUrl}
-										stencilComponent={CircleStencil}
-									/>
-								</CropperShell>
-									<CropModalActions>
-										<CreateSecondaryButton type="button" onClick={cancelCoverCrop}>
-											Cancel
-										</CreateSecondaryButton>
-										<CreatePrimaryButton
-											disabled={uploadImageMutation.isPending}
-											type="button"
-											onClick={applyCoverCrop}
-										>
-											{uploadImageMutation.isPending ? "Uploading..." : "Apply"}
-										</CreatePrimaryButton>
-									</CropModalActions>
-							</CropModal>
-						</CropModalOverlay>,
-						document.body,
-					)
-				: null}
 		</>
 	);
-};
-
-const getCroppedCoverBlob = async (cropper: CropperRef | null) => {
-	const sourceCanvas = cropper?.getCanvas({
-		height: COLLECTION_COVER_SIZE,
-		imageSmoothingQuality: "high",
-		width: COLLECTION_COVER_SIZE,
-	});
-	if (!sourceCanvas) throw new Error("Could not prepare cover");
-
-	const canvas = document.createElement("canvas");
-	canvas.width = COLLECTION_COVER_SIZE;
-	canvas.height = COLLECTION_COVER_SIZE;
-	const context = canvas.getContext("2d");
-	if (!context) throw new Error("Could not prepare cover");
-
-	context.clearRect(0, 0, COLLECTION_COVER_SIZE, COLLECTION_COVER_SIZE);
-	context.save();
-	context.beginPath();
-	context.arc(
-		COLLECTION_COVER_SIZE / 2,
-		COLLECTION_COVER_SIZE / 2,
-		COLLECTION_COVER_SIZE / 2,
-		0,
-		Math.PI * 2,
-	);
-	context.clip();
-	context.drawImage(sourceCanvas, 0, 0);
-	context.restore();
-
-	return new Promise<Blob>((resolve, reject) => {
-		canvas.toBlob(
-			(blob) => {
-				if (blob) resolve(blob);
-				else reject(new Error("Could not prepare cover"));
-			},
-			"image/webp",
-			0.92,
-		);
-	});
 };
 
 const CreateCollectionForm = styled.form`
@@ -498,54 +438,6 @@ const HiddenFileInput = styled.input`
 	overflow: hidden;
 	clip: rect(0 0 0 0);
 	white-space: nowrap;
-`;
-
-const CropperShell = styled.div`
-	width: min(100%, 24rem);
-	aspect-ratio: 1 / 1;
-	overflow: hidden;
-	border: 0.0625rem solid rgb(212 100 28 / 0.18);
-	border-radius: 1rem;
-	background: rgb(242 239 237 / 0.7);
-`;
-
-const StyledCropper = styled(Cropper)`
-	width: 100%;
-	height: 100%;
-`;
-
-const CropModalOverlay = styled.div`
-	position: fixed;
-	z-index: 90;
-	inset: 0;
-	display: grid;
-	place-items: center;
-	background: rgb(4 18 26 / 0.52);
-	padding: 1rem;
-`;
-
-const CropModal = styled.section`
-	width: min(100%, 38rem);
-	border: 0.0625rem solid #eeb38d;
-	border-radius: 1rem;
-	background: #e8e2de;
-	padding: 1rem;
-	box-shadow: 0 1.25rem 3rem rgb(4 18 26 / 0.18);
-`;
-
-const CropModalTitle = styled.h3`
-	margin: 0 0 0.8rem;
-	color: ${theme.colors.foreground};
-	font-family: ${theme.fonts.serif};
-	font-size: 1.25rem;
-	line-height: 1.2;
-`;
-
-const CropModalActions = styled.div`
-	display: flex;
-	justify-content: flex-end;
-	gap: 0.75rem;
-	margin-top: 1rem;
 `;
 
 const NewCollectionFields = styled.div`
