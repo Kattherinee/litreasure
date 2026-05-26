@@ -3,6 +3,9 @@ export interface IGenre {
 	name: string;
 	slug: string;
 	bookCount?: number;
+	category?: string;
+	group?: string;
+	isSaved?: boolean;
 }
 
 export interface IGenreGroup {

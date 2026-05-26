@@ -5,21 +5,17 @@ import styled from "styled-components";
 
 import AuthModal, { type IAuthModalMode } from "@/components/pages/AuthModal";
 import {
-	ChevronIcon,
-	DropdownButton,
-	DropdownField,
-	DropdownMenu,
-	DropdownMenuItem,
-	DropdownValue,
-	FilterLabel,
+	ClearFilterButton,
+	FilterChip,
+	FilterChips,
+	FilterEmpty,
 	Filters,
-	ModeButton,
-	ModeField,
-	ModeSwitch,
-	ResultsBadge,
-	ResultsNumber,
-	ResultsText,
-} from "@/components/pages/AuthorsFilters";
+	ModeFilter,
+	ResultsFilterBadge,
+	SearchDropdownFilter,
+	SelectFilter,
+	SelectedFilters,
+} from "@/components/pages/filters/AppFilters";
 import {
 	type ICollectionFilterMode,
 	type ICollectionSort,
@@ -204,247 +200,142 @@ const CollectionsPage = () => {
 
 			<Content>
 				<CollectionFilters ref={filtersRef}>
-					<DropdownField>
-						<FilterLabel>Сортировка</FilterLabel>
-						<DropdownButton
-							aria-expanded={isSortOpen}
-							type="button"
-							onClick={() => {
-								setIsSortOpen((current) => !current);
-								setIsTagsOpen(false);
-								setIsGenresOpen(false);
-							}}
-						>
-							<DropdownValue>{selectedSortOption.label}</DropdownValue>
-							<ChevronIcon $isOpen={isSortOpen} aria-hidden="true" />
-						</DropdownButton>
-						<DropdownMenu $isOpen={isSortOpen}>
-							{sortOptions.map((option) => (
-								<DropdownMenuItem
-									key={option.value}
-									$isSelected={option.value === sort}
-									type="button"
-									onClick={() => {
-										handleFilterChange(() => setSort(option.value));
-										setIsSortOpen(false);
-									}}
-								>
-									{option.label}
-								</DropdownMenuItem>
-							))}
-						</DropdownMenu>
-					</DropdownField>
+					<SelectFilter
+						isOpen={isSortOpen}
+						label="Сортировка"
+						options={sortOptions}
+						value={sort}
+						valueLabel={selectedSortOption.label}
+						onSelect={(value) => {
+							handleFilterChange(() => setSort(value));
+							setIsSortOpen(false);
+						}}
+						onToggle={() => {
+							setIsSortOpen((current) => !current);
+							setIsTagsOpen(false);
+							setIsGenresOpen(false);
+						}}
+					/>
 
-					<DropdownField>
-						<FilterLabel>Теги</FilterLabel>
-						<SearchDropdownField
-							$isOpen={isTagsOpen}
-							onClick={() => {
-								setIsTagsOpen(true);
-								setIsSortOpen(false);
-								setIsGenresOpen(false);
-							}}
-						>
-							<InlineSearchInput
-								aria-label="Найти тег"
-								placeholder={selectedTagLabels || "Найти тег"}
-								value={tagSearch}
-								onChange={(event) => {
-									setTagSearch(event.target.value);
-									setIsTagsOpen(true);
-								}}
-								onFocus={() => {
-									setIsTagsOpen(true);
-									setIsSortOpen(false);
-									setIsGenresOpen(false);
-								}}
-							/>
-							<ChevronIcon $isOpen={isTagsOpen} aria-hidden="true" />
-						</SearchDropdownField>
-						<FilterMenu $isOpen={isTagsOpen}>
-							<FilterChips>
-								<FilterChip
-									$isSelected={selectedTags.length === 0}
-									type="button"
-									onClick={() => handleFilterChange(() => setSelectedTags([]))}
-								>
-									Все
-								</FilterChip>
-								{visibleTagSuggestions.length > 0 ? (
-									visibleTagSuggestions.map((tag) => (
-										<FilterChip
-											key={tag}
-											$isSelected={selectedTags.includes(tag)}
-											type="button"
-											onClick={() => toggleTag(tag)}
-										>
-											{tag}
-										</FilterChip>
-									))
-								) : (
-									<FilterEmpty>Ничего не найдено</FilterEmpty>
-								)}
-							</FilterChips>
-							{selectedTags.length > 0 ? (
-								<ClearFilterButton
-									type="button"
-									onClick={() => handleFilterChange(() => setSelectedTags([]))}
-								>
-									Очистить
-								</ClearFilterButton>
-							) : null}
-						</FilterMenu>
-					</DropdownField>
-
-					<ModeField>
-						<FilterLabel>Режим тегов</FilterLabel>
-						<ModeSwitch>
-							{modeOptions.map((option) => (
-								<ModeButton
-									key={option.value}
-									$isActive={tagMode === option.value}
-									type="button"
-									onClick={() =>
-										handleFilterChange(() => setTagMode(option.value))
-									}
-								>
-									{option.label}
-								</ModeButton>
-							))}
-						</ModeSwitch>
-					</ModeField>
-
-					<DropdownField>
-						<FilterLabel>Жанры</FilterLabel>
-						<SearchDropdownField
-							$isOpen={isGenresOpen}
-							onClick={() => {
-								setIsGenresOpen(true);
-								setIsSortOpen(false);
-								setIsTagsOpen(false);
-							}}
-						>
-							<InlineSearchInput
-								aria-label="Найти жанр"
-								placeholder={selectedGenreLabels || "Найти жанр"}
-								value={genreSearch}
-								onChange={(event) => {
-									setGenreSearch(event.target.value);
-									setIsGenresOpen(true);
-								}}
-								onFocus={() => {
-									setIsGenresOpen(true);
-									setIsSortOpen(false);
-									setIsTagsOpen(false);
-								}}
-							/>
-							<ChevronIcon $isOpen={isGenresOpen} aria-hidden="true" />
-						</SearchDropdownField>
-						<FilterMenu $isOpen={isGenresOpen}>
-							<FilterChips>
-								<FilterChip
-									$isSelected={selectedGenres.length === 0}
-									type="button"
-									onClick={() =>
-										handleFilterChange(() => setSelectedGenres([]))
-									}
-								>
-									Все
-								</FilterChip>
-								{visibleGenreSuggestions.length > 0 ? (
-									visibleGenreSuggestions.map((genre) => (
-										<FilterChip
-											key={genre.id}
-											$isSelected={selectedGenres.includes(genre.slug)}
-											type="button"
-											onClick={() => toggleGenre(genre.slug)}
-										>
-											{genre.name}
-										</FilterChip>
-									))
-								) : (
-									<FilterEmpty>Ничего не найдено</FilterEmpty>
-								)}
-							</FilterChips>
-							{selectedGenres.length > 0 ? (
-								<ClearFilterButton
-									type="button"
-									onClick={() =>
-										handleFilterChange(() => setSelectedGenres([]))
-									}
-								>
-									Очистить
-								</ClearFilterButton>
-							) : null}
-						</FilterMenu>
-					</DropdownField>
-
-					<ModeField>
-						<FilterLabel>Режим жанров</FilterLabel>
-						<ModeSwitch>
-							{modeOptions.map((option) => (
-								<ModeButton
-									key={option.value}
-									$isActive={genreMode === option.value}
-									type="button"
-									onClick={() =>
-										handleFilterChange(() => setGenreMode(option.value))
-									}
-								>
-									{option.label}
-								</ModeButton>
-							))}
-						</ModeSwitch>
-					</ModeField>
-
-					<ResultsBadge aria-label={`Найдено подборок: ${total}`}>
-						<ResultsNumber>{total}</ResultsNumber>
-						<ResultsText>подборок</ResultsText>
-					</ResultsBadge>
-					{selectedTags.length > 0 ? (
-						<SelectedFiltersRow>
-							{selectedTags.map((tag) => (
-								<SelectedFilterChip key={tag}>
-									<span>{tag}</span>
-									<RemoveFilterButton
-										aria-label={`Убрать тег ${tag}`}
-										type="button"
-										onClick={() => toggleTag(tag)}
-									>
-										×
-									</RemoveFilterButton>
-								</SelectedFilterChip>
-							))}
-							<ClearSelectedFiltersButton
+					<SearchDropdownFilter
+						ariaLabel="Найти тег"
+						isOpen={isTagsOpen}
+						label="Теги"
+						placeholder={selectedTagLabels || "Найти тег"}
+						searchValue={tagSearch}
+						onOpen={() => {
+							setIsTagsOpen(true);
+							setIsSortOpen(false);
+							setIsGenresOpen(false);
+						}}
+						onSearchChange={setTagSearch}
+					>
+						<FilterChips>
+							<FilterChip
+								$isSelected={selectedTags.length === 0}
 								type="button"
 								onClick={() => handleFilterChange(() => setSelectedTags([]))}
 							>
-								Очистить все
-							</ClearSelectedFiltersButton>
-						</SelectedFiltersRow>
-					) : null}
-					{selectedGenreItems.length > 0 ? (
-						<SelectedFiltersRow>
-							{selectedGenreItems.map((genre) => (
-								<SelectedFilterChip key={genre.value}>
-									<span>{genre.label}</span>
-									<RemoveFilterButton
-										aria-label={`Убрать жанр ${genre.label}`}
+								Все
+							</FilterChip>
+							{visibleTagSuggestions.length > 0 ? (
+								visibleTagSuggestions.map((tag) => (
+									<FilterChip
+										key={tag}
+										$isSelected={selectedTags.includes(tag)}
 										type="button"
-										onClick={() => toggleGenre(genre.value)}
+										onClick={() => toggleTag(tag)}
 									>
-										×
-									</RemoveFilterButton>
-								</SelectedFilterChip>
-							))}
-							<ClearSelectedFiltersButton
+										{tag}
+									</FilterChip>
+								))
+							) : (
+								<FilterEmpty>Ничего не найдено</FilterEmpty>
+							)}
+						</FilterChips>
+						{selectedTags.length > 0 ? (
+							<ClearFilterButton
+								type="button"
+								onClick={() => handleFilterChange(() => setSelectedTags([]))}
+							>
+								Очистить
+							</ClearFilterButton>
+						) : null}
+					</SearchDropdownFilter>
+
+					<ModeFilter
+						label="Режим тегов"
+						options={modeOptions}
+						value={tagMode}
+						onChange={(value) => handleFilterChange(() => setTagMode(value))}
+					/>
+
+					<SearchDropdownFilter
+						ariaLabel="Найти жанр"
+						isOpen={isGenresOpen}
+						label="Жанры"
+						placeholder={selectedGenreLabels || "Найти жанр"}
+						searchValue={genreSearch}
+						onOpen={() => {
+							setIsGenresOpen(true);
+							setIsSortOpen(false);
+							setIsTagsOpen(false);
+						}}
+						onSearchChange={setGenreSearch}
+					>
+						<FilterChips>
+							<FilterChip
+								$isSelected={selectedGenres.length === 0}
 								type="button"
 								onClick={() => handleFilterChange(() => setSelectedGenres([]))}
 							>
-								Очистить все
-							</ClearSelectedFiltersButton>
-						</SelectedFiltersRow>
-					) : null}
+								Все
+							</FilterChip>
+							{visibleGenreSuggestions.length > 0 ? (
+								visibleGenreSuggestions.map((genre) => (
+									<FilterChip
+										key={genre.id}
+										$isSelected={selectedGenres.includes(genre.slug)}
+										type="button"
+										onClick={() => toggleGenre(genre.slug)}
+									>
+										{genre.name}
+									</FilterChip>
+								))
+							) : (
+								<FilterEmpty>Ничего не найдено</FilterEmpty>
+							)}
+						</FilterChips>
+						{selectedGenres.length > 0 ? (
+							<ClearFilterButton
+								type="button"
+								onClick={() => handleFilterChange(() => setSelectedGenres([]))}
+							>
+								Очистить
+							</ClearFilterButton>
+						) : null}
+					</SearchDropdownFilter>
+
+					<ModeFilter
+						label="Режим жанров"
+						options={modeOptions}
+						value={genreMode}
+						onChange={(value) => handleFilterChange(() => setGenreMode(value))}
+					/>
+
+					<ResultsFilterBadge label="подборок" total={total} />
+					<SelectedFilters
+						items={selectedTags.map((tag) => ({ label: tag, value: tag }))}
+						removeAriaLabel={(label) => `Убрать тег ${label}`}
+						onClear={() => handleFilterChange(() => setSelectedTags([]))}
+						onRemove={toggleTag}
+					/>
+					<SelectedFilters
+						items={selectedGenreItems}
+						removeAriaLabel={(label) => `Убрать жанр ${label}`}
+						onClear={() => handleFilterChange(() => setSelectedGenres([]))}
+						onRemove={toggleGenre}
+					/>
 				</CollectionFilters>
 				{isLoading ? (
 					<CollectionList aria-label="Загружаем подборки">
@@ -565,166 +456,6 @@ const CollectionFilters = styled(Filters)`
 
 	@media (max-width: 40rem) {
 		grid-template-columns: 1fr;
-	}
-`;
-
-const FilterMenu = styled(DropdownMenu)`
-	width: min(28rem, calc(100vw - 2rem));
-`;
-
-const SearchDropdownField = styled.div<{ $isOpen: boolean }>`
-	display: flex;
-	width: 100%;
-	min-height: 2.35rem;
-	align-items: center;
-	gap: 0.5rem;
-	border: 0.0625rem solid
-		${({ $isOpen }) =>
-			$isOpen ? theme.colors.orangeLight : "rgb(211 202 196 / 0.7)"};
-	border-radius: 0.75rem;
-	background: ${({ $isOpen }) =>
-		$isOpen ? theme.colors.white : "rgb(242 239 237 / 0.58)"};
-	padding: 0 0.7rem;
-	color: ${theme.colors.foreground};
-	cursor: text;
-	transition:
-		background 160ms ease,
-		border-color 160ms ease;
-
-	&:hover,
-	&:focus-within {
-		border-color: ${theme.colors.orangeLight};
-		background: ${theme.colors.white};
-	}
-`;
-
-const InlineSearchInput = styled.input`
-	min-width: 0;
-	flex: 1;
-	border: 0;
-	background: transparent;
-	padding: 0;
-	color: ${theme.colors.foreground};
-	font: inherit;
-	font-size: 0.9rem;
-	outline: none;
-
-	&::placeholder {
-		color: ${theme.colors.foreground};
-		opacity: 1;
-	}
-`;
-
-const FilterChips = styled.div`
-	display: flex;
-	max-height: 11rem;
-	flex-wrap: wrap;
-	gap: 0.38rem;
-	overflow-y: auto;
-	padding-right: 0.2rem;
-`;
-
-const FilterChip = styled.button<{ $isSelected: boolean }>`
-	border: 0.0625rem solid
-		${({ $isSelected }) =>
-			$isSelected ? "rgb(218 142 91 / 0.6)" : "rgb(211 202 196 / 0.72)"};
-	border-radius: 62.4375rem;
-	background: ${({ $isSelected }) =>
-		$isSelected ? "rgb(218 142 91 / 0.18)" : "rgb(255 255 255 / 0.58)"};
-	padding: 0.34rem 0.66rem;
-	color: ${({ $isSelected }) => ($isSelected ? "#d4641c" : "#233d4d")};
-	cursor: pointer;
-	font: inherit;
-	font-size: 0.82rem;
-	font-weight: 700;
-	line-height: 1;
-
-	&:hover,
-	&:focus-visible {
-		border-color: ${theme.colors.orangeLight};
-		background: rgb(218 142 91 / 0.14);
-		color: #d4641c;
-		outline: none;
-	}
-`;
-
-const FilterEmpty = styled.span`
-	padding: 0.35rem 0.2rem;
-	color: ${theme.colors.softForeground};
-	font-size: 0.85rem;
-`;
-
-const ClearFilterButton = styled.button`
-	border: 0;
-	background: transparent;
-	padding: 0.55rem 0.2rem 0.1rem;
-	color: #d4641c;
-	cursor: pointer;
-	font: inherit;
-	font-size: 0.84rem;
-	font-weight: 700;
-`;
-
-const SelectedFiltersRow = styled.div`
-	display: flex;
-	flex-wrap: wrap;
-	grid-column: 1 / -1;
-	gap: 0.4rem;
-	align-items: center;
-	margin-top: -0.15rem;
-`;
-
-const SelectedFilterChip = styled.span`
-	display: inline-flex;
-	align-items: center;
-	gap: 0.35rem;
-	border: 0.0625rem solid rgb(218 142 91 / 0.32);
-	border-radius: 62.4375rem;
-	background: rgb(218 142 91 / 0.12);
-	padding: 0.32rem 0.42rem 0.32rem 0.68rem;
-	color: ${theme.colors.orangeDark};
-	font-size: 0.82rem;
-	font-weight: 700;
-	line-height: 1;
-`;
-
-const RemoveFilterButton = styled.button`
-	display: inline-flex;
-	width: 1rem;
-	height: 1rem;
-	align-items: center;
-	justify-content: center;
-	border: 0;
-	border-radius: 50%;
-	background: rgb(212 100 28 / 0.16);
-	color: ${theme.colors.orangeDark};
-	cursor: pointer;
-	font: inherit;
-	font-size: 0.9rem;
-	line-height: 1;
-	padding: 0;
-
-	&:hover,
-	&:focus-visible {
-		background: rgb(212 100 28 / 0.24);
-		outline: none;
-	}
-`;
-
-const ClearSelectedFiltersButton = styled.button`
-	border: 0;
-	background: transparent;
-	padding: 0.25rem 0.2rem;
-	color: ${theme.colors.softForeground};
-	cursor: pointer;
-	font: inherit;
-	font-size: 0.82rem;
-	font-weight: 700;
-
-	&:hover,
-	&:focus-visible {
-		color: ${theme.colors.orangeDark};
-		outline: none;
 	}
 `;
 

@@ -1,18 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import styled from "styled-components";
 
 import { useGenresByCategoryQuery } from "@/shared/api/genres";
 import { theme } from "@/shared/theme";
 import { InputField } from "@/shared/ui/InputField";
 
-import {
-	StepBody,
-	StepDescription,
-	StepTitle,
-	StepTitleRow,
-} from "./stepStyles";
+import { StepBody } from "./stepStyles";
 import { MIN_SELECTED_GENRES } from "./types";
 
 interface IGenresStepProps {
@@ -32,17 +27,37 @@ export const GenresStep = ({ selectedGenres, onToggle }: IGenresStepProps) => {
 	);
 	const [genreSearch, setGenreSearch] = useState("");
 	const [selectedGroupKeys, setSelectedGroupKeys] = useState<string[]>([]);
+	const [areRecommendationsOpen, setAreRecommendationsOpen] = useState(true);
+	const selectedGenresRowRef = useRef<HTMLDivElement | null>(null);
+	const [selectedRowFade, setSelectedRowFade] = useState({
+		left: false,
+		right: false,
+	});
 	const normalizedSearch = genreSearch.trim().toLowerCase();
 
 	const filteredGroups = useMemo(() => {
-		if (!normalizedSearch) return genreGroups;
-
-		return genreGroups
+		const groupsWithBooks = genreGroups
 			.map((group) => ({
 				...group,
-				genres: group.genres.filter((genre) =>
-					genre.name.toLowerCase().includes(normalizedSearch),
-				),
+				genres: [...group.genres]
+					.filter((genre) => !genre.bookCount || genre.bookCount > 0)
+					.sort((first, second) => first.name.localeCompare(second.name)),
+			}))
+			.filter((group) => group.genres.length > 0)
+			.sort((first, second) => first.name.localeCompare(second.name));
+
+		if (!normalizedSearch) return groupsWithBooks;
+
+		return groupsWithBooks
+			.map((group) => ({
+				...group,
+				genres:
+					group.name.toLowerCase().includes(normalizedSearch) ||
+					group.category.toLowerCase().includes(normalizedSearch)
+						? group.genres
+						: group.genres.filter((genre) =>
+								genre.name.toLowerCase().includes(normalizedSearch),
+							),
 			}))
 			.filter(
 				(group) =>
@@ -52,12 +67,7 @@ export const GenresStep = ({ selectedGenres, onToggle }: IGenresStepProps) => {
 			);
 	}, [genreGroups, normalizedSearch]);
 
-	const visibleGroupKeys =
-		selectedGroupKeys.length > 0
-			? selectedGroupKeys
-			: filteredGroups[0]?.key
-				? [filteredGroups[0].key]
-				: [];
+	const visibleGroupKeys = selectedGroupKeys;
 	const activeGroups = visibleGroupKeys
 		.map((key) => filteredGroups.find((group) => group.key === key))
 		.filter((group): group is NonNullable<typeof group> => Boolean(group));
@@ -67,7 +77,7 @@ export const GenresStep = ({ selectedGenres, onToggle }: IGenresStepProps) => {
 				.flatMap((group) => group.genres)
 				.map((genre) => [genre.slug, genre]),
 		).values(),
-	);
+	).sort((first, second) => first.name.localeCompare(second.name));
 	const allGenresFlat = useMemo(
 		() =>
 			Array.from(
@@ -88,42 +98,65 @@ export const GenresStep = ({ selectedGenres, onToggle }: IGenresStepProps) => {
 		);
 	};
 
+	const updateSelectedRowFade = useCallback(() => {
+		const row = selectedGenresRowRef.current;
+		if (!row) {
+			setSelectedRowFade({ left: false, right: false });
+			return;
+		}
+
+		const maxScrollLeft = row.scrollWidth - row.clientWidth;
+		setSelectedRowFade({
+			left: row.scrollLeft > 2,
+			right: maxScrollLeft - row.scrollLeft > 2,
+		});
+	}, []);
+
+	useEffect(() => {
+		const frameId = window.requestAnimationFrame(updateSelectedRowFade);
+		window.addEventListener("resize", updateSelectedRowFade);
+
+		return () => {
+			window.cancelAnimationFrame(frameId);
+			window.removeEventListener("resize", updateSelectedRowFade);
+		};
+	}, [selectedGenres, updateSelectedRowFade]);
+
 	return (
 		<StepBody>
-			<StepTitleRow>
-				<StepTitle>Жанры</StepTitle>
+			<SelectedSummaryRow>
+				{selectedGenres.length > 0 ? (
+					<SelectedGenresCarousel
+						$showLeftFade={selectedRowFade.left}
+						$showRightFade={selectedRowFade.right}
+					>
+						<SelectedGenresRow
+							ref={selectedGenresRowRef}
+							aria-label="Выбранные жанры"
+							onScroll={updateSelectedRowFade}
+						>
+							{selectedGenres.map((slug) => {
+								const genre = allGenresFlat.find((item) => item.slug === slug);
+								return genre ? (
+									<SelectedChip
+										key={slug}
+										type="button"
+										onClick={() => onToggle(slug)}
+									>
+										{genre.name}
+										<ChipX>x</ChipX>
+									</SelectedChip>
+								) : null;
+							})}
+						</SelectedGenresRow>
+					</SelectedGenresCarousel>
+				) : (
+					<SelectedPlaceholder>Выбранные жанры появятся здесь</SelectedPlaceholder>
+				)}
 				<GenreCount>
 					{selectedGenres.length} / {MIN_SELECTED_GENRES} мин.
 				</GenreCount>
-			</StepTitleRow>
-			<StepDescription>
-				Выбери минимум {MIN_SELECTED_GENRES} жанров, которые тебе нравятся.
-				Сначала открой одну или несколько групп, затем отметь жанры внутри.
-			</StepDescription>
-
-			{selectedGenres.length > 0 ? (
-				<SelectedGenresRow>
-					{selectedGenres.map((slug) => {
-						const genre = allGenresFlat.find((item) => item.slug === slug);
-						return genre ? (
-							<SelectedChip
-								key={slug}
-								type="button"
-								onClick={() => onToggle(slug)}
-							>
-								{genre.name}
-								<ChipX>x</ChipX>
-							</SelectedChip>
-						) : null;
-					})}
-				</SelectedGenresRow>
-			) : null}
-
-			<GenreSearchInput
-				placeholder="Поиск жанра..."
-				value={genreSearch}
-				onChange={(event) => setGenreSearch(event.target.value)}
-			/>
+			</SelectedSummaryRow>
 
 			<GenrePicker>
 				<PanelLabel>Группы жанров</PanelLabel>
@@ -145,46 +178,23 @@ export const GenresStep = ({ selectedGenres, onToggle }: IGenresStepProps) => {
 									{hasSelected ? <ColDot /> : null}
 									{group.name}
 								</GroupName>
-								<GroupMeta>
-									{group.category}
-									{group.bookCount ? ` · ${group.bookCount}` : ""}
-								</GroupMeta>
 							</GroupButton>
 						);
 					})}
 				</GroupsRail>
 
 				<GenrePanel>
-					<PanelLabel>
-						{activeGroups.length > 1
-							? "Жанры в выбранных группах"
-							: activeGroups[0]?.name || "Жанры"}
-					</PanelLabel>
-					<GenrePillsWrap>
-						{visibleGenres.map((genre) => {
-							const isSelected = selectedGenres.includes(genre.slug);
-
-							return (
-								<GenreButton
-									key={genre.id}
-									type="button"
-									$isSelected={isSelected}
-									onClick={() => onToggle(genre.slug)}
-								>
-									{genre.name}
-								</GenreButton>
-							);
-						})}
-					</GenrePillsWrap>
-				</GenrePanel>
-
-				{recommendations.length > 0 ? (
-					<GenrePanel>
-						<PanelLabel>
-							Если нравятся эти жанры, могут понравиться и эти
-						</PanelLabel>
-						<GenrePillsWrap>
-							{recommendations.map((genre) => {
+					<GenrePanelHeader>
+						<PanelLabel>Жанры в выбранных группах</PanelLabel>
+						<InlineSearchInput
+							placeholder="Поиск жанра..."
+							value={genreSearch}
+							onChange={(event) => setGenreSearch(event.target.value)}
+						/>
+					</GenrePanelHeader>
+					{visibleGenres.length > 0 ? (
+						<ScrollableGenrePillsWrap>
+							{visibleGenres.map((genre) => {
 								const isSelected = selectedGenres.includes(genre.slug);
 
 								return (
@@ -198,13 +208,59 @@ export const GenresStep = ({ selectedGenres, onToggle }: IGenresStepProps) => {
 									</GenreButton>
 								);
 							})}
-						</GenrePillsWrap>
-					</GenrePanel>
+						</ScrollableGenrePillsWrap>
+					) : (
+						<GenreEmpty>Выбери одну или несколько групп выше.</GenreEmpty>
+					)}
+				</GenrePanel>
+
+				{recommendations.length > 0 ? (
+					<RecommendationPanel>
+						<RecommendationHeader>
+							<PanelLabel>
+								Если нравятся эти жанры, могут понравиться и эти
+							</PanelLabel>
+							<ToggleRecommendationsButton
+								type="button"
+								onClick={() =>
+									setAreRecommendationsOpen((current) => !current)
+								}
+							>
+								{areRecommendationsOpen ? "Скрыть" : "Показать"}
+							</ToggleRecommendationsButton>
+						</RecommendationHeader>
+						{areRecommendationsOpen ? (
+							<RecommendationPillsWrap>
+								{recommendations.map((genre) => {
+									const isSelected = selectedGenres.includes(genre.slug);
+
+									return (
+										<GenreButton
+											key={genre.id}
+											type="button"
+											$isSelected={isSelected}
+											onClick={() => onToggle(genre.slug)}
+										>
+											{genre.name}
+										</GenreButton>
+									);
+								})}
+							</RecommendationPillsWrap>
+						) : null}
+					</RecommendationPanel>
 				) : null}
 			</GenrePicker>
 		</StepBody>
 	);
 };
+
+const SelectedSummaryRow = styled.div`
+	display: flex;
+	min-width: 0;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+`;
 
 const GenreCount = styled.span`
 	color: ${theme.colors.softForeground};
@@ -212,10 +268,51 @@ const GenreCount = styled.span`
 	white-space: nowrap;
 `;
 
+const SelectedGenresCarousel = styled.div<{
+	$showLeftFade: boolean;
+	$showRightFade: boolean;
+}>`
+	position: relative;
+	min-width: 0;
+	flex: 1 1 auto;
+
+	&::before,
+	&::after {
+		position: absolute;
+		z-index: 1;
+		top: 0;
+		bottom: 0;
+		width: 1.2rem;
+		pointer-events: none;
+		content: "";
+		opacity: 0;
+		transition: opacity 120ms ease;
+	}
+
+	&::before {
+		left: 0;
+		background: linear-gradient(90deg, ${theme.colors.background}, transparent);
+		opacity: ${({ $showLeftFade }) => ($showLeftFade ? 1 : 0)};
+	}
+
+	&::after {
+		right: 0;
+		background: linear-gradient(270deg, ${theme.colors.background}, transparent);
+		opacity: ${({ $showRightFade }) => ($showRightFade ? 1 : 0)};
+	}
+`;
+
 const SelectedGenresRow = styled.div`
 	display: flex;
-	flex-wrap: wrap;
+	min-width: 0;
+	flex-wrap: nowrap;
 	gap: 0.4rem;
+	overflow-x: auto;
+	scrollbar-width: none;
+
+	&::-webkit-scrollbar {
+		display: none;
+	}
 `;
 
 const SelectedChip = styled.button`
@@ -228,6 +325,7 @@ const SelectedChip = styled.button`
 	padding: 0.2rem 0.55rem 0.2rem 0.7rem;
 	color: #da8e5b;
 	cursor: pointer;
+	flex: 0 0 auto;
 	font: inherit;
 	font-size: 0.8125rem;
 	font-weight: 600;
@@ -245,10 +343,22 @@ const ChipX = styled.span`
 	line-height: 1;
 `;
 
-const GenreSearchInput = styled(InputField)`
+const SelectedPlaceholder = styled.span`
+	min-width: 0;
+	flex: 1 1 auto;
+	color: ${theme.colors.softForeground};
+	font-size: 0.86rem;
+	opacity: 0.72;
+`;
+
+const InlineSearchInput = styled(InputField)`
 	&& {
+		width: min(100%, 18rem);
+		min-height: 2rem;
+		flex: 0 1 18rem;
 		background: rgb(35 61 77 / 0.07);
 		border-color: rgb(35 61 77 / 0.18);
+		font-size: 0.88rem;
 
 		&:hover,
 		&:focus {
@@ -259,51 +369,38 @@ const GenreSearchInput = styled(InputField)`
 `;
 
 const GenrePicker = styled.div`
-	display: grid;
-	gap: 0.75rem;
+	display: flex;
+	min-height: 0;
+	flex-direction: column;
+	gap: 0.65rem;
 	border: 0.0625rem solid rgb(186 183 180 / 0.5);
 	border-radius: 0.5rem;
-	padding: 0.65rem;
+	padding: 0.65rem 0.65rem 0.9rem;
 `;
 
 const GroupsRail = styled.div`
 	display: flex;
-	gap: 0.55rem;
-	overflow-x: auto;
-	padding-bottom: 0.2rem;
-
-	&::-webkit-scrollbar {
-		height: 0.25rem;
-	}
-
-	&::-webkit-scrollbar-track {
-		background: transparent;
-	}
-
-	&::-webkit-scrollbar-thumb {
-		background: rgb(186 183 180 / 0.5);
-		border-radius: 999px;
-	}
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	align-items: center;
 `;
 
 const GroupButton = styled.button<{ $isActive: boolean }>`
-	display: flex;
-	min-width: 12rem;
-	max-width: 15rem;
+	display: inline-flex;
 	flex: 0 0 auto;
-	flex-direction: column;
-	align-items: flex-start;
+	align-items: center;
 	gap: 0.25rem;
 	border: 0.0625rem solid
 		${({ $isActive }) => ($isActive ? "#da8e5b" : "rgb(186 183 180 / 0.45)")};
-	border-radius: 0.55rem;
+	border-radius: 999px;
 	background: ${({ $isActive }) =>
 		$isActive ? "rgb(218 142 91 / 0.12)" : "rgb(242 239 237 / 0.42)"};
-	padding: 0.65rem 0.75rem;
+	padding: 0.38rem 0.8rem;
 	color: ${({ $isActive }) =>
 		$isActive ? "#da8e5b" : theme.colors.foreground};
 	cursor: pointer;
 	font: inherit;
+	font-size: 0.84rem;
 	text-align: left;
 	transition:
 		background 150ms,
@@ -320,15 +417,8 @@ const GroupName = styled.span`
 	display: flex;
 	align-items: center;
 	gap: 0.4rem;
-	font-size: 0.9rem;
-	font-weight: 700;
+	font-weight: 500;
 	line-height: 1.2;
-`;
-
-const GroupMeta = styled.span`
-	color: ${theme.colors.softForeground};
-	font-size: 0.72rem;
-	line-height: 1.25;
 `;
 
 const ColDot = styled.span`
@@ -341,7 +431,21 @@ const ColDot = styled.span`
 
 const GenrePanel = styled.div`
 	display: grid;
+	min-height: 0;
 	gap: 0.45rem;
+`;
+
+const GenrePanelHeader = styled.div`
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+
+	@media (max-width: 42rem) {
+		align-items: flex-start;
+		flex-direction: column;
+		gap: 0.5rem;
+	}
 `;
 
 const PanelLabel = styled.h3`
@@ -360,7 +464,86 @@ const GenrePillsWrap = styled.div`
 	padding: 0.25rem 0;
 `;
 
+const RecommendationPanel = styled(GenrePanel)`
+	border-top: 0.0625rem solid rgb(186 183 180 / 0.36);
+	padding-top: 0.35rem;
+`;
+
+const RecommendationHeader = styled.div`
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+`;
+
+const ToggleRecommendationsButton = styled.button`
+	border: 0.0625rem solid rgb(218 142 91 / 0.32);
+	border-radius: 999px;
+	background: rgb(218 142 91 / 0.08);
+	color: #da8e5b;
+	cursor: pointer;
+	font: inherit;
+	font-size: 0.78rem;
+	font-weight: 600;
+	padding: 0.28rem 0.65rem;
+	white-space: nowrap;
+
+	&:hover,
+	&:focus-visible {
+		background: rgb(218 142 91 / 0.15);
+		outline: none;
+	}
+`;
+
+const RecommendationPillsWrap = styled(GenrePillsWrap)`
+	flex-wrap: nowrap;
+	overflow-x: auto;
+	padding-bottom: 0.35rem;
+	scrollbar-width: thin;
+	scrollbar-color: rgb(218 142 91 / 0.42) transparent;
+
+	&::-webkit-scrollbar {
+		height: 0.22rem;
+	}
+
+	&::-webkit-scrollbar-track {
+		background: transparent;
+	}
+
+	&::-webkit-scrollbar-thumb {
+		background: rgb(218 142 91 / 0.38);
+		border-radius: 999px;
+	}
+`;
+
+const ScrollableGenrePillsWrap = styled(GenrePillsWrap)`
+	max-height: clamp(9rem, calc(100dvh - 31rem), 18rem);
+	overflow-y: auto;
+	padding: 0.25rem 0.25rem 0.7rem 0;
+
+	&::-webkit-scrollbar {
+		width: 0.25rem;
+	}
+
+	&::-webkit-scrollbar-track {
+		background: transparent;
+	}
+
+	&::-webkit-scrollbar-thumb {
+		background: rgb(218 142 91 / 0.45);
+		border-radius: 999px;
+	}
+`;
+
+const GenreEmpty = styled.p`
+	margin: 0;
+	color: ${theme.colors.softForeground};
+	font-size: 0.82rem;
+	line-height: 1.4;
+`;
+
 const GenreButton = styled.button<{ $isSelected: boolean }>`
+	flex: 0 0 auto;
 	border: 0.0625rem solid
 		${({ $isSelected }) => ($isSelected ? "#da8e5b" : theme.colors.border)};
 	border-radius: 999px;

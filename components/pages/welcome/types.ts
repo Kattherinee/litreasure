@@ -27,6 +27,7 @@ export const STEP_IMAGES: Record<IWelcomeStep, string> = {
 export const STEP_SUBTITLES: Record<IWelcomeStep, string> = {
 	profile: "Каждая история начинается с имени",
 	avatar: "",
-	genres: "",
+	genres:
+		"Выбери минимум 5 жанров, которые тебе нравятся. Сначала открой одну или несколько групп, затем отметь жанры внутри.",
 	goal: "Читай больше. Живи глубже.",
 };

@@ -1,5 +1,29 @@
 export type IChallengePeriodType = "month" | "week" | "year";
-export type IChallengeType = "books";
+export type IChallengeType = "books" | "pages";
+
+export interface IBookChallengeProgressSegment {
+	percent: number;
+	remaining: number;
+	target: number;
+}
+
+export interface IBookChallengeProgress {
+	time: {
+		elapsedDays: number;
+		totalDays: number;
+		remainingDays: number;
+		percent: number;
+		isStarted: boolean;
+		isFinished: boolean;
+	};
+	books: IBookChallengeProgressSegment & {
+		finished: number;
+	};
+	value: IBookChallengeProgressSegment & {
+		current: number;
+		unit: IChallengeType;
+	};
+}
 
 export interface IBookChallenge {
 	id: string;
@@ -9,6 +33,7 @@ export interface IBookChallenge {
 	startDate: string;
 	endDate: string;
 	isActive: boolean;
+	progress?: IBookChallengeProgress;
 }
 
 export interface ICreateBookChallengePayload {
@@ -21,3 +46,10 @@ export interface ICreateBookChallengePayload {
 }
 
 export type IUpdateBookChallengePayload = Partial<ICreateBookChallengePayload>;
+
+export interface IAverageBookChallenge {
+	period: IChallengePeriodType;
+	averageTargetValue: number;
+	usersCount: number;
+	challengesCount: number;
+}

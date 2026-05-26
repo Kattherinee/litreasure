@@ -51,7 +51,10 @@ const WelcomePage = () => {
 				onSkip={skipStep}
 			/>
 
-			<OnboardingForm onSubmit={(event) => event.preventDefault()}>
+			<OnboardingForm
+				$step={activeStep}
+				onSubmit={(event) => event.preventDefault()}
+			>
 				<WelcomeStepContent
 					activeStep={activeStep}
 					name={name}
@@ -87,11 +90,11 @@ const WelcomePage = () => {
 
 export default WelcomePage;
 
-const OnboardingForm = styled.form`
+const OnboardingForm = styled.form<{ $step: string }>`
 	display: flex;
 	flex-direction: column;
 	gap: 1.25rem;
-	margin-top: 2rem;
+	margin-top: ${({ $step }) => ($step === "genres" ? "0.75rem" : "2rem")};
 	min-height: 0;
 `;
 

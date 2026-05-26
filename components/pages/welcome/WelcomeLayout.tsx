@@ -20,7 +20,7 @@ export const WelcomeLayout = ({
 	<Page $step={activeStep}>
 		<PageInner $step={activeStep}>
 			<LeftPanel>
-				<LeftInner>
+				<LeftInner $step={activeStep}>
 					<LeftContent>
 						<LeftStep>
 							{String(activeStepIndex + 1).padStart(2, "0")} /{" "}
@@ -32,7 +32,7 @@ export const WelcomeLayout = ({
 						</LeftTitle>
 						<LeftSubtitle>{STEP_SUBTITLES[activeStep]}</LeftSubtitle>
 					</LeftContent>
-					<DragonImg alt="" src={STEP_IMAGES[activeStep]} />
+					<DragonImg $step={activeStep} alt="" src={STEP_IMAGES[activeStep]} />
 				</LeftInner>
 			</LeftPanel>
 
@@ -63,16 +63,19 @@ const PageInner = styled.div<{ $step: IWelcomeStep }>`
 	width: min(
 		100%,
 		${({ $step }) =>
-			$step === "genres" ? "82rem" : $step === "avatar" ? "72rem" : "58rem"}
+			$step === "genres" ? "94rem" : $step === "avatar" ? "72rem" : "58rem"}
 	);
 	grid-template-columns: ${({ $step }) =>
 		$step === "genres"
-			? "minmax(18rem, 25rem) minmax(0, 58rem)"
+			? "minmax(13rem, 19rem) minmax(0, 72rem)"
 			: $step === "avatar"
 				? "minmax(18rem, 25rem) minmax(0, 48rem)"
 				: "minmax(18rem, 25rem) minmax(0, 28rem)"};
 	align-items: center;
-	gap: clamp(2.25rem, 4.5vw, 4rem);
+	gap: ${({ $step }) =>
+		$step === "genres"
+			? "clamp(1.25rem, 3vw, 2.5rem)"
+			: "clamp(2.25rem, 4.5vw, 4rem)"};
 	padding: 2.5rem clamp(2rem, 5vw, 4rem);
 	transform: translateY(-4vh);
 	transition:
@@ -103,11 +106,11 @@ const LeftPanel = styled.div`
 	}
 `;
 
-const LeftInner = styled.div`
+const LeftInner = styled.div<{ $step: IWelcomeStep }>`
 	position: relative;
 	display: flex;
 	width: 100%;
-	max-width: 25rem;
+	max-width: ${({ $step }) => ($step === "genres" ? "19rem" : "25rem")};
 	flex-direction: column;
 	align-items: flex-start;
 	justify-content: center;
@@ -148,10 +151,11 @@ const LeftSubtitle = styled.p`
 	line-height: 1.4;
 `;
 
-const DragonImg = styled.img`
+const DragonImg = styled.img<{ $step: IWelcomeStep }>`
 	position: relative;
 	z-index: 1;
-	width: min(88%, 22rem);
+	width: ${({ $step }) =>
+		$step === "genres" ? "min(76%, 17rem)" : "min(88%, 22rem)"};
 	align-self: center;
 	object-fit: contain;
 	object-position: bottom;
@@ -177,7 +181,7 @@ const RightInner = styled.div<{ $step: IWelcomeStep }>`
 	flex-direction: column;
 	width: 100%;
 	max-width: ${({ $step }) =>
-		$step === "genres" ? "58rem" : $step === "avatar" ? "48rem" : "28rem"};
+		$step === "genres" ? "72rem" : $step === "avatar" ? "48rem" : "28rem"};
 	flex: 0 1 auto;
 	min-height: 0;
 	transition: max-width 350ms ease;

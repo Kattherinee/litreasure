@@ -4,7 +4,10 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import styled from "styled-components";
 
+import AuthModal, { type IAuthModalMode } from "@/components/pages/AuthModal";
 import { useGenresByCategoryQuery } from "@/shared/api/genres";
+import { useAddUserGenreMutation } from "@/shared/api/users";
+import { useAuthStore } from "@/shared/store/auth-store";
 import { theme } from "@/shared/theme";
 import { GenrePillSkeleton } from "@/shared/ui/Skeleton";
 
@@ -17,20 +20,48 @@ const formatCompactCount = (value?: number) => {
 
 const GenresPage = () => {
 	const [selectedGroupKeys, setSelectedGroupKeys] = useState<string[]>([]);
-	const [likedGenres, setLikedGenres] = useState<string[]>([]);
 	const [search, setSearch] = useState("");
+	const [authModalMode, setAuthModalMode] = useState<IAuthModalMode | null>(
+		null,
+	);
+	const [optimisticSavedGenreIds, setOptimisticSavedGenreIds] = useState<
+		string[]
+	>([]);
+	const session = useAuthStore((state) => state.session);
+	const userId = session?.user.id;
+	const addGenreMutation = useAddUserGenreMutation();
+	const savedGenreIds = useMemo(
+		() => new Set(optimisticSavedGenreIds),
+		[optimisticSavedGenreIds],
+	);
 	const { data, isLoading } = useGenresByCategoryQuery({
 		includeCounts: true,
-		selected: likedGenres,
 	});
 	const groups = useMemo(() => data?.groups ?? [], [data?.groups]);
-	const recommendations = data?.recommendations ?? [];
+	const recommendations = useMemo(
+		() => data?.recommendations ?? [],
+		[data?.recommendations],
+	);
 	const normalizedSearch = search.trim().toLowerCase();
 
 	const filteredGroups = useMemo(() => {
-		if (!normalizedSearch) return groups;
+		const groupsWithBooks = groups
+			.map((group) => ({
+				...group,
+				genres: group.genres
+					.filter((genre) => Boolean(genre.bookCount))
+					.sort((firstGenre, secondGenre) =>
+						firstGenre.name.localeCompare(secondGenre.name, "ru"),
+					),
+			}))
+			.filter((group) => group.genres.length > 0)
+			.sort((firstGroup, secondGroup) =>
+				firstGroup.name.localeCompare(secondGroup.name, "ru"),
+			);
 
-		return groups
+		if (!normalizedSearch) return groupsWithBooks;
+
+		return groupsWithBooks
 			.map((group) => ({
 				...group,
 				genres: group.genres.filter((genre) =>
@@ -44,13 +75,20 @@ const GenresPage = () => {
 					group.genres.length > 0,
 			);
 	}, [groups, normalizedSearch]);
+	const filteredRecommendations = useMemo(
+		() =>
+			recommendations
+				.filter((genre) => Boolean(genre.bookCount))
+				.sort((firstGenre, secondGenre) =>
+					firstGenre.name.localeCompare(secondGenre.name, "ru"),
+				),
+		[recommendations],
+	);
+	const canReset =
+		search.length > 0 || selectedGroupKeys.length > 0;
 
 	const visibleGroupKeys =
-		selectedGroupKeys.length > 0
-			? selectedGroupKeys
-			: filteredGroups[0]?.key
-				? [filteredGroups[0].key]
-				: [];
+		selectedGroupKeys.length > 0 ? selectedGroupKeys : [];
 	const visibleGroups = visibleGroupKeys
 		.map((key) => filteredGroups.find((group) => group.key === key))
 		.filter((group): group is NonNullable<typeof group> => Boolean(group));
@@ -60,7 +98,13 @@ const GenresPage = () => {
 				.flatMap((group) => group.genres)
 				.map((genre) => [genre.slug, genre]),
 		).values(),
+	).sort((firstGenre, secondGenre) =>
+		firstGenre.name.localeCompare(secondGenre.name, "ru"),
 	);
+	const hasVisibleGroups = visibleGroups.length > 0;
+	const areAllGroupsSelected =
+		filteredGroups.length > 0 &&
+		filteredGroups.every((group) => selectedGroupKeys.includes(group.key));
 
 	const toggleGroup = (key: string) => {
 		setSelectedGroupKeys((current) =>
@@ -70,32 +114,61 @@ const GenresPage = () => {
 		);
 	};
 
-	const toggleLikedGenre = (slug: string) => {
-		setLikedGenres((current) =>
-			current.includes(slug)
-				? current.filter((currentSlug) => currentSlug !== slug)
-				: [...current, slug],
+	const addGenreToUser = (genreId: string) => {
+		if (!userId) {
+			setAuthModalMode("login");
+			return;
+		}
+
+		if (savedGenreIds.has(genreId)) return;
+
+		addGenreMutation.mutate(
+			{
+				payload: { genreId },
+				userId,
+			},
+			{
+				onSuccess: () => {
+					setOptimisticSavedGenreIds((current) =>
+						current.includes(genreId) ? current : [...current, genreId],
+					);
+				},
+			},
 		);
 	};
 
+	const selectAllGroups = () => {
+		setSelectedGroupKeys(filteredGroups.map((group) => group.key));
+	};
+
 	const renderGenreChip = (genre: (typeof visibleGenres)[number]) => {
-		const isLiked = likedGenres.includes(genre.slug);
+		const isSaved = Boolean(genre.isSaved) || savedGenreIds.has(genre.id);
+		const isSaving =
+			addGenreMutation.isPending &&
+			addGenreMutation.variables?.payload.genreId === genre.id;
 
 		return (
 			<GenreChip key={genre.id}>
 				<GenreLink href={`/genres/${genre.slug}`}>
 					<GenreName>{genre.name}</GenreName>
 					{genre.bookCount ? (
-						<GenreCountText>{formatCompactCount(genre.bookCount)}</GenreCountText>
+						<GenreCountText>
+							{formatCompactCount(genre.bookCount)}
+						</GenreCountText>
 					) : null}
 				</GenreLink>
 				<AddGenreButton
 					type="button"
-					aria-label={`Добавить ${genre.name} в рекомендации`}
-					$isLiked={isLiked}
-					onClick={() => toggleLikedGenre(genre.slug)}
+					aria-label={
+						isSaved
+							? `Жанр ${genre.name} уже сохранён`
+							: `Добавить жанр ${genre.name} в мои жанры`
+					}
+					disabled={isSaved || isSaving}
+					$isSaved={isSaved}
+					onClick={() => addGenreToUser(genre.id)}
 				>
-					{isLiked ? "✓" : "+"}
+					{isSaved ? "✓" : "+"}
 				</AddGenreButton>
 			</GenreChip>
 		);
@@ -106,16 +179,29 @@ const GenresPage = () => {
 			<Hero>
 				<HeroTop>
 					<PageTitle>Жанры</PageTitle>
-					<SearchInput
-						placeholder="Найти жанр или группу"
-						value={search}
-						onChange={(event) => setSearch(event.target.value)}
-					/>
-					{likedGenres.length > 0 ? (
-						<ClearButton type="button" onClick={() => setLikedGenres([])}>
-							Сбросить
-						</ClearButton>
-					) : null}
+					<HeroControls>
+						<SearchInput
+							placeholder="Найти жанр или группу"
+							value={search}
+							onChange={(event) => setSearch(event.target.value)}
+						/>
+						{canReset ? (
+							<ClearButton
+								type="button"
+								onClick={() => {
+									setSearch("");
+									setSelectedGroupKeys([]);
+								}}
+							>
+								Сбросить
+							</ClearButton>
+						) : null}
+						{filteredGroups.length > 0 && !areAllGroupsSelected ? (
+							<SelectAllButton type="button" onClick={selectAllGroups}>
+								Выбрать все
+							</SelectAllButton>
+						) : null}
+					</HeroControls>
 				</HeroTop>
 			</Hero>
 
@@ -128,48 +214,71 @@ const GenresPage = () => {
 					</SkeletonGrid>
 				) : (
 					<>
-						<GroupRow aria-label="Группы жанров">
-							{filteredGroups.map((group) => {
-								const isActive = visibleGroupKeys.includes(group.key);
+						<StickyFilters>
+							<GroupSection>
+								<GroupRow aria-label="Группы жанров">
+									{filteredGroups.map((group) => {
+										const isActive = visibleGroupKeys.includes(group.key);
 
-								return (
-									<GroupChip
-										key={group.key}
-										type="button"
-										$isActive={isActive}
-										onClick={() => toggleGroup(group.key)}
-									>
-										<span>{group.name}</span>
-										<GroupCount>{group.genres.length}</GroupCount>
-									</GroupChip>
-								);
-							})}
-						</GroupRow>
+										return (
+											<GroupChip
+												key={group.key}
+												type="button"
+												$isActive={isActive}
+												onClick={() => toggleGroup(group.key)}
+											>
+												<span>{group.name}</span>
+											</GroupChip>
+										);
+									})}
+								</GroupRow>
+							</GroupSection>
+						</StickyFilters>
 
-						<GenreSection>
-							<SectionHeader>
-								<SectionTitle>
-									{visibleGroups.length > 1
-										? "Выбранные группы"
-										: visibleGroups[0]?.name || "Жанры"}
-								</SectionTitle>
-								<SectionMeta>{visibleGenres.length}</SectionMeta>
-							</SectionHeader>
-							<GenreGrid>{visibleGenres.map(renderGenreChip)}</GenreGrid>
-						</GenreSection>
+						{hasVisibleGroups ? (
+							<GenreListSection>
+								<SectionHeader>
+									<SectionTitle>
+										{visibleGroups.length > 1
+											? "Жанры в выбранных группах"
+											: visibleGroups[0]?.name || "Жанры"}
+									</SectionTitle>
+								</SectionHeader>
+								<GenreGrid>{visibleGenres.map(renderGenreChip)}</GenreGrid>
+							</GenreListSection>
+						) : (
+							<GenreListSection>
+								<SectionHeader>
+									<SectionTitle>Жанры в выбранных группах</SectionTitle>
+								</SectionHeader>
+								<GenreEmptyHint>
+									Выберите одну или несколько групп выше: жанры появятся здесь.
+								</GenreEmptyHint>
+							</GenreListSection>
+						)}
 
-						{recommendations.length > 0 ? (
+						{filteredRecommendations.length > 0 ? (
 							<RecommendationSection>
 								<SectionHeader>
 									<SectionTitle>Может понравиться</SectionTitle>
-									<SectionMeta>{recommendations.length}</SectionMeta>
+									<SectionMeta>{filteredRecommendations.length}</SectionMeta>
 								</SectionHeader>
-								<GenreGrid>{recommendations.map(renderGenreChip)}</GenreGrid>
+								<GenreGrid>
+									{filteredRecommendations.map(renderGenreChip)}
+								</GenreGrid>
 							</RecommendationSection>
 						) : null}
 					</>
 				)}
 			</Content>
+			{authModalMode ? (
+				<AuthModal
+					mode={authModalMode}
+					redirectOnSuccess={false}
+					onClose={() => setAuthModalMode(null)}
+					onModeChange={setAuthModalMode}
+				/>
+			) : null}
 		</Page>
 	);
 };
@@ -179,36 +288,55 @@ export default GenresPage;
 const Page = styled.div`
 	min-height: 100dvh;
 	background: ${theme.colors.background};
-	padding-bottom: 1.5rem;
+	padding-bottom: 2rem;
 `;
 
 const Hero = styled.section`
-	width: min(
-		calc(100% - (${theme.layout.contentGutter} * 2)),
-		${theme.layout.contentMaxWidth}
-	);
+	width: min(calc(100% - (${theme.layout.contentGutter} * 2)), 72rem);
 	margin: 0 auto;
-	padding: clamp(1.35rem, 2.8vw, 2.4rem) 0 0.8rem;
+	padding: clamp(2.4rem, 4.4vw, 4rem) 0 1rem;
 `;
 
 const HeroTop = styled.div`
 	display: flex;
-	flex-wrap: wrap;
 	align-items: center;
-	gap: 0.75rem;
+	justify-content: space-between;
+	gap: 1rem;
+
+	@media (max-width: 52rem) {
+		align-items: flex-start;
+		flex-direction: column;
+	}
 `;
 
 const PageTitle = styled.h1`
 	margin: 0;
 	color: ${theme.colors.foreground};
 	font-family: ${theme.fonts.serif};
-	font-size: clamp(2rem, 3.4vw, 3.35rem);
+	font-size: clamp(1.75rem, 2.35vw, 2.25rem);
 	font-weight: 600;
 	line-height: 1;
 `;
 
+const HeroControls = styled.div`
+	display: flex;
+	min-width: 0;
+	flex: 1 1 auto;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 1rem;
+
+	@media (max-width: 52rem) {
+		width: 100%;
+		flex-direction: column;
+		align-items: stretch;
+		gap: 0.6rem;
+	}
+`;
+
 const SearchInput = styled.input`
-	width: min(100%, 24rem);
+	width: min(100%, 21rem);
+	flex: 0 1 21rem;
 	min-height: 2.2rem;
 	border: 0.0625rem solid rgb(211 202 196 / 0.82);
 	border-radius: 999px;
@@ -225,32 +353,60 @@ const SearchInput = styled.input`
 `;
 
 const ClearButton = styled.button`
-	border: 0;
-	background: transparent;
+	border: 0.0625rem solid rgb(218 142 91 / 0.32);
+	border-radius: 999px;
+	background: rgb(218 142 91 / 0.1);
 	color: ${theme.colors.orangeDark};
 	cursor: pointer;
+	flex: 0 0 auto;
 	font: inherit;
 	font-size: 0.86rem;
-	font-weight: 700;
+	font-weight: 600;
+	padding: 0.48rem 0.8rem;
+	white-space: nowrap;
+
+	&:hover,
+	&:focus-visible {
+		border-color: rgb(218 142 91 / 0.58);
+		background: rgb(218 142 91 / 0.16);
+		outline: none;
+	}
 `;
 
 const Content = styled.section`
 	display: flex;
-	width: min(
-		calc(100% - (${theme.layout.contentGutter} * 2)),
-		${theme.layout.contentMaxWidth}
-	);
+	width: min(calc(100% - (${theme.layout.contentGutter} * 2)), 72rem);
 	flex-direction: column;
-	gap: 0.8rem;
+	gap: 0.85rem;
 	margin: 0 auto;
+`;
+
+const StickyFilters = styled.div`
+	position: sticky;
+	z-index: 5;
+	top: 4rem;
+	display: flex;
+	flex-direction: column;
+	gap: 0.85rem;
+	background: ${theme.colors.background};
+	padding: 0.65rem 0 1.4rem;
+
+	@media (max-width: 40rem) {
+		top: 4.625rem;
+	}
+`;
+
+const GroupSection = styled.section`
+	border: 0.0625rem solid rgb(186 183 180 / 0.5);
+	border-radius: 0.85rem;
+	background: rgb(242 239 237 / 0.22);
+	padding: 1rem 1rem 1.25rem;
 `;
 
 const GroupRow = styled.div`
 	display: flex;
-	max-height: 4.95rem;
 	flex-wrap: wrap;
-	gap: 0.38rem;
-	overflow: hidden;
+	gap: 0.45rem;
 `;
 
 const GroupChip = styled.button<{ $isActive: boolean }>`
@@ -263,37 +419,53 @@ const GroupChip = styled.button<{ $isActive: boolean }>`
 	border-radius: 999px;
 	background: ${({ $isActive }) =>
 		$isActive ? "rgb(218 142 91 / 0.16)" : "rgb(242 239 237 / 0.62)"};
-	padding: 0.26rem 0.42rem 0.28rem 0.62rem;
+	padding: 0.48rem 0.88rem;
 	color: ${({ $isActive }) =>
 		$isActive ? theme.colors.orangeDark : theme.colors.foreground};
 	cursor: pointer;
 	font: inherit;
-	font-size: 0.78rem;
-	font-weight: 700;
-	line-height: 1;
-`;
+	font-family: ${theme.fonts.sans};
+	font-size: 0.86rem;
+	font-weight: 400;
+	line-height: 1.2;
+	transition:
+		background 150ms ease,
+		border-color 150ms ease,
+		color 150ms ease;
 
-const GroupCount = styled.span`
-	display: inline-flex;
-	min-width: 1.15rem;
-	height: 1.15rem;
-	align-items: center;
-	justify-content: center;
-	border-radius: 999px;
-	background: rgb(255 255 255 / 0.66);
-	color: ${theme.colors.softForeground};
-	font-size: 0.7rem;
-	font-weight: 700;
+	&:hover,
+	&:focus-visible {
+		border-color: ${theme.colors.orangeLight};
+		background: rgb(218 142 91 / 0.12);
+		color: ${theme.colors.orangeDark};
+		outline: none;
+	}
 `;
 
 const GenreSection = styled.section`
 	border-radius: 0.85rem;
 	background: rgb(242 239 237 / 0.58);
-	padding: 0.8rem;
+	padding: 1rem;
+`;
+
+const GenreListSection = styled.section`
+	padding: 0.25rem 0 0;
+`;
+
+const GenreEmptyHint = styled.p`
+	margin: 0;
+	border: 0.0625rem solid rgb(186 183 180 / 0.5);
+	border-radius: 0.85rem;
+	background: rgb(242 239 237 / 0.18);
+	padding: 1rem;
+	color: ${theme.colors.softForeground};
+	font-size: 0.92rem;
+	line-height: 1.45;
 `;
 
 const RecommendationSection = styled(GenreSection)`
-	padding-top: 0.7rem;
+	flex: 0 0 auto;
+	padding-top: 0.9rem;
 `;
 
 const SectionHeader = styled.div`
@@ -301,7 +473,12 @@ const SectionHeader = styled.div`
 	align-items: baseline;
 	justify-content: space-between;
 	gap: 1rem;
-	margin-bottom: 0.55rem;
+	margin-bottom: 0.8rem;
+
+	@media (max-width: 42rem) {
+		flex-direction: column;
+		align-items: flex-start;
+	}
 `;
 
 const SectionTitle = styled.h2`
@@ -309,7 +486,7 @@ const SectionTitle = styled.h2`
 	color: ${theme.colors.foreground};
 	font-family: ${theme.fonts.serif};
 	font-size: 1.28rem;
-	font-weight: 600;
+	font-weight: 500;
 	line-height: 1.1;
 `;
 
@@ -318,10 +495,30 @@ const SectionMeta = styled.span`
 	font-size: 0.82rem;
 `;
 
+const SelectAllButton = styled.button`
+	border: 0.0625rem solid rgb(218 142 91 / 0.32);
+	border-radius: 999px;
+	background: ${theme.colors.white};
+	color: ${theme.colors.orangeDark};
+	cursor: pointer;
+	font: inherit;
+	font-size: 0.86rem;
+	font-weight: 600;
+	padding: 0.48rem 0.8rem;
+	white-space: nowrap;
+
+	&:hover,
+	&:focus-visible {
+		border-color: rgb(218 142 91 / 0.58);
+		background: rgb(218 142 91 / 0.12);
+		outline: none;
+	}
+`;
+
 const GenreGrid = styled.div`
 	display: flex;
 	flex-wrap: wrap;
-	gap: 0.45rem;
+	gap: 0.6rem;
 `;
 
 const GenreChip = styled.article`
@@ -332,7 +529,16 @@ const GenreChip = styled.article`
 	border: 0.0625rem solid rgb(211 202 196 / 0.72);
 	border-radius: 999px;
 	background: rgb(255 255 255 / 0.5);
-	padding: 0.22rem 0.28rem 0.22rem 0.72rem;
+	padding: 0.4rem 0.44rem 0.4rem 0.9rem;
+	transition:
+		background 150ms ease,
+		border-color 150ms ease;
+
+	&:hover,
+	&:focus-within {
+		border-color: ${theme.colors.orangeLight};
+		background: rgb(218 142 91 / 0.12);
+	}
 `;
 
 const GenreLink = styled(Link)`
@@ -348,21 +554,26 @@ const GenreName = styled.span`
 	overflow: hidden;
 	color: ${theme.colors.foreground};
 	font-family: ${theme.fonts.sans};
-	font-size: 0.9rem;
-	font-weight: 700;
+	font-size: 0.86rem;
+	font-weight: 400;
 	line-height: 1.2;
 	text-overflow: ellipsis;
 	white-space: nowrap;
+
+	${GenreChip}:hover &,
+	${GenreChip}:focus-within & {
+		color: ${theme.colors.orangeDark};
+	}
 `;
 
 const GenreCountText = styled.span`
 	flex: 0 0 auto;
 	color: ${theme.colors.softForeground};
-	font-size: 0.76rem;
+	font-size: 0.78rem;
 	line-height: 1;
 `;
 
-const AddGenreButton = styled.button<{ $isLiked: boolean }>`
+const AddGenreButton = styled.button<{ $isSaved: boolean }>`
 	display: inline-flex;
 	width: 1.45rem;
 	height: 1.45rem;
@@ -371,15 +582,29 @@ const AddGenreButton = styled.button<{ $isLiked: boolean }>`
 	justify-content: center;
 	border: 0;
 	border-radius: 50%;
-	background: ${({ $isLiked }) =>
-		$isLiked ? theme.colors.orangeLight : "rgb(218 142 91 / 0.13)"};
-	color: ${({ $isLiked }) =>
-		$isLiked ? theme.colors.invertedText : theme.colors.orangeDark};
+	background: ${({ $isSaved }) =>
+		$isSaved ? theme.colors.orangeLight : "rgb(218 142 91 / 0.13)"};
+	color: ${({ $isSaved }) =>
+		$isSaved ? theme.colors.invertedText : theme.colors.orangeDark};
 	cursor: pointer;
 	font: inherit;
-	font-size: 1rem;
-	font-weight: 700;
+	font-size: 1.05rem;
+	font-weight: 400;
 	line-height: 1;
+	transition:
+		background 150ms ease,
+		color 150ms ease;
+
+	&:hover,
+	&:focus-visible {
+		background: rgb(218 142 91 / 0.22);
+		outline: none;
+	}
+
+	&:disabled {
+		cursor: default;
+		opacity: ${({ $isSaved }) => ($isSaved ? 1 : 0.65)};
+	}
 `;
 
 const SkeletonGrid = styled.div`

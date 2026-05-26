@@ -1,4 +1,4 @@
-import { request } from "../base";
+import { request, requestOptionalAuth } from "../base";
 import type { IGenre, IGenresByCategoryResponse } from "./genres.types";
 
 export const getGenres = (): Promise<IGenre[]> => request<IGenre[]>("/genres");
@@ -25,7 +25,7 @@ export const getGenresByCategory = ({
 
 	const query = searchParams.toString();
 
-	return request<IGenresByCategoryResponse>(
+	return requestOptionalAuth<IGenresByCategoryResponse>(
 		`/genres/byCategory${query ? `?${query}` : ""}`,
 	);
 };

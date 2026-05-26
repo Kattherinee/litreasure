@@ -43,7 +43,7 @@ const navItems = [
 
 const profileItems = [
 	{ href: "/treasures", label: "Мои сокровища" },
-	{ label: "Книжный вызов" },
+	{ href: "/book-challenge", label: "Книжный вызов" },
 ];
 
 const emptySubscribe = () => () => undefined;

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import styled from "styled-components";
 
+import { useAverageChallengeQuery } from "@/shared/api/book-challenge";
 import { theme } from "@/shared/theme";
 
 import { StepBody, StepDescription, StepTitle } from "./stepStyles";
@@ -15,6 +16,17 @@ const clampGoal = (value: number) => Math.min(999, Math.max(1, value));
 
 export const GoalStep = ({ yearGoal, onGoalChange }: IGoalStepProps) => {
 	const [draftGoal, setDraftGoal] = useState(String(yearGoal));
+	const {
+		data: averageChallenge,
+		isError: isAverageError,
+		isLoading: isAverageLoading,
+	} = useAverageChallengeQuery("year", yearGoal);
+	const averageTarget = averageChallenge?.averageTargetValue ?? 0;
+	const roundedAverageTarget = Math.round(averageTarget);
+	const goalDifference = yearGoal - averageTarget;
+	const formattedDifference = Math.abs(goalDifference).toFixed(
+		Math.abs(goalDifference) >= 10 ? 0 : 1,
+	);
 
 	useEffect(() => {
 		setDraftGoal(String(yearGoal));
@@ -87,6 +99,30 @@ export const GoalStep = ({ yearGoal, onGoalChange }: IGoalStepProps) => {
 									? "Почти по книге в неделю — настоящий читатель"
 									: "Легендарный темп! Ты точно готов?"}
 					</GoalHint>
+					<AverageComparison>
+						<AverageLabel>Средняя цель читателей</AverageLabel>
+						{isAverageLoading ? (
+							<AverageText>Сверяем с другими целями...</AverageText>
+						) : isAverageError || !averageChallenge ? (
+							<AverageText>Пока не удалось загрузить среднее значение.</AverageText>
+						) : (
+							<>
+								<AverageValue>
+									{roundedAverageTarget} книг в год
+									<AverageUsers>
+										на основе {averageChallenge.usersCount} пользователей
+									</AverageUsers>
+								</AverageValue>
+								<AverageText>
+									{Math.abs(goalDifference) < 0.5
+										? "Твоя цель почти совпадает со средним темпом."
+										: goalDifference > 0
+											? `Твоя цель выше среднего на ${formattedDifference} книг.`
+											: `Твоя цель ниже среднего на ${formattedDifference} книг.`}
+								</AverageText>
+							</>
+						)}
+					</AverageComparison>
 				</GoalLeft>
 			</GoalLayout>
 		</GoalStepBody>
@@ -200,5 +236,49 @@ const GoalHint = styled.p`
 	color: ${theme.colors.softForeground};
 	font-size: 0.875rem;
 	font-style: italic;
+	line-height: 1.4;
+`;
+
+const AverageComparison = styled.div`
+	display: grid;
+	width: min(100%, 24rem);
+	gap: 0.35rem;
+	border: 0.0625rem solid rgb(218 142 91 / 0.24);
+	border-radius: 0.75rem;
+	background: rgb(242 239 237 / 0.48);
+	padding: 0.85rem 1rem;
+`;
+
+const AverageLabel = styled.span`
+	color: ${theme.colors.softForeground};
+	font-size: 0.78rem;
+	font-weight: 700;
+	line-height: 1.2;
+`;
+
+const AverageValue = styled.strong`
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 0.8rem;
+	color: ${theme.colors.foreground};
+	font-family: ${theme.fonts.serif};
+	font-size: 1.25rem;
+	font-weight: 600;
+	line-height: 1.15;
+`;
+
+const AverageUsers = styled.span`
+	color: ${theme.colors.softForeground};
+	font-family: ${theme.fonts.sans};
+	font-size: 0.76rem;
+	font-weight: 400;
+	white-space: nowrap;
+`;
+
+const AverageText = styled.p`
+	margin: 0;
+	color: ${theme.colors.softForeground};
+	font-size: 0.86rem;
 	line-height: 1.4;
 `;

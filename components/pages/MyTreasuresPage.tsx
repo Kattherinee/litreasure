@@ -20,6 +20,7 @@ import {
 	type IUserBookStatus,
 	type IUserBookTracking,
 } from "@/shared/api/user-books";
+import { useUserGenresQuery } from "@/shared/api/users";
 import { useAuthStore } from "@/shared/store/auth-store";
 import { theme } from "@/shared/theme";
 import { BookCard } from "@/shared/ui/BookCard";
@@ -128,7 +129,10 @@ const MyTreasuresPage = () => {
 		{ enabled: isSessionReady },
 	);
 	const { data: mySeriesData } = useMySeriesQuery({ enabled: isSessionReady });
+	const { data: myGenres = [], isLoading: isMyGenresLoading } =
+		useUserGenresQuery(session?.user.id, { enabled: isSessionReady });
 	const activeChallenge = challenges.find((challenge) => challenge.isActive);
+	const activeChallengeProgress = activeChallenge?.progress?.value.percent ?? 0;
 	const readingBooks = readingBooksData?.items ?? [];
 	const trackedBooks = userBooksData?.items ?? [];
 	const myCollections = myCollectionsData?.items ?? [];
@@ -276,15 +280,39 @@ const MyTreasuresPage = () => {
 								: "Вызов не задан"}
 						</CardTitle>
 						<ProgressTrack aria-hidden="true">
-							<ProgressFill $width={0} />
+							<ProgressFill $width={activeChallengeProgress} />
 						</ProgressTrack>
 						<CardText>
 							{activeChallenge
-								? "Прогресс вызова появится здесь, а подробности будут на отдельной странице."
+								? `${Math.round(activeChallengeProgress)}% выполнено, осталось ${activeChallenge.progress?.value.remaining ?? activeChallenge.targetValue} ${activeChallenge.type === "pages" ? "страниц" : "книг"}.`
 								: "Создайте цель, чтобы отслеживать чтение в течение года, месяца или недели."}
 						</CardText>
+						<SmallAction href="/book-challenge">Управлять вызовами</SmallAction>
 					</ChallengeCard>
 				</TopGrid>
+
+				<MyGenresPanel>
+					<PanelHeader>
+						<PanelTitle>Мои жанры</PanelTitle>
+						<SmallAction href="/genres">Добавить жанры</SmallAction>
+					</PanelHeader>
+					{isMyGenresLoading ? (
+						<CollectionPreviewText>Загружаем ваши жанры...</CollectionPreviewText>
+					) : myGenres.length > 0 ? (
+						<MyGenresList aria-label="Мои сохранённые жанры">
+							{myGenres.map((genre) => (
+								<MyGenreChip key={genre.id} href={`/genres/${genre.slug}`}>
+									{genre.name}
+								</MyGenreChip>
+							))}
+						</MyGenresList>
+					) : (
+						<CollectionPreviewText>
+							Сохранённые жанры появятся здесь после нажатия на плюс в каталоге
+							жанров.
+						</CollectionPreviewText>
+					)}
+				</MyGenresPanel>
 
 				<CollectionsPanel
 					role="link"
@@ -698,6 +726,40 @@ const CollectionsPanel = styled(LibraryPanel)`
 		box-shadow: 0 0.75rem 1.5rem rgb(4 18 26 / 0.08);
 		outline: none;
 		transform: translateY(-0.0625rem);
+	}
+`;
+
+const MyGenresPanel = styled(LibraryPanel)`
+	margin-bottom: 1rem;
+`;
+
+const MyGenresList = styled.div`
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.55rem;
+`;
+
+const MyGenreChip = styled(Link)`
+	border: 0.0625rem solid rgb(211 202 196 / 0.72);
+	border-radius: 999px;
+	background: rgb(255 255 255 / 0.58);
+	padding: 0.45rem 0.85rem;
+	color: ${theme.colors.foreground};
+	font-family: ${theme.fonts.sans};
+	font-size: 0.88rem;
+	line-height: 1.2;
+	text-decoration: none;
+	transition:
+		background 150ms ease,
+		border-color 150ms ease,
+		color 150ms ease;
+
+	&:hover,
+	&:focus-visible {
+		border-color: ${theme.colors.orangeLight};
+		background: rgb(218 142 91 / 0.12);
+		color: ${theme.colors.orangeDark};
+		outline: none;
 	}
 `;
 
