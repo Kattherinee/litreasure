@@ -27,6 +27,7 @@ import {
 } from "@/shared/api/series";
 import { useAuthStore } from "@/shared/store/auth-store";
 import { theme } from "@/shared/theme";
+import { AuthorAvatar } from "@/shared/ui/AuthorAvatar";
 import { BookCard } from "@/shared/ui/BookCard";
 import { GenrePill } from "@/shared/ui/GenrePill";
 import { BookCardSkeleton, SkeletonBlock } from "@/shared/ui/Skeleton";
@@ -287,9 +288,12 @@ const AuthorPage = ({ id }: IAuthorPageProps) => {
 			<Content>
 				<BackLink href="/authors">К авторам</BackLink>
 				<Hero>
-					<AuthorPhoto $photoUrl={author.photoUrl}>
-						{author.photoUrl ? null : author.name.charAt(0).toUpperCase()}
-					</AuthorPhoto>
+					<AuthorAvatar
+						fontSize="2.5rem"
+						name={author.name}
+						photoUrl={author.photoUrl}
+						size="7rem"
+					/>
 					<HeroCopy>
 						<TitleRow>
 							<Title>{author.name}</Title>
@@ -651,23 +655,6 @@ const Hero = styled.section`
 	@media (max-width: 38rem) {
 		grid-template-columns: 1fr;
 	}
-`;
-
-const AuthorPhoto = styled.span<{ $photoUrl?: string }>`
-	display: inline-flex;
-	width: 7rem;
-	height: 7rem;
-	align-items: center;
-	justify-content: center;
-	border-radius: 50%;
-	background: ${({ $photoUrl }) =>
-		$photoUrl
-			? `url("${$photoUrl}") center / cover no-repeat`
-			: theme.colors.surface};
-	color: ${theme.colors.orangeDark};
-	font-family: ${theme.fonts.serif};
-	font-size: 2.5rem;
-	font-weight: 600;
 `;
 
 const HeroCopy = styled.div`

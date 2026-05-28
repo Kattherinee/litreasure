@@ -1,15 +1,20 @@
+import AddIcon from "@mui/icons-material/Add";
+import CheckIcon from "@mui/icons-material/Check";
+import { useState } from "react";
+
+import { useSaveSeriesMutation } from "@/shared/api/series";
 import type { ISearchSeries } from "@/shared/api/search";
 
 import {
-	ResultArrow,
 	ResultAuthor,
+	ResultContentLink,
 	ResultEntityCard,
 	ResultMeta,
 	ResultSeries,
 	ResultTitle,
+	MiniSaveButton,
 	SeriesStack,
 	SeriesStackCover,
-	WantButton,
 } from "./SearchResultCard.styles";
 import {
 	getBooksCountLabel,
@@ -19,7 +24,6 @@ import {
 	HighlightedText,
 	SearchMatchBadge,
 } from "./SearchResultCard.utils";
-import { StyledResultLink } from "./BookResultCard";
 
 interface ISeriesResultCardProps {
 	closeSearch?: () => void;
@@ -34,6 +38,8 @@ export const SeriesResultCard = ({
 	saveRecentSearch,
 	series,
 }: ISeriesResultCardProps) => {
+	const saveSeriesMutation = useSaveSeriesMutation();
+	const [isSaved, setIsSaved] = useState(false);
 	const coverUrl = getSeriesCoverUrl(series);
 	const authorLine = getSeriesAuthorLine(series);
 
@@ -43,48 +49,62 @@ export const SeriesResultCard = ({
 			closeSearch();
 		}
 	};
+	const handleSaveSeries = async () => {
+		if (isSaved || saveSeriesMutation.isPending) return;
+
+		try {
+			await saveSeriesMutation.mutateAsync(series.id);
+			setIsSaved(true);
+		} catch {
+			setIsSaved(false);
+		}
+	};
 
 	return (
 		<ResultEntityCard>
-			<SeriesStack>
-				{Array.from({ length: 3 }, (_, index) => (
-					<SeriesStackCover
-						key={index}
-						$index={index}
-						alt=""
-						src={coverUrl ?? "/images/book-placeholder.svg"}
-					/>
-				))}
-			</SeriesStack>
-			<ResultMeta>
-				<ResultTitle>
-					<HighlightedText query={query} text={series.title} />
-				</ResultTitle>
-				{authorLine ? (
-					<ResultAuthor>
-						<StyledResultLink
-							href={`/authors/${series.authorId}`}
-							onClick={handleOpenResult}
-						>
+			<ResultContentLink href={`/series/${series.id}`} onClick={handleOpenResult}>
+				<SeriesStack>
+					{Array.from({ length: 3 }, (_, index) => (
+						<SeriesStackCover
+							key={index}
+							$index={index}
+							alt=""
+							src={coverUrl ?? "/images/book-placeholder.svg"}
+						/>
+					))}
+				</SeriesStack>
+				<ResultMeta>
+					<ResultTitle>
+						<HighlightedText query={query} text={series.title} />
+					</ResultTitle>
+					{authorLine ? (
+						<ResultAuthor>
 							<HighlightedText query={query} text={authorLine} />
-						</StyledResultLink>
-					</ResultAuthor>
-				) : null}
-				<ResultSeries>{getBooksCountLabel(series.bookCount ?? 0)}</ResultSeries>
-				<SearchMatchBadge
-					match={getEntitySupplementalMatch(series.searchMatches, query, [
-						"series",
-						"seriesTitle",
-						"title",
-						"author",
-					])}
-					query={query}
-				/>
-			</ResultMeta>
-			<WantButton buttonType="oxygenPill" type="button">
-				Add to library
-			</WantButton>
-			<ResultArrow aria-hidden="true" />
+						</ResultAuthor>
+					) : null}
+					<ResultSeries>
+						{getBooksCountLabel(series.bookCount ?? 0)}
+					</ResultSeries>
+					<SearchMatchBadge
+						match={getEntitySupplementalMatch(series.searchMatches, query, [
+							"series",
+							"seriesTitle",
+							"title",
+							"author",
+						])}
+						query={query}
+					/>
+				</ResultMeta>
+			</ResultContentLink>
+			<MiniSaveButton
+				$isSaved={isSaved}
+				aria-label={isSaved ? "Серия сохранена" : "Сохранить серию"}
+				disabled={isSaved || saveSeriesMutation.isPending}
+				type="button"
+				onClick={() => void handleSaveSeries()}
+			>
+				{isSaved ? <CheckIcon aria-hidden="true" /> : <AddIcon aria-hidden="true" />}
+			</MiniSaveButton>
 		</ResultEntityCard>
 	);
 };

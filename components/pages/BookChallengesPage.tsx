@@ -20,6 +20,7 @@ import {
 import { useAuthStore } from "@/shared/store/auth-store";
 import { theme } from "@/shared/theme";
 import { Button } from "@/shared/ui/Button";
+import { DateField } from "@/shared/ui/DateField";
 
 const periodOptions: Array<{ label: string; value: IChallengePeriodType }> = [
 	{ label: "Неделя", value: "week" },
@@ -987,7 +988,25 @@ const ChallengeModal = ({
 	onUpdateForm,
 }: IChallengeModalProps) => {
 	const target = Math.max(1, Math.round(Number(form.targetValue) || 1));
-	const targetMax = form.type === "pages" ? 5000 : 120;
+	const targetPresets =
+		form.type === "pages" ? [600, 1200, 2400, 5000] : [12, 24, 36, 52];
+	const targetPlaceholder = form.type === "pages" ? "1200" : "24";
+	const targetLabel =
+		form.type === "pages"
+			? "Введи количество страниц"
+			: "Введи количество книг";
+	const targetHelp =
+		form.type === "pages"
+			? "Это число станет целью вызова по страницам. Можно ввести своё или выбрать вариант ниже."
+			: "Это число станет целью книжного вызова. Можно ввести своё или выбрать вариант ниже.";
+	const handleTargetChange = (value: string) => {
+		const digitsOnly = value.replace(/\D/g, "");
+
+		onUpdateForm((current) => ({
+			...current,
+			targetValue: digitsOnly,
+		}));
+	};
 
 	return (
 		<ModalOverlay role="presentation" onMouseDown={onClose}>
@@ -1006,115 +1025,103 @@ const ChallengeModal = ({
 					</CloseButton>
 				</ModalHeader>
 				<Form onSubmit={onSubmit}>
-					<Fieldset>
-						<FieldsetLabel>Что считаем</FieldsetLabel>
-						<Segmented>
-							{typeOptions.map((option) => (
-								<SegmentButton
-									key={option.value}
+					{/* Выбор "книги/страницы" временно скрыт: вызовы по страницам еще не подключены. */}
+
+					<PeriodActivityRow>
+						<Fieldset>
+							<FieldsetLabel>Период</FieldsetLabel>
+							<Segmented>
+								{periodOptions.map((option) => (
+									<SegmentButton
+										key={option.value}
+										type="button"
+										$isActive={form.periodType === option.value}
+										onClick={() => onPeriodChange(option.value)}
+									>
+										{option.label}
+									</SegmentButton>
+								))}
+							</Segmented>
+						</Fieldset>
+						<ActivityToggle
+							type="button"
+							aria-pressed={form.isActive}
+							$isActive={form.isActive}
+							onClick={() =>
+								onUpdateForm((current) => ({
+									...current,
+									isActive: !current.isActive,
+								}))
+							}
+						>
+							<ToggleTrack $isActive={form.isActive}>
+								<ToggleThumb $isActive={form.isActive} />
+							</ToggleTrack>
+							<ToggleText>
+								<span>{form.isActive ? "Активный" : "Неактивный"}</span>
+							</ToggleText>
+						</ActivityToggle>
+					</PeriodActivityRow>
+
+					<TargetBox>
+						<TargetInputColumn>
+							<TargetInputLabel>{targetLabel}</TargetInputLabel>
+							<TargetNumberInput
+								aria-label={targetLabel}
+								inputMode="numeric"
+								$isEmpty={!form.targetValue}
+								placeholder={targetPlaceholder}
+								value={form.targetValue}
+								onBlur={() =>
+									onUpdateForm((current) => ({
+										...current,
+										targetValue: String(
+											Math.max(1, Math.round(Number(current.targetValue) || 1)),
+										),
+									}))
+								}
+								onChange={(event) => handleTargetChange(event.target.value)}
+							/>
+							<TargetInputHelp>{targetHelp}</TargetInputHelp>
+						</TargetInputColumn>
+						<TargetPresetsRow>
+							{targetPresets.map((preset) => (
+								<TargetPreset
+									key={preset}
 									type="button"
-									$isActive={form.type === option.value}
+									$isActive={target === preset}
 									onClick={() =>
 										onUpdateForm((current) => ({
 											...current,
-											targetValue:
-												option.value === "pages" ? "1200" : current.targetValue,
-											type: option.value,
+											targetValue: String(preset),
 										}))
 									}
 								>
-									{option.label}
-								</SegmentButton>
+									{preset}
+								</TargetPreset>
 							))}
-						</Segmented>
-					</Fieldset>
-
-					<Fieldset>
-						<FieldsetLabel>Период</FieldsetLabel>
-						<Segmented>
-							{periodOptions.map((option) => (
-								<SegmentButton
-									key={option.value}
-									type="button"
-									$isActive={form.periodType === option.value}
-									onClick={() => onPeriodChange(option.value)}
-								>
-									{option.label}
-								</SegmentButton>
-							))}
-						</Segmented>
-					</Fieldset>
-
-					<TargetBox>
-						<TargetTop>
-							<FieldsetLabel>Цель</FieldsetLabel>
-							<TargetValue>
-								{target} {getTypeOption(form.type).unit}
-							</TargetValue>
-						</TargetTop>
-						<Range
-							min={1}
-							max={targetMax}
-							step={form.type === "pages" ? 50 : 1}
-							type="range"
-							value={target}
-							onChange={(event) =>
-								onUpdateForm((current) => ({
-									...current,
-									targetValue: event.target.value,
-								}))
-							}
-						/>
-						<Input
-							min={1}
-							type="number"
-							value={form.targetValue}
-							onChange={(event) =>
-								onUpdateForm((current) => ({
-									...current,
-									targetValue: event.target.value,
-								}))
-							}
-						/>
+						</TargetPresetsRow>
 					</TargetBox>
 
 					<DateGrid>
-						<Field>
-							<Label>Дата начала</Label>
-							<Input
-								type="date"
-								value={form.startDate}
-								onChange={(event) => onStartDateChange(event.target.value)}
-							/>
-						</Field>
-						<Field>
-							<Label>Дата окончания</Label>
-							<Input
-								type="date"
-								value={form.endDate}
-								onChange={(event) =>
-									onUpdateForm((current) => ({
-										...current,
-										endDate: event.target.value,
-									}))
-								}
-							/>
-						</Field>
-					</DateGrid>
-
-					<CheckboxLabel>
-						<Checkbox
-							checked={form.isActive}
-							type="checkbox"
-							onChange={(event) =>
+						<DateField
+							label="Дата начала"
+							max={form.endDate}
+							value={form.startDate}
+							onChange={onStartDateChange}
+						/>
+						<DateField
+							label="Дата окончания"
+							min={form.startDate}
+							value={form.endDate}
+							onChange={(endDate) =>
 								onUpdateForm((current) => ({
 									...current,
-									isActive: event.target.checked,
+									endDate,
 								}))
 							}
 						/>
-						Активный вызов
-					</CheckboxLabel>
+					</DateGrid>
 
 					<ModalActions>
 						{mode === "edit" ? (
@@ -1256,6 +1263,7 @@ const ChallengeSlide = styled.div<{ $hasPreview: boolean; $isActive: boolean }>`
 		${({ $hasPreview }) =>
 			$hasPreview ? "clamp(34rem, 54vw, 50rem)" : "min(100%, 50rem)"};
 	min-width: 0;
+	margin-inline: clamp(0.65rem, 1.1vw, 1.15rem);
 	border-radius: 1.25rem;
 	background: rgb(242 239 237 / 0.32);
 	padding: clamp(0.85rem, 2vw, 1.25rem);
@@ -1881,6 +1889,89 @@ const FieldsetLabel = styled.span`
 	font-weight: 700;
 `;
 
+const PeriodActivityRow = styled.div`
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	align-items: stretch;
+	gap: 0.9rem;
+
+	@media (max-width: 34rem) {
+		grid-template-columns: 1fr;
+	}
+`;
+
+const ActivityToggle = styled.button<{ $isActive: boolean }>`
+	display: inline-flex;
+	align-items: center;
+	justify-content: flex-start;
+	gap: 0.65rem;
+	align-self: end;
+	min-height: 2.7rem;
+	border: 0.0625rem solid
+		${({ $isActive }) =>
+			$isActive ? "rgb(218 142 91 / 0.5)" : "rgb(211 202 196 / 0.82)"};
+	border-radius: 0.9rem;
+	background: ${({ $isActive }) =>
+		$isActive ? "rgb(218 142 91 / 0.14)" : "rgb(242 239 237 / 0.72)"};
+	padding: 0.42rem 0.8rem 0.42rem 0.55rem;
+	color: ${({ $isActive }) =>
+		$isActive ? theme.colors.orangeDark : theme.colors.softForeground};
+	cursor: pointer;
+	font: inherit;
+	font-size: 0.82rem;
+	font-weight: 700;
+	transition:
+		background 150ms,
+		border-color 150ms,
+		color 150ms,
+		transform 150ms;
+
+	&:hover,
+	&:focus-visible {
+		background: rgb(218 142 91 / 0.12);
+		border-color: ${theme.colors.orangeLight};
+		color: ${theme.colors.orangeDark};
+		outline: none;
+	}
+
+	&:active {
+		transform: translateY(0.0625rem);
+	}
+`;
+
+const ToggleTrack = styled.span<{ $isActive: boolean }>`
+	position: relative;
+	flex: 0 0 auto;
+	width: 2.45rem;
+	height: 1.3rem;
+	border-radius: 999px;
+	background: ${({ $isActive }) =>
+		$isActive ? theme.colors.orangeLight : "rgb(186 183 180 / 0.56)"};
+	box-shadow: inset 0 0 0 0.0625rem rgb(4 18 26 / 0.04);
+	transition:
+		background 150ms,
+		box-shadow 150ms;
+`;
+
+const ToggleThumb = styled.span<{ $isActive: boolean }>`
+	position: absolute;
+	top: 0.18rem;
+	left: ${({ $isActive }) => ($isActive ? "1.3rem" : "0.18rem")};
+	width: 0.94rem;
+	height: 0.94rem;
+	border-radius: 50%;
+	background: ${theme.colors.background};
+	box-shadow: 0 0.0625rem 0.18rem rgb(4 18 26 / 0.18);
+	transition: left 150ms;
+`;
+
+const ToggleText = styled.span`
+	display: grid;
+	gap: 0.05rem;
+	text-align: left;
+	white-space: nowrap;
+`;
+
 const Segmented = styled.div`
 	display: flex;
 	flex-wrap: wrap;
@@ -1903,29 +1994,98 @@ const SegmentButton = styled.button<{ $isActive: boolean }>`
 
 const TargetBox = styled.div`
 	display: grid;
-	gap: 0.65rem;
+	justify-items: center;
+	gap: 0.75rem;
 	border-radius: 1rem;
 	background: rgb(242 239 237 / 0.72);
 	padding: 1rem;
 `;
 
-const TargetTop = styled.div`
-	display: flex;
-	align-items: baseline;
-	justify-content: space-between;
-	gap: 1rem;
+const TargetInputColumn = styled.div`
+	display: grid;
+	justify-items: center;
+	gap: 0.45rem;
 `;
 
-const TargetValue = styled.strong`
+const TargetInputLabel = styled.span`
+	color: ${theme.colors.foreground};
+	font-size: 0.86rem;
+	font-weight: 700;
+	text-align: center;
+`;
+
+const TargetNumberInput = styled.input<{ $isEmpty: boolean }>`
+	width: 5.25rem;
+	border: 0.0625rem solid rgb(218 142 91 / 0.18);
+	border-radius: 0.75rem;
+	background: ${({ $isEmpty }) =>
+		$isEmpty ? "rgb(218 142 91 / 0.08)" : "transparent"};
+	padding: 0.25rem 0.35rem;
 	color: ${theme.colors.foreground};
 	font-family: ${theme.fonts.serif};
-	font-size: 1.5rem;
+	font-size: 3.25rem;
+	font-weight: 600;
 	line-height: 1;
+	text-align: center;
+	outline: none;
+	box-shadow: ${({ $isEmpty }) =>
+		$isEmpty ? "0 0 0 0.125rem rgb(218 142 91 / 0.18)" : "none"};
+	transition:
+		background-color 150ms,
+		border-color 150ms,
+		box-shadow 150ms;
+
+	&:hover,
+	&:focus {
+		border-color: rgb(218 142 91 / 0.28);
+		background: rgb(218 142 91 / 0.08);
+		box-shadow: 0 0 0 0.125rem rgb(218 142 91 / 0.18);
+	}
+
+	&::placeholder {
+		color: rgb(4 18 26 / 0.26);
+	}
 `;
 
-const Range = styled.input`
-	width: 100%;
-	accent-color: ${theme.colors.orangeLight};
+const TargetInputHelp = styled.p`
+	max-width: 22rem;
+	margin: 0;
+	color: ${theme.colors.softForeground};
+	font-size: 0.78rem;
+	line-height: 1.35;
+	text-align: center;
+`;
+
+const TargetPresetsRow = styled.div`
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	gap: 0.55rem;
+`;
+
+const TargetPreset = styled.button<{ $isActive: boolean }>`
+	border: 0.0625rem solid
+		${({ $isActive }) => ($isActive ? "#da8e5b" : "rgb(186 183 180 / 0.6)")};
+	border-radius: 999px;
+	background: ${({ $isActive }) =>
+		$isActive ? "rgb(218 142 91 / 0.12)" : "transparent"};
+	padding: 0.3rem 0.85rem;
+	color: ${({ $isActive }) => ($isActive ? "#da8e5b" : "#bab7b4")};
+	cursor: pointer;
+	font: inherit;
+	font-size: 0.875rem;
+	font-weight: 600;
+	transition:
+		background 150ms,
+		border-color 150ms,
+		color 150ms;
+
+	&:hover,
+	&:focus-visible {
+		border-color: #da8e5b;
+		color: #da8e5b;
+		outline: none;
+	}
 `;
 
 const DateGrid = styled.div`
@@ -1936,45 +2096,6 @@ const DateGrid = styled.div`
 	@media (max-width: 34rem) {
 		grid-template-columns: 1fr;
 	}
-`;
-
-const Field = styled.label`
-	display: grid;
-	gap: 0.3rem;
-`;
-
-const Label = styled.span`
-	color: ${theme.colors.softForeground};
-	font-size: 0.78rem;
-	font-weight: 700;
-`;
-
-const fieldStyles = `
-	min-height: 2.35rem;
-	border: 0.0625rem solid rgb(211 202 196 / 0.82);
-	border-radius: 0.75rem;
-	background: rgb(242 239 237 / 0.72);
-	padding: 0 0.75rem;
-	color: ${theme.colors.foreground};
-	font: inherit;
-`;
-
-const Input = styled.input`
-	${fieldStyles}
-`;
-
-const CheckboxLabel = styled.label`
-	display: inline-flex;
-	align-items: center;
-	gap: 0.55rem;
-	color: ${theme.colors.foreground};
-	font-size: 0.9rem;
-`;
-
-const Checkbox = styled.input`
-	width: 1rem;
-	height: 1rem;
-	accent-color: ${theme.colors.orangeLight};
 `;
 
 const ModalActions = styled.div`

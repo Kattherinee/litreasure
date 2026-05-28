@@ -1,14 +1,13 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import styled from "styled-components";
 
+import { CreateBookModal } from "@/components/pages/my-books/CreateBookModal";
 import {
-	useDeleteBookTrackingMutation,
 	useUserBooksQuery,
 	type IUserBookStatus,
-	type IUserBookTracking,
 } from "@/shared/api/user-books";
 import { useAuthStore } from "@/shared/store/auth-store";
 import { theme } from "@/shared/theme";
@@ -26,31 +25,58 @@ const statusTabs: Array<{ id: IUserBookStatus | "all"; label: string }> = [
 	{ id: "dropped", label: "Брошено" },
 ];
 
-const statusLabels: Record<IUserBookStatus, string> = {
-	dropped: "Брошено",
-	finished: "Прочитано",
-	paused: "Пауза",
-	planned: "В планах",
-	reading: "Читаю",
-	rereading: "Перечитываю",
-};
-
 const MyBooksPage = () => {
 	const router = useRouter();
+	const searchParams = useSearchParams();
 	const session = useAuthStore((state) => state.session);
-	const deleteTrackingMutation = useDeleteBookTrackingMutation();
 	const [page, setPage] = useState(1);
 	const [activeStatus, setActiveStatus] = useState<IUserBookStatus | "all">(
 		"all",
 	);
-	const { data, isError, isLoading } = useUserBooksQuery(
+	const [isCreateBookOpen, setIsCreateBookOpen] = useState(false);
+
+	const allBooksQuery = useUserBooksQuery(
 		{
 			limit: 30,
 			page,
-			status: activeStatus === "all" ? undefined : activeStatus,
 		},
 		{ enabled: Boolean(session) },
 	);
+	const readingBooksQuery = useUserBooksQuery(
+		{ limit: 30, page, status: "reading" },
+		{ enabled: Boolean(session) },
+	);
+	const plannedBooksQuery = useUserBooksQuery(
+		{ limit: 30, page, status: "planned" },
+		{ enabled: Boolean(session) },
+	);
+	const finishedBooksQuery = useUserBooksQuery(
+		{ limit: 30, page, status: "finished" },
+		{ enabled: Boolean(session) },
+	);
+	const pausedBooksQuery = useUserBooksQuery(
+		{ limit: 30, page, status: "paused" },
+		{ enabled: Boolean(session) },
+	);
+	const rereadingBooksQuery = useUserBooksQuery(
+		{ limit: 30, page, status: "rereading" },
+		{ enabled: Boolean(session) },
+	);
+	const droppedBooksQuery = useUserBooksQuery(
+		{ limit: 30, page, status: "dropped" },
+		{ enabled: Boolean(session) },
+	);
+	const queriesByStatus = {
+		all: allBooksQuery,
+		dropped: droppedBooksQuery,
+		finished: finishedBooksQuery,
+		paused: pausedBooksQuery,
+		planned: plannedBooksQuery,
+		reading: readingBooksQuery,
+		rereading: rereadingBooksQuery,
+	} satisfies Record<IUserBookStatus | "all", typeof allBooksQuery>;
+	const activeBooksQuery = queriesByStatus[activeStatus];
+	const { data, isError, isLoading } = activeBooksQuery;
 	const books = data?.items ?? [];
 	const pages = data?.pages ?? 1;
 
@@ -59,6 +85,12 @@ const MyBooksPage = () => {
 			router.replace("/?auth=required");
 		}
 	}, [router, session]);
+
+	useEffect(() => {
+		if (session && searchParams.get("create") === "1") {
+			setIsCreateBookOpen(true);
+		}
+	}, [searchParams, session]);
 
 	if (!session) {
 		return null;
@@ -72,7 +104,11 @@ const MyBooksPage = () => {
 						<Title>Мои книги</Title>
 						<Lead>Все книги, которые вы добавили в свои сокровища.</Lead>
 					</HeroCopy>
-					<Button buttonType="containedInverted" href="/search">
+					<Button
+						buttonType="containedInverted"
+						type="button"
+						onClick={() => setIsCreateBookOpen(true)}
+					>
 						Добавить книгу
 					</Button>
 				</Hero>
@@ -92,7 +128,11 @@ const MyBooksPage = () => {
 								}}
 							>
 								{status.label}
-								{isActive && data ? <StatusCount>{data.total}</StatusCount> : null}
+								{queriesByStatus[status.id].data ? (
+									<StatusCount>
+										{queriesByStatus[status.id].data?.total ?? 0}
+									</StatusCount>
+								) : null}
 							</StatusTab>
 						);
 					})}
@@ -106,17 +146,15 @@ const MyBooksPage = () => {
 					<>
 						<BookGrid>
 							{books.map((item) => (
-								<TrackedBook key={item.id}>
-									<BookCard book={item.book} />
-									<TrackingInfo>{getTrackingInfo(item)}</TrackingInfo>
-									<RemoveTrackingButton
-										type="button"
-										disabled={deleteTrackingMutation.isPending}
-										onClick={() => deleteTrackingMutation.mutate(item.book.id)}
-									>
-										Убрать
-									</RemoveTrackingButton>
-								</TrackedBook>
+								<BookItem key={item.id}>
+									<BookCard
+										book={{
+											...item.book,
+											isTracked: true,
+											myStatus: item.status,
+										}}
+									/>
+								</BookItem>
 							))}
 						</BookGrid>
 						<AppPagination count={pages} page={page} onChange={setPage} />
@@ -130,20 +168,18 @@ const MyBooksPage = () => {
 					</EmptyState>
 				)}
 			</Content>
+
+			{isCreateBookOpen ? (
+				<CreateBookModal
+					onClose={() => setIsCreateBookOpen(false)}
+					onCreated={(book) => router.push(`/books/${book.id}`)}
+				/>
+			) : null}
 		</Page>
 	);
 };
 
 export default MyBooksPage;
-
-const getTrackingInfo = (item: IUserBookTracking) => {
-	const parts = [statusLabels[item.status]];
-
-	if (item.currentPage) parts.push(`${item.currentPage} стр.`);
-	if (item.readCount) parts.push(`${item.readCount} прочт.`);
-
-	return parts.join(" · ");
-};
 
 const Page = styled.div`
 	min-height: 100dvh;
@@ -228,47 +264,17 @@ const StatusCount = styled.span`
 `;
 
 const BookGrid = styled.div`
+	--book-card-column: 8rem;
+
 	display: grid;
-	gap: 1.4rem 1rem;
-	grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr));
+	gap: 1rem;
+	grid-template-columns: repeat(auto-fill, var(--book-card-column));
+	justify-content: start;
+	margin-top: clamp(2.5rem, 5vw, 4rem);
 `;
 
-const TrackedBook = styled.article`
-	display: grid;
-	gap: 0.45rem;
-	justify-items: start;
-`;
-
-const TrackingInfo = styled.p`
-	margin: 0;
-	color: ${theme.colors.orangeDark};
-	font-size: 0.78rem;
-	font-weight: 700;
-	line-height: 1.25;
-`;
-
-const RemoveTrackingButton = styled.button`
-	border: 0;
-	background: transparent;
-	padding: 0;
-	color: ${theme.colors.lightText};
-	cursor: pointer;
-	font: inherit;
-	font-size: 0.76rem;
-	line-height: 1.2;
-
-	&:hover,
-	&:focus-visible {
-		color: ${theme.colors.orangeDark};
-		outline: none;
-		text-decoration: underline;
-		text-underline-offset: 0.15rem;
-	}
-
-	&:disabled {
-		cursor: wait;
-		opacity: 0.55;
-	}
+const BookItem = styled.div`
+	width: fit-content;
 `;
 
 const StateMessage = styled.p`

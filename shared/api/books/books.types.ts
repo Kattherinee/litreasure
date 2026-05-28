@@ -85,7 +85,10 @@ export interface ICreateBookPayload {
 	description?: string;
 	coverUrl?: string;
 	genres: string[];
+	pagesCount?: number;
 	publishedYear?: number;
+	publisher?: string;
+	language?: string;
 	rating?: number;
 }
 

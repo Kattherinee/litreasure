@@ -53,7 +53,7 @@ export const getBook = (id: string): Promise<IBook> =>
 	requestOptionalAuth<IBook>(`/books/${id}`);
 
 export const createBook = (payload: ICreateBookPayload): Promise<IBook> =>
-	request<IBook>("/books", {
+	requestAuth<IBook>("/books", {
 		body: JSON.stringify(payload),
 		method: "POST",
 	});
@@ -62,13 +62,13 @@ export const updateBook = (
 	id: string,
 	payload: IUpdateBookPayload,
 ): Promise<IBook> =>
-	request<IBook>(`/books/${id}`, {
+	requestAuth<IBook>(`/books/${id}`, {
 		body: JSON.stringify(payload),
 		method: "PATCH",
 	});
 
 export const deleteBook = (id: string): Promise<void> =>
-	request<void>(`/books/${id}`, { method: "DELETE" });
+	requestAuth<void>(`/books/${id}`, { method: "DELETE" });
 
 export const rateBook = (
 	id: string,

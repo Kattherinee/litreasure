@@ -2,21 +2,13 @@ import { theme } from "@/shared/theme";
 import Link from "next/link";
 import styled from "styled-components";
 import { IAuthorPreview } from "../../api/authors";
+import { AuthorAvatar } from "../AuthorAvatar";
 import { ResultSeries } from "../BookSearch/SearchResultCard.styles";
 
 const AuthorCard = ({ author }: { author: IAuthorPreview }) => {
-	const getInitials = (value: string) =>
-		value
-			.split(/[\s._-]+/)
-			.filter(Boolean)
-			.slice(0, 2)
-			.map((part) => part.charAt(0).toUpperCase())
-			.join("");
 	return (
 		<AuthorCardContainer key={author.id} href={`/authors/${author.id}`}>
-			<AuthorPhoto $photoUrl={author.photoUrl} aria-hidden={!author.photoUrl}>
-				{author.photoUrl ? null : getInitials(author.name)}
-			</AuthorPhoto>
+			<AuthorAvatar name={author.name} photoUrl={author.photoUrl} />
 			<AuthorMeta>
 				<AuthorName>{author.name}</AuthorName>
 
@@ -33,22 +25,6 @@ const AuthorCard = ({ author }: { author: IAuthorPreview }) => {
 	);
 };
 export default AuthorCard;
-const AuthorPhoto = styled.span<{ $photoUrl?: string }>`
-	display: inline-flex;
-	width: 5rem;
-	height: 5rem;
-	align-items: center;
-	justify-content: center;
-	border-radius: 50%;
-	background: ${({ $photoUrl }) =>
-		$photoUrl
-			? `url("${$photoUrl}") center / cover no-repeat`
-			: theme.colors.surface};
-	color: ${theme.colors.orangeDark};
-	font-family: ${theme.fonts.serif};
-	font-size: 1.35rem;
-	font-weight: 600;
-`;
 const AuthorCardContainer = styled(Link)`
 	display: grid;
 	align-items: center;

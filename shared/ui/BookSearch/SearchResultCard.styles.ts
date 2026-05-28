@@ -5,6 +5,8 @@ import { theme } from "@/shared/theme";
 import { Button } from "@/shared/ui/Button";
 
 export const ResultItem = styled.div`
+	position: relative;
+	z-index: 0;
 	display: grid;
 	align-items: center;
 	gap: 0.9rem;
@@ -16,8 +18,14 @@ export const ResultItem = styled.div`
 
 	&:hover,
 	&:focus-within {
+		z-index: 10;
 		background: rgb(242 239 237 / 0.78);
 		transform: translateY(-0.0625rem);
+	}
+
+	&:hover .search-result-title,
+	&:focus-within .search-result-title {
+		color: ${theme.colors.orangeDark};
 	}
 
 	@media (max-width: 34rem) {
@@ -26,6 +34,8 @@ export const ResultItem = styled.div`
 `;
 
 export const ResultLinkCard = styled(Link)`
+	position: relative;
+	z-index: 0;
 	display: grid;
 	align-items: center;
 	gap: 1.05rem;
@@ -40,9 +50,15 @@ export const ResultLinkCard = styled(Link)`
 
 	&:hover,
 	&:focus-visible {
+		z-index: 10;
 		background: rgb(242 239 237 / 0.78);
 		outline: none;
 		transform: translateY(-0.0625rem);
+	}
+
+	&:hover .search-result-title,
+	&:focus-visible .search-result-title {
+		color: ${theme.colors.orangeDark};
 	}
 
 	@media (max-width: 34rem) {
@@ -51,10 +67,12 @@ export const ResultLinkCard = styled(Link)`
 `;
 
 export const ResultEntityCard = styled.div`
+	position: relative;
+	z-index: 0;
 	display: grid;
 	align-items: center;
 	gap: 1.05rem;
-	grid-template-columns: 4.5rem minmax(0, 1fr) auto 1.5rem;
+	grid-template-columns: 4.5rem minmax(0, 1fr) auto;
 	border-radius: 0.8rem;
 	padding: 0.75rem 0.9rem;
 	transition:
@@ -63,12 +81,58 @@ export const ResultEntityCard = styled.div`
 
 	&:hover,
 	&:focus-within {
+		z-index: 10;
 		background: rgb(242 239 237 / 0.78);
 		transform: translateY(-0.0625rem);
 	}
 
+	&:hover .search-result-title,
+	&:focus-within .search-result-title {
+		color: ${theme.colors.orangeDark};
+	}
+
 	@media (max-width: 34rem) {
-		grid-template-columns: 3.75rem minmax(0, 1fr) 1.5rem;
+		grid-template-columns: 3.75rem minmax(0, 1fr) auto;
+	}
+`;
+
+export const ResultActionCard = styled.div`
+	position: relative;
+	z-index: 0;
+	display: grid;
+	align-items: center;
+	gap: 1.05rem;
+	grid-template-columns: 4.5rem minmax(0, 1fr) auto;
+	border-radius: 0.8rem;
+	padding: 0.75rem 0.9rem;
+	transition:
+		background 160ms ease,
+		transform 160ms ease;
+
+	&:hover,
+	&:focus-within {
+		z-index: 10;
+		background: rgb(242 239 237 / 0.78);
+		transform: translateY(-0.0625rem);
+	}
+
+	&:hover .search-result-title,
+	&:focus-within .search-result-title {
+		color: ${theme.colors.orangeDark};
+	}
+
+	@media (max-width: 34rem) {
+		grid-template-columns: 3.75rem minmax(0, 1fr) auto;
+	}
+`;
+
+export const ResultContentLink = styled(Link)`
+	display: contents;
+	color: inherit;
+	text-decoration: none;
+
+	&:focus-visible .search-result-title {
+		color: ${theme.colors.orangeDark};
 	}
 `;
 
@@ -78,15 +142,6 @@ export const ResultArrow = styled.span`
 	border-top: 0.22rem solid rgb(4 18 26 / 0.25);
 	border-right: 0.22rem solid rgb(4 18 26 / 0.25);
 	transform: rotate(45deg);
-`;
-
-export const RoundImage = styled.span<{ $photoUrl: string }>`
-	width: 4rem;
-	height: 4rem;
-	border-radius: 50%;
-	background:
-		center / cover no-repeat url(${({ $photoUrl }) => $photoUrl}),
-		rgb(218 142 91 / 0.22);
 `;
 
 export const GenreMark = styled.span`
@@ -217,7 +272,9 @@ export const ResultSeries = styled.span`
 	white-space: nowrap;
 `;
 
-export const ResultTitle = styled.span`
+export const ResultTitle = styled.span.attrs({
+	className: "search-result-title",
+})`
 	display: -webkit-box;
 	overflow: hidden;
 	-webkit-box-orient: vertical;
@@ -227,6 +284,9 @@ export const ResultTitle = styled.span`
 	font-size: 1.05rem;
 	font-weight: 500;
 	line-height: 1.15;
+	transition:
+		color 160ms ease,
+		text-decoration-color 160ms ease;
 `;
 
 export const ResultAuthor = styled.span`
@@ -250,14 +310,63 @@ export const ResultDescription = styled.span`
 	line-height: 1.3;
 `;
 
-export const WantButton = styled(Button)`
+export const WantButton = styled(Button)<{ $isSaved?: boolean }>`
 	&& {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.28rem;
 		justify-self: end;
 		margin-right: 0.6rem;
+		padding: 0.45rem 0.8rem;
+		font-size: 0.82rem;
 		white-space: nowrap;
+
+		& svg {
+			width: 1rem;
+			height: 1rem;
+		}
 
 		@media (max-width: 34rem) {
 			display: none;
 		}
+	}
+`;
+
+export const MiniSaveButton = styled.button<{ $isSaved?: boolean }>`
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 2rem;
+	height: 2rem;
+	border: 0;
+	border-radius: 50%;
+	background: ${({ $isSaved }) =>
+		$isSaved ? theme.colors.surface : theme.colors.orangeLight};
+	color: ${({ $isSaved }) =>
+		$isSaved ? theme.colors.darkerOrangeLight : theme.colors.invertedText};
+	cursor: pointer;
+	transition:
+		background 180ms ease,
+		color 180ms ease,
+		transform 180ms ease,
+		opacity 180ms ease;
+
+	& svg {
+		width: 1.25rem;
+		height: 1.25rem;
+	}
+
+	&:hover,
+	&:focus-visible {
+		background: ${theme.colors.bluePrimary};
+		color: ${theme.colors.invertedText};
+		outline: none;
+		transform: translateY(-0.0625rem);
+	}
+
+	&:disabled {
+		cursor: wait;
+		opacity: 0.68;
+		transform: none;
 	}
 `;

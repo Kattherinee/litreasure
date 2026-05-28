@@ -196,9 +196,9 @@ const ControlButton = styled.button`
 		transform 180ms ease;
 
 	&:not(:disabled):hover {
-		background: ${theme.colors.orangePrimary};
-		border-color: ${theme.colors.orangePrimary};
-		color: ${theme.colors.lightText};
+		background: ${theme.colors.orangeLight};
+		border-color: ${theme.colors.orangeLight};
+		color: ${theme.colors.invertedText};
 		transform: translateY(-0.0625rem);
 	}
 

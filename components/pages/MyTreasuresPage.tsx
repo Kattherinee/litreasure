@@ -2,6 +2,9 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import AddIcon from "@mui/icons-material/Add";
+import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
+import SearchIcon from "@mui/icons-material/Search";
 import { useEffect, useRef, useState } from "react";
 import styled from "styled-components";
 
@@ -24,7 +27,7 @@ import {
 import { useUserGenresQuery } from "@/shared/api/users";
 import { useAuthStore } from "@/shared/store/auth-store";
 import { theme } from "@/shared/theme";
-import { BookCard } from "@/shared/ui/BookCard";
+import { AuthorAvatar } from "@/shared/ui/AuthorAvatar";
 import BookCarousel from "@/shared/ui/BookCarousel/BookCarousel";
 import { Button } from "@/shared/ui/Button";
 
@@ -68,14 +71,20 @@ const MyTreasuresPage = () => {
 		useState<ITreasureTab>("collections");
 	const [selectedChallengeIndex, setSelectedChallengeIndex] = useState(0);
 	const [isCreateCollectionOpen, setIsCreateCollectionOpen] = useState(false);
-	const [isAuthHydrated, setIsAuthHydrated] = useState(() =>
-		useAuthStore.persist.hasHydrated(),
+	const [isAuthHydrated, setIsAuthHydrated] = useState(
+		() => useAuthStore.persist?.hasHydrated?.() ?? true,
 	);
 	const [collectionRailControls, setCollectionRailControls] = useState({
 		canScrollNext: false,
 		canScrollPrev: false,
 		hasOverflow: false,
 	});
+	const [bookCarouselControls, setBookCarouselControls] = useState<{
+		canScrollNext: boolean;
+		canScrollPrev: boolean;
+		scrollNext: () => void;
+		scrollPrev: () => void;
+	} | null>(null);
 	const collectionsRailRef = useRef<HTMLDivElement | null>(null);
 	const isSessionReady = Boolean(session);
 	const activeStatusParam = activeStatus === "all" ? undefined : activeStatus;
@@ -110,11 +119,12 @@ const MyTreasuresPage = () => {
 		data: subscribedCollectionsData,
 		isLoading: isSubscribedCollectionsLoading,
 	} = useSubscribedCollectionsQuery({ limit: 5 }, { enabled: isSessionReady });
-	const { data: myAuthorsData } = useMyAuthorsQuery(
-		{ limit: 1 },
+	const { data: myAuthorsData, isLoading: isMyAuthorsLoading } =
+		useMyAuthorsQuery({ limit: 8 }, { enabled: isSessionReady });
+	const { data: mySeriesData } = useMySeriesQuery(
+		{ limit: 8 },
 		{ enabled: isSessionReady },
 	);
-	const { data: mySeriesData } = useMySeriesQuery({ enabled: isSessionReady });
 	const { data: myGenres = [], isLoading: isMyGenresLoading } =
 		useUserGenresQuery(session?.user.id, { enabled: isSessionReady });
 	const activeChallenges = challenges
@@ -167,6 +177,8 @@ const MyTreasuresPage = () => {
 				: myCollectionsTotal + subscribedCollectionsTotal;
 	const isCollectionsLoading =
 		isMyCollectionsLoading || isSubscribedCollectionsLoading;
+	const myAuthors = myAuthorsData?.items ?? [];
+	const mySeries = mySeriesData?.items ?? [];
 	const updateCollectionRailControls = () => {
 		const rail = collectionsRailRef.current;
 
@@ -212,6 +224,7 @@ const MyTreasuresPage = () => {
 					: -rail.clientWidth * 0.82,
 		});
 		window.requestAnimationFrame(updateCollectionRailControls);
+		window.setTimeout(updateCollectionRailControls, 260);
 	};
 	const showChallenge = (direction: "next" | "prev") => {
 		if (activeChallenges.length < 2) return;
@@ -246,20 +259,36 @@ const MyTreasuresPage = () => {
 	const shouldShowAllBooksLink =
 		(userBooksData?.total ?? 0) > trackedBooks.length ||
 		trackedBooks.length > 6;
+	const bookCarouselItems = trackedBooks.map((item) =>
+		activeStatus === "all"
+			? {
+					...item.book,
+					isTracked: true,
+					myStatus: item.status,
+				}
+			: item.book,
+	);
+	const hasBookCarouselControls = Boolean(
+		bookCarouselControls?.canScrollPrev || bookCarouselControls?.canScrollNext,
+	);
 	const getStatusCount = (status: IUserBookStatus | "all") =>
 		status === "all"
 			? (statusCounts?.total ?? userBooksData?.total ?? 0)
 			: (statusCounts?.[status] ?? 0);
 
 	useEffect(() => {
-		const unsubscribeHydrate = useAuthStore.persist.onHydrate(() => {
+		const persistApi = useAuthStore.persist;
+
+		if (!persistApi) {
+			return;
+		}
+
+		const unsubscribeHydrate = persistApi.onHydrate(() => {
 			setIsAuthHydrated(false);
 		});
-		const unsubscribeFinishHydration = useAuthStore.persist.onFinishHydration(
-			() => {
-				setIsAuthHydrated(true);
-			},
-		);
+		const unsubscribeFinishHydration = persistApi.onFinishHydration(() => {
+			setIsAuthHydrated(true);
+		});
 
 		return () => {
 			unsubscribeHydrate();
@@ -431,33 +460,68 @@ const MyTreasuresPage = () => {
 				<MainGrid>
 					<LibraryPanel>
 						<PanelHeader>
-							<PanelTitle>Мои книги</PanelTitle>
-							<HeaderActions>
+							<PanelTitleRow>
+								<PanelTitle>Мои книги</PanelTitle>
 								{shouldShowAllBooksLink ? (
-									<SmallAction href="/treasures/books">
-										Посмотреть все
-									</SmallAction>
+									<ViewAllAction href="/treasures/books">
+										<span>Посмотреть все</span>
+										<KeyboardArrowRightIcon aria-hidden="true" />
+									</ViewAllAction>
 								) : null}
-								<SmallAction href="/search">Добавить книгу</SmallAction>
+							</PanelTitleRow>
+							<HeaderActions>
+								<IconTextAction href="/search" title="Найти книгу">
+									<SearchIcon aria-hidden="true" />
+									<span>Найти книгу</span>
+								</IconTextAction>
+								<IconTextAction
+									href="/treasures/books?create=1"
+									title="Создать книгу"
+								>
+									<AddIcon aria-hidden="true" />
+									<span>Создать</span>
+								</IconTextAction>
 							</HeaderActions>
 						</PanelHeader>
-						<StatusTabs aria-label="Статусы книг">
-							{statusTabs.map((status) => {
-								const isActive = activeStatus === status.id;
+						<BooksToolbar>
+							<StatusTabs aria-label="Статусы книг">
+								{statusTabs.map((status) => {
+									const isActive = activeStatus === status.id;
 
-								return (
-									<StatusTab
-										key={status.id}
-										$isActive={isActive}
+									return (
+										<StatusTab
+											key={status.id}
+											$isActive={isActive}
+											type="button"
+											onClick={() => setActiveStatus(status.id)}
+										>
+											{status.label}
+											<StatusCount>{getStatusCount(status.id)}</StatusCount>
+										</StatusTab>
+									);
+								})}
+							</StatusTabs>
+							{hasBookCarouselControls ? (
+								<RailControls aria-label="Перелистывание книг">
+									<RailControlButton
+										aria-label="Предыдущие книги"
+										disabled={!bookCarouselControls?.canScrollPrev}
 										type="button"
-										onClick={() => setActiveStatus(status.id)}
+										onClick={bookCarouselControls?.scrollPrev}
 									>
-										{status.label}
-										<StatusCount>{getStatusCount(status.id)}</StatusCount>
-									</StatusTab>
-								);
-							})}
-						</StatusTabs>
+										{"‹"}
+									</RailControlButton>
+									<RailControlButton
+										aria-label="Следующие книги"
+										disabled={!bookCarouselControls?.canScrollNext}
+										type="button"
+										onClick={bookCarouselControls?.scrollNext}
+									>
+										{"›"}
+									</RailControlButton>
+								</RailControls>
+							) : null}
+						</BooksToolbar>
 
 						{isUserBooksLoading ? (
 							<BookEmptyState>
@@ -470,25 +534,30 @@ const MyTreasuresPage = () => {
 									Проверьте авторизацию и попробуйте открыть страницу еще раз.
 								</BookEmptyText>
 							</BookEmptyState>
-						) : trackedBooks.length > 0 ? (
-							<BookRail>
-								{trackedBooks.map((item) => (
-									<TrackedBook key={item.id}>
-										<BookCard
-											book={
-												activeStatus === "all"
-													? {
-															...item.book,
-															isTracked: true,
-															myStatus: item.status,
-														}
-													: item.book
+						) : bookCarouselItems.length > 0 ? (
+							<BookCarouselFrame>
+								<BookCarousel
+									bleed={false}
+									books={bookCarouselItems}
+									size="tiny"
+									onControlsChange={(controls) => {
+										setBookCarouselControls((currentControls) => {
+											if (
+												currentControls?.canScrollNext ===
+													controls.canScrollNext &&
+												currentControls?.canScrollPrev ===
+													controls.canScrollPrev &&
+												currentControls?.scrollNext === controls.scrollNext &&
+												currentControls?.scrollPrev === controls.scrollPrev
+											) {
+												return currentControls;
 											}
-											size="tiny"
-										/>
-									</TrackedBook>
-								))}
-							</BookRail>
+
+											return controls;
+										});
+									}}
+								/>
+							</BookCarouselFrame>
 						) : (
 							<BookEmptyState>
 								<BookEmptyTitle>Книг пока нет</BookEmptyTitle>
@@ -519,35 +588,141 @@ const MyTreasuresPage = () => {
 					<TreasureTabContent>
 						{activeTreasureTab === "authors" ? (
 							<CompactResourcePanel>
-								<ResourceTitle>Мои авторы</ResourceTitle>
-								<ResourceText>
-									{resourceCounts.authors > 0
-										? `${resourceCounts.authors} авторов сохранено в ваших сокровищах.`
-										: "Сохраненные авторы появятся здесь после добавления."}
-								</ResourceText>
-								<SmallAction href="/authors">Добавить автора</SmallAction>
+								<PanelHeader>
+									<PanelTitleRow>
+										<PanelTitle>Мои авторы</PanelTitle>
+										<ViewAllAction href="/authors">
+											<span>Посмотреть все</span>
+											<KeyboardArrowRightIcon aria-hidden="true" />
+										</ViewAllAction>
+									</PanelTitleRow>
+									<HeaderActions>
+										<IconTextAction href="/authors" title="Добавить автора">
+											<AddIcon aria-hidden="true" />
+											<span>Добавить автора</span>
+										</IconTextAction>
+									</HeaderActions>
+								</PanelHeader>
+								{isMyAuthorsLoading ? (
+									<CollectionPreviewText>
+										Загружаем сохранённых авторов...
+									</CollectionPreviewText>
+								) : myAuthors.length > 0 ? (
+									<TreasureResourceGrid>
+										{myAuthors.map((author) => (
+											<AuthorTreasureCard
+												key={author.id}
+												href={`/authors/${author.id}`}
+											>
+												<AuthorAvatar
+													fontSize="0.95rem"
+													name={author.name}
+													photoUrl={author.photoUrl}
+													size="3.75rem"
+												/>
+												<TreasureResourceMeta>
+													<TreasureResourceTitle>
+														{author.name}
+													</TreasureResourceTitle>
+													<TreasureResourceText>
+														{author.bookCount} книг
+													</TreasureResourceText>
+												</TreasureResourceMeta>
+											</AuthorTreasureCard>
+										))}
+									</TreasureResourceGrid>
+								) : (
+									<CollectionPreviewText>
+										Сохранённые авторы появятся здесь после добавления.
+									</CollectionPreviewText>
+								)}
 							</CompactResourcePanel>
 						) : null}
 
 						{activeTreasureTab === "series" ? (
 							<CompactResourcePanel>
-								<ResourceTitle>Мои серии</ResourceTitle>
-								<ResourceText>
-									{resourceCounts.series > 0
-										? `${resourceCounts.series} серий добавлено для отслеживания.`
-										: "Серии, за которыми вы следите, появятся здесь."}
-								</ResourceText>
-								<SmallAction href="/search?tab=series">
-									Добавить серию
-								</SmallAction>
+								<PanelHeader>
+									<PanelTitleRow>
+										<PanelTitle>Мои серии</PanelTitle>
+										<ViewAllAction href="/search?tab=series">
+											<span>Посмотреть все</span>
+											<KeyboardArrowRightIcon aria-hidden="true" />
+										</ViewAllAction>
+									</PanelTitleRow>
+									<HeaderActions>
+										<IconTextAction
+											href="/search?tab=series"
+											title="Добавить серию"
+										>
+											<AddIcon aria-hidden="true" />
+											<span>Добавить серию</span>
+										</IconTextAction>
+									</HeaderActions>
+								</PanelHeader>
+								{mySeries.length > 0 ? (
+									<TreasureResourceGrid>
+										{mySeries.slice(0, 8).map((series) => (
+											<SeriesTreasureCard
+												key={series.id}
+												href={`/series/${series.id}`}
+											>
+												<SeriesTreasureStack aria-hidden="true">
+													{Array.from({ length: 3 }, (_, index) => (
+														<SeriesTreasureCover
+															key={index}
+															$coverUrl={series.coverUrl}
+															$index={index}
+														/>
+													))}
+												</SeriesTreasureStack>
+												<TreasureResourceMeta>
+													<TreasureResourceTitle>
+														{series.title}
+													</TreasureResourceTitle>
+													{series.description ? (
+														<TreasureResourceText>
+															{series.description}
+														</TreasureResourceText>
+													) : series.authorName ? (
+														<TreasureResourceText>
+															{series.authorName}
+															{series.bookCount
+																? ` · ${series.bookCount} книг`
+																: ""}
+														</TreasureResourceText>
+													) : (
+														<TreasureResourceText>
+															Сохранённая серия
+														</TreasureResourceText>
+													)}
+												</TreasureResourceMeta>
+											</SeriesTreasureCard>
+										))}
+									</TreasureResourceGrid>
+								) : (
+									<CollectionPreviewText>
+										Серии, за которыми вы следите, появятся здесь.
+									</CollectionPreviewText>
+								)}
 							</CompactResourcePanel>
 						) : null}
 
 						{activeTreasureTab === "genres" ? (
 							<CompactResourcePanel>
 								<PanelHeader>
-									<PanelTitle>Мои жанры</PanelTitle>
-									<SmallAction href="/genres">Добавить жанры</SmallAction>
+									<PanelTitleRow>
+										<PanelTitle>Мои жанры</PanelTitle>
+										<ViewAllAction href="/genres">
+											<span>Посмотреть все</span>
+											<KeyboardArrowRightIcon aria-hidden="true" />
+										</ViewAllAction>
+									</PanelTitleRow>
+									<HeaderActions>
+										<IconTextAction href="/genres" title="Добавить жанры">
+											<AddIcon aria-hidden="true" />
+											<span>Добавить жанры</span>
+										</IconTextAction>
+									</HeaderActions>
 								</PanelHeader>
 								{isMyGenresLoading ? (
 									<CollectionPreviewText>
@@ -576,37 +751,22 @@ const MyTreasuresPage = () => {
 						{activeTreasureTab === "collections" ? (
 							<CompactResourcePanel>
 								<PanelHeader>
-									<PanelTitle>Мои подборки</PanelTitle>
+									<PanelTitleRow>
+										<PanelTitle>Мои подборки</PanelTitle>
+										<ViewAllAction href="/collections/_username">
+											<span>Смотреть все</span>
+											<KeyboardArrowRightIcon aria-hidden="true" />
+										</ViewAllAction>
+									</PanelTitleRow>
 									<HeaderActions>
-										{collectionRailControls.hasOverflow ? (
-											<RailControls aria-label="Scroll my collections">
-												<RailControlButton
-													aria-label="Previous collections"
-													disabled={!collectionRailControls.canScrollPrev}
-													type="button"
-													onClick={() => scrollCollectionsRail("prev")}
-												>
-													{"‹"}
-												</RailControlButton>
-												<RailControlButton
-													aria-label="Next collections"
-													disabled={!collectionRailControls.canScrollNext}
-													type="button"
-													onClick={() => scrollCollectionsRail("next")}
-												>
-													{"›"}
-												</RailControlButton>
-											</RailControls>
-										) : null}
-										<SmallAction href="/collections/_username">
-											Смотреть все
-										</SmallAction>
-										<InlineAction
+										<IconButtonAction
+											title="Создать подборку"
 											type="button"
 											onClick={() => setIsCreateCollectionOpen(true)}
 										>
-											Создать
-										</InlineAction>
+											<AddIcon aria-hidden="true" />
+											<span>Создать</span>
+										</IconButtonAction>
 									</HeaderActions>
 								</PanelHeader>
 								<CollectionFilterRow>
@@ -622,12 +782,38 @@ const MyTreasuresPage = () => {
 											</CollectionFilterTab>
 										))}
 									</CollectionFilterTabs>
-									<CollectionSummary>
-										<CollectionCount>{visibleCollectionsTotal}</CollectionCount>
-										<CollectionText>
-											{visibleCollectionsTotal === 1 ? "подборка" : "подборок"}
-										</CollectionText>
-									</CollectionSummary>
+									<CollectionToolbarActions>
+										{collectionRailControls.hasOverflow ? (
+											<RailControls aria-label="Перелистывание подборок">
+												<RailControlButton
+													aria-label="Предыдущие подборки"
+													disabled={!collectionRailControls.canScrollPrev}
+													type="button"
+													onClick={() => scrollCollectionsRail("prev")}
+												>
+													{"‹"}
+												</RailControlButton>
+												<RailControlButton
+													aria-label="Следующие подборки"
+													disabled={!collectionRailControls.canScrollNext}
+													type="button"
+													onClick={() => scrollCollectionsRail("next")}
+												>
+													{"›"}
+												</RailControlButton>
+											</RailControls>
+										) : null}
+										<CollectionSummary>
+											<CollectionCount>
+												{visibleCollectionsTotal}
+											</CollectionCount>
+											<CollectionText>
+												{visibleCollectionsTotal === 1
+													? "подборка"
+													: "подборок"}
+											</CollectionText>
+										</CollectionSummary>
+									</CollectionToolbarActions>
 								</CollectionFilterRow>
 								{isCollectionsLoading ? (
 									<CollectionPreviewText>
@@ -862,7 +1048,7 @@ const ChallengeNavButton = styled.button`
 	&:focus-visible {
 		background: ${theme.colors.orangePrimary};
 		border-color: ${theme.colors.orangePrimary};
-		color: ${theme.colors.lightText};
+		color: ${theme.colors.invertedText};
 		outline: none;
 		transform: translateY(-0.0625rem);
 	}
@@ -969,7 +1155,7 @@ const ChallengeProgress = styled.div`
 	display: grid;
 	gap: 0.35rem;
 	justify-items: center;
-	margin-top: 0.55rem;
+	margin-top: 0.05rem;
 	min-width: 0;
 	width: 100%;
 `;
@@ -1014,8 +1200,8 @@ const MainGrid = styled.div`
 const LibraryPanel = styled.section`
 	border: 0.0625rem solid rgb(211 202 196 / 0.72);
 	border-radius: 1rem;
-	background: rgb(255 255 255 / 0.42);
-	padding: 1rem;
+	background: rgb(242 239 237 / 0.74);
+	padding: 1.25rem 1.35rem 1.45rem;
 `;
 
 const TreasureTabsPanel = styled.section`
@@ -1088,6 +1274,100 @@ const CompactResourcePanel = styled.div`
 	min-width: 0;
 `;
 
+const TreasureResourceGrid = styled.div`
+	display: grid;
+	gap: 0.75rem;
+	grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
+`;
+
+const treasureCardStyles = `
+	display: grid;
+	align-items: center;
+	grid-template-columns: 3.9rem minmax(0, 1fr);
+	gap: 0.75rem;
+	min-width: 0;
+	border: 0.0625rem solid rgb(211 202 196 / 0.72);
+	border-radius: 0.75rem;
+	background: rgb(255 255 255 / 0.58);
+	padding: 0.55rem;
+	color: inherit;
+	text-decoration: none;
+	transition:
+		border-color 180ms ease,
+		background 180ms ease,
+		transform 180ms ease;
+
+	&:hover,
+	&:focus-visible {
+		border-color: ${theme.colors.orangeLight};
+		background: rgb(255 255 255 / 0.76);
+		outline: none;
+		transform: translateY(-0.0625rem);
+	}
+`;
+
+const AuthorTreasureCard = styled(Link)`
+	${treasureCardStyles}
+`;
+
+const SeriesTreasureCard = styled(Link)`
+	${treasureCardStyles}
+`;
+
+const SeriesTreasureStack = styled.span`
+	position: relative;
+	display: block;
+	width: 3.9rem;
+	height: 4.7rem;
+`;
+
+const SeriesTreasureCover = styled.span<{
+	$coverUrl?: string;
+	$index: number;
+}>`
+	position: absolute;
+	top: ${({ $index }) => $index * 0.22}rem;
+	left: ${({ $index }) => $index * -0.18}rem;
+	z-index: ${({ $index }) => 3 - $index};
+	width: 3.3rem;
+	height: 4.4rem;
+	border: 0.0625rem solid ${theme.colors.background};
+	border-radius: 0.42rem;
+	background:
+		linear-gradient(rgb(4 18 26 / 0.05), rgb(4 18 26 / 0.05)),
+		url("${({ $coverUrl }) => $coverUrl || "/images/book-placeholder.svg"}")
+			center / cover;
+	box-shadow: 0 0.35rem 0.9rem rgb(4 18 26 / 0.08);
+`;
+
+const TreasureResourceMeta = styled.div`
+	min-width: 0;
+`;
+
+const TreasureResourceTitle = styled.h3`
+	display: -webkit-box;
+	overflow: hidden;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
+	margin: 0;
+	color: ${theme.colors.foreground};
+	font-family: ${theme.fonts.serif};
+	font-size: 1rem;
+	font-weight: 600;
+	line-height: 1.15;
+`;
+
+const TreasureResourceText = styled.p`
+	display: -webkit-box;
+	overflow: hidden;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
+	margin: 0.28rem 0 0;
+	color: ${theme.colors.softForeground};
+	font-size: 0.8rem;
+	line-height: 1.3;
+`;
+
 const MyGenresList = styled.div`
 	display: flex;
 	flex-wrap: wrap;
@@ -1128,6 +1408,18 @@ const CollectionFilterRow = styled.div`
 	@media (max-width: 40rem) {
 		align-items: flex-start;
 		flex-direction: column;
+	}
+`;
+
+const CollectionToolbarActions = styled.div`
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 0.75rem;
+
+	@media (max-width: 40rem) {
+		justify-content: space-between;
+		width: 100%;
 	}
 `;
 
@@ -1275,7 +1567,7 @@ const HeaderActions = styled.div`
 	flex-wrap: wrap;
 	align-items: center;
 	justify-content: flex-end;
-	gap: 0.75rem;
+	gap: 0.6rem;
 `;
 
 const RailControls = styled.div`
@@ -1307,9 +1599,9 @@ const RailControlButton = styled.button`
 
 	&:not(:disabled):hover,
 	&:not(:disabled):focus-visible {
-		background: ${theme.colors.orangePrimary};
-		border-color: ${theme.colors.orangePrimary};
-		color: ${theme.colors.lightText};
+		background: ${theme.colors.orangeLight};
+		border-color: ${theme.colors.orangeLight};
+		color: ${theme.colors.invertedText};
 		outline: none;
 		transform: translateY(-0.0625rem);
 	}
@@ -1328,31 +1620,96 @@ const PanelTitle = styled.h2`
 	line-height: 1.15;
 `;
 
-const SmallAction = styled(Link)`
+const PanelTitleRow = styled.div`
+	display: flex;
+	align-items: center;
+	gap: 0.85rem;
+	min-width: 0;
+`;
+
+const ViewAllAction = styled(Link)`
+	display: inline-flex;
+	align-items: center;
+	gap: 0.18rem;
+	border-radius: 999px;
 	color: ${theme.colors.orangeDark};
-	font-size: 0.9rem;
+	font-size: 0.86rem;
 	font-weight: 700;
+	padding: 0.12rem 0.38rem;
 	text-decoration: none;
+	transition:
+		background 160ms ease,
+		color 160ms ease;
+
+	& svg {
+		width: 1.15rem;
+		height: 1.15rem;
+		transition: transform 160ms ease;
+	}
 
 	&:hover,
 	&:focus-visible {
-		text-decoration: underline;
-		text-underline-offset: 0.16rem;
+		color: ${theme.colors.invertedText};
+		background: ${theme.colors.orangeLight};
 		outline: none;
+
+		& svg {
+			transform: translateX(0.12rem);
+		}
 	}
 `;
 
-const InlineAction = styled(Button)`
-	cursor: pointer;
-	font: inherit;
-	font-size: 0.9rem;
+const actionPillStyles = `
+	display: inline-flex;
+	align-items: center;
+	gap: 0.32rem;
+	border: 0.0625rem solid rgb(212 100 28 / 0.24);
+	border-radius: 999px;
+	background: rgb(255 255 255 / 0.36);
+	padding: 0.36rem 0.68rem;
+	color: ${theme.colors.orangeDark};
+	font-size: 0.82rem;
 	font-weight: 700;
+	line-height: 1;
+	text-decoration: none;
+	transition:
+		background 160ms ease,
+		border-color 160ms ease,
+		color 160ms ease,
+		transform 160ms ease;
+
+	& svg {
+		width: 1rem;
+		height: 1rem;
+	}
 
 	&:hover,
 	&:focus-visible {
-		text-decoration: underline;
-		text-underline-offset: 0.16rem;
+		border-color: ${theme.colors.orangeLight};
+		background: ${theme.colors.orangeLight};
+		color: ${theme.colors.invertedText};
 		outline: none;
+		transform: translateY(-0.0625rem);
+	}
+`;
+
+const IconTextAction = styled(Link)`
+	${actionPillStyles}
+`;
+
+const IconButtonAction = styled.button`
+	${actionPillStyles}
+`;
+
+const BooksToolbar = styled.div`
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+
+	@media (max-width: 44rem) {
+		align-items: flex-start;
+		flex-direction: column;
 	}
 `;
 
@@ -1360,6 +1717,7 @@ const StatusTabs = styled.div`
 	display: flex;
 	flex-wrap: wrap;
 	gap: 0.42rem;
+	min-width: 0;
 `;
 
 const StatusTab = styled.button<{ $isActive: boolean }>`
@@ -1393,21 +1751,10 @@ const StatusCount = styled.span`
 	font-weight: 700;
 `;
 
-const BookRail = styled.div`
-	display: flex;
-	gap: 0.55rem;
-	overflow-x: auto;
-	margin-top: 0.8rem;
-	padding-bottom: 0.1rem;
-	scroll-snap-type: x proximity;
-`;
-
-const TrackedBook = styled.article`
-	min-width: 5.75rem;
-	flex: 0 0 auto;
-	display: grid;
-	justify-items: start;
-	scroll-snap-align: start;
+const BookCarouselFrame = styled.div`
+	min-height: 12.75rem;
+	margin-top: 1rem;
+	overflow: visible;
 `;
 
 const BookEmptyState = styled.div`
@@ -1430,19 +1777,4 @@ const BookEmptyText = styled.p`
 	color: ${theme.colors.softForeground};
 	font-size: 0.95rem;
 	line-height: 1.45;
-`;
-
-const ResourceTitle = styled.h2`
-	margin: 0;
-	color: ${theme.colors.foreground};
-	font-family: ${theme.fonts.serif};
-	font-size: 1.25rem;
-	line-height: 1.15;
-`;
-
-const ResourceText = styled.p`
-	margin: 0.55rem 0 1rem;
-	color: ${theme.colors.softForeground};
-	font-size: 0.9rem;
-	line-height: 1.4;
 `;

@@ -1,4 +1,13 @@
+import Link from "next/link";
+import { useState } from "react";
+import styled from "styled-components";
+
 import type { ISearchBook } from "@/shared/api/search";
+import {
+	type IUserBookStatus,
+	useUpdateBookTrackingMutation,
+} from "@/shared/api/user-books";
+import { BookLibraryAction } from "@/shared/ui/BookLibraryAction";
 
 import {
 	ResultAuthor,
@@ -10,7 +19,6 @@ import {
 	ResultMeta,
 	ResultSeries,
 	ResultTitle,
-	WantButton,
 } from "./SearchResultCard.styles";
 import {
 	getSupplementalSearchMatch,
@@ -18,8 +26,6 @@ import {
 	lineHasMatch,
 	SearchMatchBadge,
 } from "./SearchResultCard.utils";
-import Link from "next/link";
-import styled from "styled-components";
 
 interface IBookResultCardProps {
 	book: ISearchBook;
@@ -34,6 +40,8 @@ export const BookResultCard = ({
 	query,
 	saveRecentSearch,
 }: IBookResultCardProps) => {
+	const updateTrackingMutation = useUpdateBookTrackingMutation();
+	const [isSaved, setIsSaved] = useState<IUserBookStatus | null>(null);
 	const seriesLine = book.seriesTitle
 		? `${book.orderInSeries}/${book.bookCountInSeries} of  ${book.seriesTitle}`
 		: null;
@@ -64,7 +72,24 @@ export const BookResultCard = ({
 		saveRecentSearch();
 		closeSearch();
 	};
-	
+	const handleSaveBook = async (status: IUserBookStatus) => {
+		if (updateTrackingMutation.isPending) return;
+
+		try {
+			await updateTrackingMutation.mutateAsync({
+				bookId: book.id,
+				payload: {
+					isRereading: status === "rereading",
+					readCount: 0,
+					status,
+				},
+			});
+			setIsSaved(status);
+		} catch {
+			setIsSaved(null);
+		}
+	};
+
 	return (
 		<ResultItem>
 			<ResultMain>
@@ -96,9 +121,12 @@ export const BookResultCard = ({
 					<SearchMatchBadge match={supplementalMatch} query={query} />
 				</ResultMeta>
 			</ResultMain>
-			<WantButton buttonType="oxygenPill" type="button">
-				Want to read
-			</WantButton>
+			<BookLibraryAction
+				currentStatus={isSaved}
+				disabled={updateTrackingMutation.isPending}
+				size="small"
+				onSaveStatus={handleSaveBook}
+			/>
 		</ResultItem>
 	);
 };
@@ -107,6 +135,6 @@ export const StyledResultLink = styled(Link)`
 	color: inherit;
 
 	&:hover {
-		text-decoration: underline;
+		color: inherit;
 	}
 `;

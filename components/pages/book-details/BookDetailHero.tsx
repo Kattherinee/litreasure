@@ -17,6 +17,7 @@ import {
 } from "@/shared/api/user-books";
 import { useAuthStore } from "@/shared/store/auth-store";
 import { theme } from "@/shared/theme";
+import { AuthorAvatar } from "@/shared/ui/AuthorAvatar";
 
 import { BookCollectionModal } from "./BookCollectionModal";
 
@@ -152,7 +153,12 @@ const BookDetailHero = ({ book, onAuthRequired }: IBookDetailHeroProps) => {
 			{primaryAuthor ? (
 				<AuthorLink href={`/authors/${primaryAuthor.id}`}>
 					<AuthorBy>by</AuthorBy>
-					{authorPhotoUrl ? <AuthorPhoto $photoUrl={authorPhotoUrl} /> : null}
+					<AuthorAvatar
+						fontSize="0.85rem"
+						name={authorName}
+						photoUrl={authorPhotoUrl}
+						size="1.75rem"
+					/>
 					<AuthorName>{authorName}</AuthorName>
 				</AuthorLink>
 			) : (
@@ -449,23 +455,6 @@ const AuthorBy = styled.span`
 	${AuthorLink}:hover & {
 		text-decoration: none !important;
 	}
-`;
-
-const AuthorPhoto = styled.span<{ $photoUrl?: string }>`
-	display: inline-flex;
-	width: 1.75rem;
-	height: 1.75rem;
-	flex: 0 0 auto;
-	align-items: center;
-	justify-content: center;
-	border: 0.0625rem solid rgb(242 239 237 / 0.36);
-	border-radius: 50%;
-	background: url("${({ $photoUrl }) => $photoUrl}") center / cover no-repeat;
-	color: ${theme.colors.orangeLight};
-	font-family: ${theme.fonts.serif};
-	font-size: 0.85rem;
-	font-weight: 600;
-	line-height: 1;
 `;
 
 const AuthorName = styled.span`

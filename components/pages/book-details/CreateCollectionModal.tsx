@@ -55,7 +55,7 @@ export const CreateCollectionModal = ({
 
 const ModalOverlay = styled.div`
 	position: fixed;
-	z-index: 80;
+	z-index: 1400;
 	inset: 0;
 	display: grid;
 	place-items: center;

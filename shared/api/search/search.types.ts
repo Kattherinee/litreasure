@@ -63,6 +63,7 @@ export interface ISearchTabResponse<T> {
 	items: T[];
 	limit: number;
 	page: number;
+	suggestion?: string;
 	total: number;
 }
 

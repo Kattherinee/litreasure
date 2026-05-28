@@ -214,6 +214,10 @@ const BookSearch = () => {
 
 	const clearSearch = () => setSearchValue("");
 	const selectTab = (tab: ISearchTabActiveId) => setActiveTab(tab);
+	const selectSuggestion = (suggestion: string) => {
+		setSearchValue(suggestion);
+		setActiveTab("genre");
+	};
 
 	useEffect(() => {
 		if (!isOpen) {
@@ -238,7 +242,7 @@ const BookSearch = () => {
 			<SearchIcon aria-hidden="true" />
 			<SearchInput
 				aria-label="Поиск книг"
-				placeholder="Название, автор"
+				placeholder="Название, автор, жанр"
 				type="search"
 				value={searchValue}
 				onChange={(event) => setSearchValue(event.target.value)}
@@ -254,7 +258,7 @@ const BookSearch = () => {
 							<PanelSearchInput
 								autoFocus
 								aria-label="Расширенный поиск"
-								placeholder="Название, автор, серия"
+								placeholder="Название, автор, серия, жанр"
 								type="search"
 								value={searchValue}
 								onChange={(event) => setSearchValue(event.target.value)}
@@ -387,7 +391,19 @@ const BookSearch = () => {
 								: null}
 
 							{shouldSearch && !isFetching && !hasVisibleResults ? (
-								<EmptyState>Ничего не найдено.</EmptyState>
+								<EmptyState>
+									Ничего не найдено.
+									{activeTab === "genre" && genresResponse?.suggestion ? (
+										<SuggestionButton
+											type="button"
+											onClick={() =>
+												selectSuggestion(genresResponse.suggestion!)
+											}
+										>
+											Искать «{genresResponse.suggestion}»
+										</SuggestionButton>
+									) : null}
+								</EmptyState>
 							) : null}
 						</ResultsArea>
 
@@ -675,6 +691,23 @@ const EmptyState = styled.div`
 	font-family: ${theme.fonts.sans};
 	font-size: 0.95rem;
 	text-align: center;
+`;
+
+const SuggestionButton = styled.button`
+	display: inline-flex;
+	margin-left: 0.45rem;
+	border: 0;
+	background: transparent;
+	color: ${theme.colors.orangeDark};
+	cursor: pointer;
+	font: inherit;
+	font-weight: 700;
+
+	&:hover,
+	&:focus-visible {
+		color: ${theme.colors.bluePrimary};
+		outline: none;
+	}
 `;
 
 const SearchFooter = styled.div`

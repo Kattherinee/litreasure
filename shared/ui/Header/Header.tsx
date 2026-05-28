@@ -85,17 +85,17 @@ const Header = () => {
 	const topGenres = [...genres]
 		.slice(0, 30)
 		.sort((a, b) => a.name.localeCompare(b.name, "ru"));
-	const showAuthRequiredModal =
-		isMounted && !user && isAuthRequiredRedirect();
-	const visibleAuthModalMode = authModalMode ?? (showAuthRequiredModal ? "login" : null);
+	const showAuthRequiredModal = isMounted && !user && isAuthRequiredRedirect();
+	const visibleAuthModalMode =
+		authModalMode ?? (showAuthRequiredModal ? "login" : null);
 	const authModalMessage = showAuthRequiredModal ? AUTH_REQUIRED_MESSAGE : "";
 	const userNavItems = user
 		? [
 				{
-					href: "/treasures/books",
-					label: "Мои книги",
+					href: "/treasures",
+					label: "Мои сокровища",
 					match: (currentPathname: string) =>
-						currentPathname.startsWith("/treasures/books"),
+						currentPathname.startsWith("/treasures"),
 				},
 			]
 		: [];

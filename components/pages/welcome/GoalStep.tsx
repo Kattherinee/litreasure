@@ -106,29 +106,21 @@ export const GoalStep = ({
 									onChange={(event) => handleDraftChange(event.target.value)}
 								/>
 							</GoalCounter>
-							<GoalInputHelp>
-								Это число станет целью книжного вызова. Можно ввести своё или
-								выбрать готовый вариант ниже.
-							</GoalInputHelp>
+							{/* <GoalInputHelp>
+								Это число станет целью книжного вызова.
+							</GoalInputHelp> */}
 						</GoalInputColumn>
 						<AverageComparison>
 							<AverageLabel>Средняя цель читателей</AverageLabel>
 							{isAverageLoading ? (
 								<AverageText>Сверяем с другими целями...</AverageText>
 							) : isAverageError || !averageChallenge ? (
-								<AverageText>Пока не удалось загрузить среднее значение.</AverageText>
+								<AverageText>
+									Пока не удалось загрузить среднее значение.
+								</AverageText>
 							) : (
 								<>
 									<AverageValue>{roundedAverageTarget} книг в год</AverageValue>
-									<AverageText>
-										{!hasGoal
-											? "Введи цель, и мы покажем, насколько она близка к средней."
-											: Math.abs(goalDifference) < 0.5
-											? "Твоя цель почти совпадает со средним темпом."
-											: goalDifference > 0
-												? `Твоя цель выше среднего на ${formattedDifference} книг.`
-												: `Твоя цель ниже среднего на ${formattedDifference} книг.`}
-									</AverageText>
 								</>
 							)}
 						</AverageComparison>
@@ -149,12 +141,12 @@ export const GoalStep = ({
 						{!hasGoal
 							? "Например, две книги в месяц — хорошая привычка"
 							: yearGoal <= 12
-							? "Отличное начало — одна книга в месяц"
-							: yearGoal <= 24
-								? "Две книги в месяц — хорошая привычка"
-								: yearGoal <= 52
-									? "Почти по книге в неделю — настоящий читатель"
-									: "Легендарный темп! Ты точно готов?"}
+								? "Отличное начало — одна книга в месяц"
+								: yearGoal <= 24
+									? "Две книги в месяц — хорошая привычка"
+									: yearGoal <= 52
+										? "Почти по книге в неделю — настоящий читатель"
+										: "Легендарный темп! Ты точно готов?"}
 					</GoalHint>
 				</GoalLeft>
 			</GoalLayout>

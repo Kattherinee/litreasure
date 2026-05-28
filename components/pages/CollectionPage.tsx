@@ -22,6 +22,7 @@ import { useAuthStore } from "@/shared/store/auth-store";
 import { theme } from "@/shared/theme";
 import { BookCard } from "@/shared/ui/BookCard";
 import { Button } from "@/shared/ui/Button";
+import { ConfirmModal } from "@/shared/ui/ConfirmModal";
 import { BookCardSkeleton } from "@/shared/ui/Skeleton";
 
 interface ICollectionPageProps {
@@ -112,8 +113,6 @@ const CollectionPage = ({ id }: ICollectionPageProps) => {
 	return (
 		<Page>
 			<Content>
-				<BackLink href="/collections">К подборкам</BackLink>
-
 				{isLoading ? (
 					<>
 						<TitleSkeleton />
@@ -151,43 +150,47 @@ const CollectionPage = ({ id }: ICollectionPageProps) => {
 								</Kicker>
 								<Title>{collection.title}</Title>
 								<Lead>{collection.description || "Без описания."}</Lead>
-								<Meta>
-									<OwnerMeta>
-										<OwnerAvatar
-											src={ownerAvatarUrl}
-											alt=""
-										/>
-										<span>{ownerLabel}</span>
-									</OwnerMeta>
-									<BookTotalBadge aria-label={`Всего книг: ${collection.bookCount}`}>
-										<TotalNumber>{collection.bookCount}</TotalNumber>
-										<TotalText>всего книг</TotalText>
-									</BookTotalBadge>
-									<TextMeta>
-										<PersonIcon aria-hidden="true" />
-										<span>{subscriberCount} подписчиков</span>
-									</TextMeta>
-								</Meta>
+								<MetaButtons>
+									<Meta>
+										<OwnerMeta>
+											<OwnerAvatar src={ownerAvatarUrl} alt="" />
+											<span>{ownerLabel}</span>
+										</OwnerMeta>
+										<BookTotalBadge
+											aria-label={`Всего книг: ${collection.bookCount}`}
+										>
+											<TotalNumber>{collection.bookCount}</TotalNumber>
+											<TotalText>всего книг</TotalText>
+										</BookTotalBadge>
+										{collection.isPublic && (
+											<TextMeta>
+												<PersonIcon aria-hidden="true" />
+												<span>{subscriberCount} подписчиков</span>
+											</TextMeta>
+										)}
+									</Meta>
+									{isMyCollection ? (
+										<OwnerActions aria-label="Collection owner actions">
+											<Button
+												buttonType="containedInverted"
+												type="button"
+												onClick={() => setIsEditOpen(true)}
+											>
+												Edit
+											</Button>
+											<DangerButton
+												type="button"
+												disabled={deleteCollectionMutation.isPending}
+												onClick={() => setIsDeleteConfirmOpen(true)}
+											>
+												Delete
+											</DangerButton>
+										</OwnerActions>
+									) : null}
+								</MetaButtons>
 							</HeroCopy>
 						</Hero>
-						{isMyCollection ? (
-							<OwnerActions aria-label="Collection owner actions">
-								<Button
-									buttonType="containedInverted"
-									type="button"
-									onClick={() => setIsEditOpen(true)}
-								>
-									Edit
-								</Button>
-								<DangerButton
-									type="button"
-									disabled={deleteCollectionMutation.isPending}
-									onClick={() => setIsDeleteConfirmOpen(true)}
-								>
-									Delete
-								</DangerButton>
-							</OwnerActions>
-						) : null}
+
 						{actionMessage ? (
 							<ActionMessage role="status">{actionMessage}</ActionMessage>
 						) : null}
@@ -222,40 +225,17 @@ const CollectionPage = ({ id }: ICollectionPageProps) => {
 				/>
 			) : null}
 			{isDeleteConfirmOpen ? (
-				<ConfirmOverlay
-					role="presentation"
-					onMouseDown={() => setIsDeleteConfirmOpen(false)}
+				<ConfirmModal
+					cancelLabel="Cancel"
+					confirmLabel="Delete"
+					confirmLoadingLabel="Deleting..."
+					isLoading={deleteCollectionMutation.isPending}
+					title="Delete collection?"
+					onCancel={() => setIsDeleteConfirmOpen(false)}
+					onConfirm={() => void deleteCollection()}
 				>
-					<ConfirmDialog
-						aria-modal="true"
-						role="dialog"
-						aria-labelledby="delete-collection-title"
-						onMouseDown={(event) => event.stopPropagation()}
-					>
-						<ConfirmTitle id="delete-collection-title">
-							Delete collection?
-						</ConfirmTitle>
-						<ConfirmText>
-							This action will remove the collection and cannot be undone.
-						</ConfirmText>
-						<ConfirmActions>
-							<Button
-								buttonType="outlined"
-								type="button"
-								onClick={() => setIsDeleteConfirmOpen(false)}
-							>
-								Cancel
-							</Button>
-							<DangerButton
-								type="button"
-								disabled={deleteCollectionMutation.isPending}
-								onClick={() => void deleteCollection()}
-							>
-								{deleteCollectionMutation.isPending ? "Deleting..." : "Delete"}
-							</DangerButton>
-						</ConfirmActions>
-					</ConfirmDialog>
-				</ConfirmOverlay>
+					This action will remove the collection and cannot be undone.
+				</ConfirmModal>
 			) : null}
 		</Page>
 	);
@@ -265,24 +245,12 @@ export default CollectionPage;
 
 const Page = styled.div`
 	min-height: 100dvh;
-	padding: clamp(3rem, 5vw, 4.5rem) clamp(1.5rem, 2.78vw, 2.5rem);
+	padding: clamp(1rem, 3vw, 2.5rem) clamp(1.5rem, 2.78vw, 2.5rem);
 `;
 
 const Content = styled.section`
 	margin: 0 auto;
-	max-width: 77.5rem;
-`;
-
-const BackLink = styled(Link)`
-	display: inline-flex;
-	margin-bottom: 1.5rem;
-	color: ${theme.colors.orangeDark};
-	font-size: 0.9375rem;
-	text-decoration: none;
-
-	&:hover {
-		text-decoration: underline;
-	}
+	max-width: 70.5rem;
 `;
 
 const Hero = styled.section<{ $coverUrl?: string }>`
@@ -293,14 +261,14 @@ const Hero = styled.section<{ $coverUrl?: string }>`
 		linear-gradient(
 			90deg,
 			rgb(232 226 222 / 0.96) 0%,
-			rgb(232 226 222 / 0.9) 42%,
-			rgb(232 226 222 / 0.44) 100%
+			rgb(232 226 222 / 0.6) 36%,
+			rgb(232 226 222 / 0.24) 100%
 		),
 		${({ $coverUrl }) =>
 			$coverUrl
 				? `url("${$coverUrl}") center / cover no-repeat`
 				: "linear-gradient(135deg, rgb(242 239 237 / 0.95), rgb(211 202 196 / 0.72))"};
-	padding: clamp(1.5rem, 4vw, 3.4rem);
+	padding: clamp(1rem, 2vw, 2.4rem);
 
 	@media (max-width: 42rem) {
 		background:
@@ -316,7 +284,12 @@ const HeroCopy = styled.div`
 	position: relative;
 	z-index: 1;
 	min-width: 0;
-	max-width: 52rem;
+`;
+
+const MetaButtons = styled.div`
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
 `;
 
 const UnsubscribeButton = styled.button`
@@ -360,10 +333,10 @@ const Kicker = styled.p`
 `;
 
 const Title = styled.h1`
-	max-width: 58rem;
+	max-width: 50rem;
 	margin: 0;
 	font-family: ${theme.fonts.serif};
-	font-size: clamp(2.25rem, 4.8vw, 4.25rem);
+	font-size: clamp(2.05rem, 3vw, 3.7rem);
 	font-weight: 600;
 	line-height: 1;
 	overflow-wrap: anywhere;
@@ -373,7 +346,7 @@ const Lead = styled.p`
 	max-width: 48rem;
 	margin: 1rem 0 0;
 	color: ${theme.colors.softForeground};
-	font-size: 1.125rem;
+	font-size: 1rem;
 	line-height: 1.55;
 `;
 
@@ -515,43 +488,4 @@ const ActionMessage = styled.p`
 	font-size: 0.95rem;
 	font-weight: 700;
 	line-height: 1.4;
-`;
-
-const ConfirmOverlay = styled.div`
-	position: fixed;
-	z-index: 90;
-	inset: 0;
-	display: grid;
-	place-items: center;
-	background: rgb(4 18 26 / 0.52);
-	padding: 1rem;
-`;
-
-const ConfirmDialog = styled.section`
-	width: min(100%, 28rem);
-	border-radius: 1rem;
-	background: ${theme.colors.surface};
-	padding: 1.5rem;
-	box-shadow: 0 1.25rem 3rem rgb(4 18 26 / 0.18);
-`;
-
-const ConfirmTitle = styled.h2`
-	margin: 0;
-	color: ${theme.colors.foreground};
-	font-family: ${theme.fonts.serif};
-	font-size: 1.55rem;
-	line-height: 1.2;
-`;
-
-const ConfirmText = styled.p`
-	margin: 0.7rem 0 1.2rem;
-	color: ${theme.colors.softForeground};
-	font-size: 0.95rem;
-	line-height: 1.45;
-`;
-
-const ConfirmActions = styled.div`
-	display: flex;
-	justify-content: flex-end;
-	gap: 0.75rem;
 `;

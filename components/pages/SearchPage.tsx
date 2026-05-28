@@ -193,6 +193,13 @@ const SearchPage = () => {
 		params.delete("page");
 		replaceSearchParams(params);
 	};
+	const handleSuggestionSearch = (suggestion: string) => {
+		setSearchValue(suggestion);
+		const params = new URLSearchParams(searchParams.toString());
+		params.set("q", suggestion);
+		params.delete("page");
+		replaceSearchParams(params);
+	};
 
 	const noop = () => {};
 
@@ -239,7 +246,7 @@ const SearchPage = () => {
 					<StyledInput
 						aria-label="Поиск"
 						autoFocus
-						placeholder="Название, автор, серия"
+						placeholder="Название, автор, серия, жанр"
 						type="search"
 						value={searchValue}
 						onChange={(event) => handleSearchChange(event.target.value)}
@@ -582,7 +589,17 @@ const SearchPage = () => {
 							/>
 						</>
 					) : (
-						<EmptyState>Жанры не найдены.</EmptyState>
+						<EmptyState>
+							Жанры не найдены.
+							{genresData?.suggestion ? (
+								<SuggestionButton
+									type="button"
+									onClick={() => handleSuggestionSearch(genresData.suggestion!)}
+								>
+									Искать «{genresData.suggestion}»
+								</SuggestionButton>
+							) : null}
+						</EmptyState>
 					)
 				) : null}
 
@@ -849,6 +866,24 @@ const EmptyState = styled.div`
 	font-family: ${theme.fonts.sans};
 	font-size: 0.95rem;
 	text-align: center;
+`;
+
+const SuggestionButton = styled.button`
+	display: inline-flex;
+	margin-left: 0.45rem;
+	border: 0;
+	background: transparent;
+	color: ${theme.colors.orangeDark};
+	cursor: pointer;
+	font: inherit;
+	font-weight: 700;
+	text-decoration: none;
+
+	&:hover,
+	&:focus-visible {
+		color: ${theme.colors.bluePrimary};
+		outline: none;
+	}
 `;
 
 const ResultsNumber = styled.span`
