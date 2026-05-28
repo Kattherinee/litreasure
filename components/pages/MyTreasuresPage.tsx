@@ -7,23 +7,25 @@ import styled from "styled-components";
 
 import { CreateCollectionModal } from "@/components/pages/book-details/CreateCollectionModal";
 import { useMyAuthorsQuery } from "@/shared/api/authors";
-import { useChallengesQuery } from "@/shared/api/book-challenge";
+import {
+	useChallengesQuery,
+	type IChallengePeriodType,
+} from "@/shared/api/book-challenge";
 import {
 	useMyCollectionsQuery,
 	useSubscribedCollectionsQuery,
 } from "@/shared/api/collections";
 import { useMySeriesQuery } from "@/shared/api/series";
 import {
-	useDeleteBookTrackingMutation,
 	useUserBookStatusCountsQuery,
 	useUserBooksQuery,
 	type IUserBookStatus,
-	type IUserBookTracking,
 } from "@/shared/api/user-books";
 import { useUserGenresQuery } from "@/shared/api/users";
 import { useAuthStore } from "@/shared/store/auth-store";
 import { theme } from "@/shared/theme";
 import { BookCard } from "@/shared/ui/BookCard";
+import BookCarousel from "@/shared/ui/BookCarousel/BookCarousel";
 import { Button } from "@/shared/ui/Button";
 
 const statusTabs: Array<{ id: IUserBookStatus | "all"; label: string }> = [
@@ -36,16 +38,8 @@ const statusTabs: Array<{ id: IUserBookStatus | "all"; label: string }> = [
 	{ id: "dropped", label: "Брошено" },
 ];
 
-const statusLabels: Record<IUserBookStatus, string> = {
-	dropped: "Брошено",
-	finished: "Прочитано",
-	paused: "Пауза",
-	planned: "В планах",
-	reading: "Читаю",
-	rereading: "Перечитываю",
-};
-
 type ICollectionTreasureFilter = "all" | "created" | "subscribed";
+type ITreasureTab = "authors" | "series" | "genres" | "collections";
 
 const collectionFilterTabs: Array<{
 	id: ICollectionTreasureFilter;
@@ -56,40 +50,32 @@ const collectionFilterTabs: Array<{
 	{ id: "subscribed", label: "Подписки" },
 ];
 
-const sections = [
-	{
-		action: "Добавить автора",
-		countKey: "authors",
-		description: "Сохраненные авторы и личные авторские записи.",
-		href: "/authors",
-		title: "Мои авторы",
-	},
-	{
-		action: "Добавить серию",
-		countKey: "series",
-		description: "Серии, за которыми вы следите или добавили для себя.",
-		href: "/search?tab=series",
-		title: "Мои серии",
-	},
-	{
-		action: "Добавить цитату",
-		countKey: "quotes",
-		description: "Любимые цитаты и заметки по прочитанному.",
-		href: "/treasures",
-		title: "Мои цитаты",
-	},
-] as const;
+const challengePeriodLabels: Record<IChallengePeriodType, string> = {
+	month: "месяц",
+	week: "неделю",
+	year: "год",
+};
 
 const MyTreasuresPage = () => {
 	const router = useRouter();
 	const session = useAuthStore((state) => state.session);
-	const deleteTrackingMutation = useDeleteBookTrackingMutation();
 	const [activeStatus, setActiveStatus] = useState<IUserBookStatus | "all">(
 		"all",
 	);
 	const [activeCollectionFilter, setActiveCollectionFilter] =
 		useState<ICollectionTreasureFilter>("all");
+	const [activeTreasureTab, setActiveTreasureTab] =
+		useState<ITreasureTab>("collections");
+	const [selectedChallengeIndex, setSelectedChallengeIndex] = useState(0);
 	const [isCreateCollectionOpen, setIsCreateCollectionOpen] = useState(false);
+	const [isAuthHydrated, setIsAuthHydrated] = useState(() =>
+		useAuthStore.persist.hasHydrated(),
+	);
+	const [collectionRailControls, setCollectionRailControls] = useState({
+		canScrollNext: false,
+		canScrollPrev: false,
+		hasOverflow: false,
+	});
 	const collectionsRailRef = useRef<HTMLDivElement | null>(null);
 	const isSessionReady = Boolean(session);
 	const activeStatusParam = activeStatus === "all" ? undefined : activeStatus;
@@ -99,7 +85,7 @@ const MyTreasuresPage = () => {
 	const { data: readingBooksData, isLoading: isReadingBooksLoading } =
 		useUserBooksQuery(
 			{
-				limit: 3,
+				limit: 8,
 				status: "reading",
 			},
 			{ enabled: isSessionReady },
@@ -131,8 +117,29 @@ const MyTreasuresPage = () => {
 	const { data: mySeriesData } = useMySeriesQuery({ enabled: isSessionReady });
 	const { data: myGenres = [], isLoading: isMyGenresLoading } =
 		useUserGenresQuery(session?.user.id, { enabled: isSessionReady });
-	const activeChallenge = challenges.find((challenge) => challenge.isActive);
-	const activeChallengeProgress = activeChallenge?.progress?.value.percent ?? 0;
+	const activeChallenges = challenges
+		.filter((challenge) => challenge.isActive)
+		.sort(
+			(firstChallenge, secondChallenge) =>
+				new Date(firstChallenge.endDate).getTime() -
+				new Date(secondChallenge.endDate).getTime(),
+		);
+	const activeChallengeIndex = activeChallenges.length
+		? Math.min(selectedChallengeIndex, activeChallenges.length - 1)
+		: 0;
+	const activeChallenge = activeChallenges[activeChallengeIndex];
+	const activeChallengeProgress = clampPercent(
+		activeChallenge?.progress?.value.percent,
+	);
+	const activeChallengeTimeProgress = clampPercent(
+		activeChallenge?.progress?.time.percent,
+	);
+	const activeChallengeCurrentValue =
+		activeChallenge?.progress?.value.current ?? 0;
+	const activeChallengeRemainingDays =
+		activeChallenge?.progress?.time.remainingDays ?? 0;
+	const activeChallengeUnit =
+		activeChallenge?.type === "pages" ? "стр." : "книг";
 	const readingBooks = readingBooksData?.items ?? [];
 	const trackedBooks = userBooksData?.items ?? [];
 	const myCollections = myCollectionsData?.items ?? [];
@@ -160,6 +167,39 @@ const MyTreasuresPage = () => {
 				: myCollectionsTotal + subscribedCollectionsTotal;
 	const isCollectionsLoading =
 		isMyCollectionsLoading || isSubscribedCollectionsLoading;
+	const updateCollectionRailControls = () => {
+		const rail = collectionsRailRef.current;
+
+		if (!rail) {
+			setCollectionRailControls({
+				canScrollNext: false,
+				canScrollPrev: false,
+				hasOverflow: false,
+			});
+			return;
+		}
+
+		const maxScrollLeft = rail.scrollWidth - rail.clientWidth;
+		const hasOverflow = maxScrollLeft > 1;
+		const canScrollPrev = hasOverflow && rail.scrollLeft > 1;
+		const canScrollNext = hasOverflow && rail.scrollLeft < maxScrollLeft - 1;
+
+		setCollectionRailControls((currentControls) => {
+			if (
+				currentControls.canScrollNext === canScrollNext &&
+				currentControls.canScrollPrev === canScrollPrev &&
+				currentControls.hasOverflow === hasOverflow
+			) {
+				return currentControls;
+			}
+
+			return {
+				canScrollNext,
+				canScrollPrev,
+				hasOverflow,
+			};
+		});
+	};
 	const scrollCollectionsRail = (direction: "next" | "prev") => {
 		const rail = collectionsRailRef.current;
 		if (!rail) return;
@@ -171,12 +211,38 @@ const MyTreasuresPage = () => {
 					? rail.clientWidth * 0.82
 					: -rail.clientWidth * 0.82,
 		});
+		window.requestAnimationFrame(updateCollectionRailControls);
+	};
+	const showChallenge = (direction: "next" | "prev") => {
+		if (activeChallenges.length < 2) return;
+
+		setSelectedChallengeIndex((currentIndex) =>
+			direction === "next"
+				? (currentIndex + 1) % activeChallenges.length
+				: (currentIndex - 1 + activeChallenges.length) %
+					activeChallenges.length,
+		);
 	};
 	const resourceCounts = {
 		authors: myAuthorsData?.total ?? 0,
-		quotes: 0,
+		genres: myGenres.length,
+		collections: visibleCollectionsTotal,
 		series: mySeriesData?.total ?? 0,
 	};
+	const treasureTabs: Array<{
+		count: number;
+		id: ITreasureTab;
+		label: string;
+	}> = [
+		{ id: "authors", label: "Мои авторы", count: resourceCounts.authors },
+		{ id: "series", label: "Мои серии", count: resourceCounts.series },
+		{ id: "genres", label: "Мои жанры", count: resourceCounts.genres },
+		{
+			id: "collections",
+			label: "Мои подборки",
+			count: resourceCounts.collections,
+		},
+	];
 	const shouldShowAllBooksLink =
 		(userBooksData?.total ?? 0) > trackedBooks.length ||
 		trackedBooks.length > 6;
@@ -186,26 +252,61 @@ const MyTreasuresPage = () => {
 			: (statusCounts?.[status] ?? 0);
 
 	useEffect(() => {
-		if (!session) {
+		const unsubscribeHydrate = useAuthStore.persist.onHydrate(() => {
+			setIsAuthHydrated(false);
+		});
+		const unsubscribeFinishHydration = useAuthStore.persist.onFinishHydration(
+			() => {
+				setIsAuthHydrated(true);
+			},
+		);
+
+		return () => {
+			unsubscribeHydrate();
+			unsubscribeFinishHydration();
+		};
+	}, []);
+
+	useEffect(() => {
+		if (isAuthHydrated && !session) {
 			router.replace("/?auth=required");
 		}
-	}, [router, session]);
+	}, [isAuthHydrated, router, session]);
 
-	if (!session) {
+	useEffect(() => {
+		const rail = collectionsRailRef.current;
+
+		if (!rail || activeTreasureTab !== "collections") {
+			const frame = window.requestAnimationFrame(updateCollectionRailControls);
+
+			return () => window.cancelAnimationFrame(frame);
+		}
+
+		const frame = window.requestAnimationFrame(updateCollectionRailControls);
+		const resizeObserver =
+			typeof ResizeObserver === "undefined"
+				? null
+				: new ResizeObserver(updateCollectionRailControls);
+
+		rail.addEventListener("scroll", updateCollectionRailControls, {
+			passive: true,
+		});
+		resizeObserver?.observe(rail);
+
+		return () => {
+			window.cancelAnimationFrame(frame);
+			rail.removeEventListener("scroll", updateCollectionRailControls);
+			resizeObserver?.disconnect();
+		};
+	}, [
+		activeTreasureTab,
+		isCollectionsLoading,
+		visibleCollections.length,
+		visibleCollectionsTotal,
+	]);
+
+	if (!isAuthHydrated || !session) {
 		return null;
-	}
-
-	if (!session) {
-		return (
-			<Page>
-				<Content>
-					<Title>Мои сокровища</Title>
-					<EmptyState>
-						Войдите в аккаунт, чтобы увидеть свои книги, подборки и прогресс.
-					</EmptyState>
-				</Content>
-			</Page>
-		);
 	}
 
 	return (
@@ -219,45 +320,23 @@ const MyTreasuresPage = () => {
 							созданное лично вами собирается здесь.
 						</Lead>
 					</HeroCopy>
-					<HeroActions>
-						<Button buttonType="containedInverted" href="/search">
-							Добавить книгу
-						</Button>
-						<Button
-							buttonType="outlined"
-							type="button"
-							onClick={() => setIsCreateCollectionOpen(true)}
-						>
-							Создать подборку
-						</Button>
-					</HeroActions>
 				</Hero>
 
-				<TopGrid>
-					<ReadingCard>
-						<CardEyebrow>Сейчас читаю</CardEyebrow>
+				<ReadingCard>
+					<ReadingShelf>
+						<ReadingHeader>
+							<CardEyebrow>Сейчас читаю</CardEyebrow>
+						</ReadingHeader>
 						{isReadingBooksLoading ? (
 							<CardText>Загружаем текущие книги...</CardText>
 						) : readingBooks.length > 0 ? (
-							<ReadingList>
-								{readingBooks.map((item) => (
-									<ReadingItem key={item.id}>
-										<ReadingCover
-											$coverUrl={item.book.coverUrl}
-											aria-hidden="true"
-										/>
-										<ReadingMeta>
-											<ReadingTitle href={`/books/${item.book.id}`}>
-												{item.book.title}
-											</ReadingTitle>
-											<ReadingDetails>
-												{item.book.author}
-												{item.currentPage ? ` · ${item.currentPage} стр.` : ""}
-											</ReadingDetails>
-										</ReadingMeta>
-									</ReadingItem>
-								))}
-							</ReadingList>
+							<ReadingCarouselWrap $bookCount={readingBooks.length}>
+								<BookCarousel
+									bleed={false}
+									books={readingBooks.map((item) => item.book)}
+									size="tiny"
+								/>
+							</ReadingCarouselWrap>
 						) : (
 							<>
 								<CardTitle>Пока пусто</CardTitle>
@@ -270,259 +349,334 @@ const MyTreasuresPage = () => {
 								</Button>
 							</>
 						)}
-					</ReadingCard>
+					</ReadingShelf>
 
 					<ChallengeCard>
-						<CardEyebrow>Книжный вызов</CardEyebrow>
-						<CardTitle>
-							{activeChallenge
-								? `${activeChallenge.targetValue} книг`
-								: "Вызов не задан"}
-						</CardTitle>
-						<ProgressTrack aria-hidden="true">
-							<ProgressFill $width={activeChallengeProgress} />
-						</ProgressTrack>
-						<CardText>
-							{activeChallenge
-								? `${Math.round(activeChallengeProgress)}% выполнено, осталось ${activeChallenge.progress?.value.remaining ?? activeChallenge.targetValue} ${activeChallenge.type === "pages" ? "страниц" : "книг"}.`
-								: "Создайте цель, чтобы отслеживать чтение в течение года, месяца или недели."}
-						</CardText>
-						<SmallAction href="/book-challenge">Управлять вызовами</SmallAction>
+						<ChallengeCopy>
+							<ChallengeHeading>
+								<CardEyebrow>Книжный вызов</CardEyebrow>
+								{activeChallenges.length > 1 ? (
+									<ChallengeCount>
+										{activeChallenges.length} активных
+									</ChallengeCount>
+								) : null}
+							</ChallengeHeading>
+							<ChallengeCarouselRow>
+								{activeChallenges.length > 1 ? (
+									<ChallengeNavButton
+										aria-label="Предыдущий вызов"
+										type="button"
+										onClick={() => showChallenge("prev")}
+									>
+										{"‹"}
+									</ChallengeNavButton>
+								) : null}
+								<ChallengeGraph
+									href="/book-challenge"
+									$timePercent={activeChallengeTimeProgress}
+									aria-label="Прогресс книжного вызова"
+								>
+									<ChallengeValueRing $valuePercent={activeChallengeProgress}>
+										<ChallengeGraphCenter>
+											<ChallengeGraphLabel>
+												{activeChallenge
+													? `На ${challengePeriodLabels[activeChallenge.periodType]}`
+													: "Нет вызова"}
+											</ChallengeGraphLabel>
+											<ChallengeGraphValue>
+												{activeChallenge
+													? `	${activeChallengeCurrentValue} /${" "}
+														${activeChallenge.targetValue} ${activeChallengeUnit}`
+													: "0"}
+											</ChallengeGraphValue>
+											{activeChallenge ? (
+												<>
+													<ChallengeGraphMeta>
+														{activeChallengeRemainingDays} дн. · до{" "}
+														{formatChallengeDate(activeChallenge.endDate)}
+													</ChallengeGraphMeta>
+												</>
+											) : (
+												<ChallengeGraphMeta>
+													Создайте цель для чтения
+												</ChallengeGraphMeta>
+											)}
+										</ChallengeGraphCenter>
+									</ChallengeValueRing>
+								</ChallengeGraph>
+								{activeChallenges.length > 1 ? (
+									<ChallengeNavButton
+										aria-label="Следующий вызов"
+										type="button"
+										onClick={() => showChallenge("next")}
+									>
+										{"›"}
+									</ChallengeNavButton>
+								) : null}
+							</ChallengeCarouselRow>
+							{activeChallenges.length > 1 ? (
+								<ChallengeSlideLabel>
+									{activeChallengeIndex + 1} из {activeChallenges.length}
+								</ChallengeSlideLabel>
+							) : null}
+						</ChallengeCopy>
+						<ChallengeProgress>
+							<ChallengeDetailsLink href="/book-challenge">
+								Посмотреть подробнее
+							</ChallengeDetailsLink>
+						</ChallengeProgress>
 					</ChallengeCard>
-				</TopGrid>
+				</ReadingCard>
 
-				<MyGenresPanel>
-					<PanelHeader>
-						<PanelTitle>Мои жанры</PanelTitle>
-						<SmallAction href="/genres">Добавить жанры</SmallAction>
-					</PanelHeader>
-					{isMyGenresLoading ? (
-						<CollectionPreviewText>Загружаем ваши жанры...</CollectionPreviewText>
-					) : myGenres.length > 0 ? (
-						<MyGenresList aria-label="Мои сохранённые жанры">
-							{myGenres.map((genre) => (
-								<MyGenreChip key={genre.id} href={`/genres/${genre.slug}`}>
-									{genre.name}
-								</MyGenreChip>
-							))}
-						</MyGenresList>
-					) : (
-						<CollectionPreviewText>
-							Сохранённые жанры появятся здесь после нажатия на плюс в каталоге
-							жанров.
-						</CollectionPreviewText>
-					)}
-				</MyGenresPanel>
+				<MainGrid>
+					<LibraryPanel>
+						<PanelHeader>
+							<PanelTitle>Мои книги</PanelTitle>
+							<HeaderActions>
+								{shouldShowAllBooksLink ? (
+									<SmallAction href="/treasures/books">
+										Посмотреть все
+									</SmallAction>
+								) : null}
+								<SmallAction href="/search">Добавить книгу</SmallAction>
+							</HeaderActions>
+						</PanelHeader>
+						<StatusTabs aria-label="Статусы книг">
+							{statusTabs.map((status) => {
+								const isActive = activeStatus === status.id;
 
-				<CollectionsPanel
-					role="link"
-					tabIndex={0}
-					onClick={() => router.push("/collections/_username")}
-					onKeyDown={(event) => {
-						if (event.key !== "Enter" && event.key !== " ") return;
-
-						event.preventDefault();
-						router.push("/collections/_username");
-					}}
-				>
-					<PanelHeader>
-						<PanelTitle>Мои подборки</PanelTitle>
-						<HeaderActions>
-							{visibleCollections.length > 1 ? (
-								<RailControls aria-label="Scroll my collections">
-									<RailControlButton
-										aria-label="Previous collections"
+								return (
+									<StatusTab
+										key={status.id}
+										$isActive={isActive}
 										type="button"
-										onClick={(event) => {
-											event.stopPropagation();
-											scrollCollectionsRail("prev");
-										}}
+										onClick={() => setActiveStatus(status.id)}
 									>
-										{"<"}
-									</RailControlButton>
-									<RailControlButton
-										aria-label="Next collections"
-										type="button"
-										onClick={(event) => {
-											event.stopPropagation();
-											scrollCollectionsRail("next");
-										}}
-									>
-										{">"}
-									</RailControlButton>
-								</RailControls>
-							) : null}
-							<SmallAction
-								href="/collections/_username"
-								onClick={(event) => event.stopPropagation()}
-							>
-								Смотреть все
-							</SmallAction>
-							<InlineAction
+										{status.label}
+										<StatusCount>{getStatusCount(status.id)}</StatusCount>
+									</StatusTab>
+								);
+							})}
+						</StatusTabs>
+
+						{isUserBooksLoading ? (
+							<BookEmptyState>
+								<BookEmptyTitle>Загружаем книги...</BookEmptyTitle>
+							</BookEmptyState>
+						) : isUserBooksError ? (
+							<BookEmptyState>
+								<BookEmptyTitle>Не удалось загрузить книги</BookEmptyTitle>
+								<BookEmptyText>
+									Проверьте авторизацию и попробуйте открыть страницу еще раз.
+								</BookEmptyText>
+							</BookEmptyState>
+						) : trackedBooks.length > 0 ? (
+							<BookRail>
+								{trackedBooks.map((item) => (
+									<TrackedBook key={item.id}>
+										<BookCard
+											book={
+												activeStatus === "all"
+													? {
+															...item.book,
+															isTracked: true,
+															myStatus: item.status,
+														}
+													: item.book
+											}
+											size="tiny"
+										/>
+									</TrackedBook>
+								))}
+							</BookRail>
+						) : (
+							<BookEmptyState>
+								<BookEmptyTitle>Книг пока нет</BookEmptyTitle>
+								<BookEmptyText>
+									Добавьте книгу и назначьте статус: планирую, читаю, прочитано,
+									пауза, перечитываю или брошено.
+								</BookEmptyText>
+							</BookEmptyState>
+						)}
+					</LibraryPanel>
+				</MainGrid>
+
+				<TreasureTabsPanel>
+					<TreasureTabs aria-label="Разделы сокровищ">
+						{treasureTabs.map((tab) => (
+							<TreasureTabButton
+								key={tab.id}
+								$isActive={activeTreasureTab === tab.id}
 								type="button"
-								onClick={(event) => {
-									event.stopPropagation();
-									setIsCreateCollectionOpen(true);
-								}}
+								onClick={() => setActiveTreasureTab(tab.id)}
 							>
-								Создать
-							</InlineAction>
-						</HeaderActions>
-					</PanelHeader>
-					<CollectionFilterTabs aria-label="Фильтр подборок">
-						{collectionFilterTabs.map((filter) => (
-							<CollectionFilterTab
-								key={filter.id}
-								$isActive={activeCollectionFilter === filter.id}
-								type="button"
-								onClick={(event) => {
-									event.stopPropagation();
-									setActiveCollectionFilter(filter.id);
-								}}
-								onKeyDown={(event) => event.stopPropagation()}
-							>
-								{filter.label}
-							</CollectionFilterTab>
+								<span>{tab.label}</span>
+								<TreasureTabCount>{tab.count}</TreasureTabCount>
+							</TreasureTabButton>
 						))}
-					</CollectionFilterTabs>
-					<CollectionSummary>
-						<CollectionCount>{visibleCollectionsTotal}</CollectionCount>
-						<CollectionText>
-							{visibleCollectionsTotal === 1
-								? "подборка в ваших сокровищах"
-								: "подборок в ваших сокровищах"}
-						</CollectionText>
-					</CollectionSummary>
-					{isCollectionsLoading ? (
-						<CollectionPreviewText>
-							Загружаем ваши подборки...
-						</CollectionPreviewText>
-					) : visibleCollections.length > 0 ? (
-						<MyCollectionsRail ref={collectionsRailRef}>
-							{visibleCollections.map((collection) => (
-								<MyCollectionChip
-									key={collection.id}
-									aria-label={`Открыть подборку ${collection.title}`}
-									role="link"
-									tabIndex={0}
-									onClick={(event) => {
-										event.stopPropagation();
-										router.push(`/collections/${collection.id}`);
-									}}
-									onKeyDown={(event) => {
-										event.stopPropagation();
+					</TreasureTabs>
 
-										if (event.key !== "Enter" && event.key !== " ") return;
+					<TreasureTabContent>
+						{activeTreasureTab === "authors" ? (
+							<CompactResourcePanel>
+								<ResourceTitle>Мои авторы</ResourceTitle>
+								<ResourceText>
+									{resourceCounts.authors > 0
+										? `${resourceCounts.authors} авторов сохранено в ваших сокровищах.`
+										: "Сохраненные авторы появятся здесь после добавления."}
+								</ResourceText>
+								<SmallAction href="/authors">Добавить автора</SmallAction>
+							</CompactResourcePanel>
+						) : null}
 
-										event.preventDefault();
-										router.push(`/collections/${collection.id}`);
-									}}
-								>
-									<CollectionCover
-										$coverUrl={collection.coverUrl}
-										aria-hidden="true"
-									/>
-									<CollectionChipMeta>
-										<CollectionChipTitle>
-											{collection.title}
-										</CollectionChipTitle>
-										<CollectionChipText>
-											{collection.bookCount} книг
-										</CollectionChipText>
-									</CollectionChipMeta>
-								</MyCollectionChip>
-							))}
-						</MyCollectionsRail>
-					) : (
-						<CollectionPreviewText>
-							Создайте первую подборку для любимых книг, настроений и будущих
-							полок.
-						</CollectionPreviewText>
-					)}
-				</CollectionsPanel>
-
-				<LibraryPanel>
-					<PanelHeader>
-						<PanelTitle>Мои книги</PanelTitle>
-						<HeaderActions>
-							{shouldShowAllBooksLink ? (
-								<SmallAction href="/treasures/books">
-									Посмотреть все
+						{activeTreasureTab === "series" ? (
+							<CompactResourcePanel>
+								<ResourceTitle>Мои серии</ResourceTitle>
+								<ResourceText>
+									{resourceCounts.series > 0
+										? `${resourceCounts.series} серий добавлено для отслеживания.`
+										: "Серии, за которыми вы следите, появятся здесь."}
+								</ResourceText>
+								<SmallAction href="/search?tab=series">
+									Добавить серию
 								</SmallAction>
-							) : null}
-							<SmallAction href="/search">Добавить книгу</SmallAction>
-						</HeaderActions>
-					</PanelHeader>
-					<StatusTabs aria-label="Статусы книг">
-						{statusTabs.map((status) => {
-							const isActive = activeStatus === status.id;
+							</CompactResourcePanel>
+						) : null}
 
-							return (
-								<StatusTab
-									key={status.id}
-									$isActive={isActive}
-									type="button"
-									onClick={() => setActiveStatus(status.id)}
-								>
-									{status.label}
-									<StatusCount>{getStatusCount(status.id)}</StatusCount>
-								</StatusTab>
-							);
-						})}
-					</StatusTabs>
+						{activeTreasureTab === "genres" ? (
+							<CompactResourcePanel>
+								<PanelHeader>
+									<PanelTitle>Мои жанры</PanelTitle>
+									<SmallAction href="/genres">Добавить жанры</SmallAction>
+								</PanelHeader>
+								{isMyGenresLoading ? (
+									<CollectionPreviewText>
+										Загружаем ваши жанры...
+									</CollectionPreviewText>
+								) : myGenres.length > 0 ? (
+									<MyGenresList aria-label="Мои сохранённые жанры">
+										{myGenres.map((genre) => (
+											<MyGenreChip
+												key={genre.id}
+												href={`/genres/${genre.slug}`}
+											>
+												{genre.name}
+											</MyGenreChip>
+										))}
+									</MyGenresList>
+								) : (
+									<CollectionPreviewText>
+										Сохранённые жанры появятся здесь после нажатия на плюс в
+										каталоге жанров.
+									</CollectionPreviewText>
+								)}
+							</CompactResourcePanel>
+						) : null}
 
-					{isUserBooksLoading ? (
-						<BookEmptyState>
-							<BookEmptyTitle>Загружаем книги...</BookEmptyTitle>
-						</BookEmptyState>
-					) : isUserBooksError ? (
-						<BookEmptyState>
-							<BookEmptyTitle>Не удалось загрузить книги</BookEmptyTitle>
-							<BookEmptyText>
-								Проверьте авторизацию и попробуйте открыть страницу еще раз.
-							</BookEmptyText>
-						</BookEmptyState>
-					) : trackedBooks.length > 0 ? (
-						<BookRail>
-							{trackedBooks.map((item) => (
-								<TrackedBook key={item.id}>
-									<BookCard book={item.book} />
-									<TrackingInfo>{getTrackingInfo(item)}</TrackingInfo>
-									<RemoveTrackingButton
-										type="button"
-										disabled={deleteTrackingMutation.isPending}
-										onClick={() => deleteTrackingMutation.mutate(item.book.id)}
-									>
-										Убрать
-									</RemoveTrackingButton>
-								</TrackedBook>
-							))}
-						</BookRail>
-					) : (
-						<BookEmptyState>
-							<BookEmptyTitle>Книг пока нет</BookEmptyTitle>
-							<BookEmptyText>
-								Добавьте книгу и назначьте статус: планирую, читаю, прочитано,
-								пауза, перечитываю или брошено.
-							</BookEmptyText>
-						</BookEmptyState>
-					)}
-				</LibraryPanel>
+						{activeTreasureTab === "collections" ? (
+							<CompactResourcePanel>
+								<PanelHeader>
+									<PanelTitle>Мои подборки</PanelTitle>
+									<HeaderActions>
+										{collectionRailControls.hasOverflow ? (
+											<RailControls aria-label="Scroll my collections">
+												<RailControlButton
+													aria-label="Previous collections"
+													disabled={!collectionRailControls.canScrollPrev}
+													type="button"
+													onClick={() => scrollCollectionsRail("prev")}
+												>
+													{"‹"}
+												</RailControlButton>
+												<RailControlButton
+													aria-label="Next collections"
+													disabled={!collectionRailControls.canScrollNext}
+													type="button"
+													onClick={() => scrollCollectionsRail("next")}
+												>
+													{"›"}
+												</RailControlButton>
+											</RailControls>
+										) : null}
+										<SmallAction href="/collections/_username">
+											Смотреть все
+										</SmallAction>
+										<InlineAction
+											type="button"
+											onClick={() => setIsCreateCollectionOpen(true)}
+										>
+											Создать
+										</InlineAction>
+									</HeaderActions>
+								</PanelHeader>
+								<CollectionFilterRow>
+									<CollectionFilterTabs aria-label="Фильтр подборок">
+										{collectionFilterTabs.map((filter) => (
+											<CollectionFilterTab
+												key={filter.id}
+												$isActive={activeCollectionFilter === filter.id}
+												type="button"
+												onClick={() => setActiveCollectionFilter(filter.id)}
+											>
+												{filter.label}
+											</CollectionFilterTab>
+										))}
+									</CollectionFilterTabs>
+									<CollectionSummary>
+										<CollectionCount>{visibleCollectionsTotal}</CollectionCount>
+										<CollectionText>
+											{visibleCollectionsTotal === 1 ? "подборка" : "подборок"}
+										</CollectionText>
+									</CollectionSummary>
+								</CollectionFilterRow>
+								{isCollectionsLoading ? (
+									<CollectionPreviewText>
+										Загружаем ваши подборки...
+									</CollectionPreviewText>
+								) : visibleCollections.length > 0 ? (
+									<MyCollectionsRail ref={collectionsRailRef}>
+										{visibleCollections.map((collection) => (
+											<MyCollectionChip
+												key={collection.id}
+												aria-label={`Открыть подборку ${collection.title}`}
+												role="link"
+												tabIndex={0}
+												onClick={() =>
+													router.push(`/collections/${collection.id}`)
+												}
+												onKeyDown={(event) => {
+													if (event.key !== "Enter" && event.key !== " ")
+														return;
 
-				<SectionsGrid>
-					{sections.map((section) => (
-						<ResourceCard key={section.title}>
-							<ResourceTitle>{section.title}</ResourceTitle>
-							<ResourceText>{section.description}</ResourceText>
-							<ResourceFooter>
-								<ResourceCount>{resourceCounts[section.countKey]}</ResourceCount>
-								<ResourceLink href={section.href}>
-									{section.action}
-								</ResourceLink>
-							</ResourceFooter>
-						</ResourceCard>
-					))}
-				</SectionsGrid>
+													event.preventDefault();
+													router.push(`/collections/${collection.id}`);
+												}}
+											>
+												<CollectionCover
+													$coverUrl={collection.coverUrl}
+													aria-hidden="true"
+												/>
+												<CollectionChipMeta>
+													<CollectionChipTitle>
+														{collection.title}
+													</CollectionChipTitle>
+													<CollectionChipText>
+														{collection.bookCount} книг
+													</CollectionChipText>
+												</CollectionChipMeta>
+											</MyCollectionChip>
+										))}
+									</MyCollectionsRail>
+								) : (
+									<CollectionPreviewText>
+										Создайте первую подборку для любимых книг, настроений и
+										будущих полок.
+									</CollectionPreviewText>
+								)}
+							</CompactResourcePanel>
+						) : null}
+					</TreasureTabContent>
+				</TreasureTabsPanel>
 				{isCreateCollectionOpen ? (
 					<CreateCollectionModal
 						onClose={() => setIsCreateCollectionOpen(false)}
@@ -535,14 +689,13 @@ const MyTreasuresPage = () => {
 
 export default MyTreasuresPage;
 
-const getTrackingInfo = (item: IUserBookTracking) => {
-	const parts = [statusLabels[item.status]];
+const formatChallengeDate = (date: string) =>
+	new Intl.DateTimeFormat("ru-RU", {
+		day: "numeric",
+		month: "short",
+	}).format(new Date(date));
 
-	if (item.currentPage) parts.push(`${item.currentPage} стр.`);
-	if (item.readCount) parts.push(`${item.readCount} прочт.`);
-
-	return parts.join(" · ");
-};
+const clampPercent = (value?: number) => Math.min(Math.max(value ?? 0, 0), 100);
 
 const Page = styled.div`
 	min-height: calc(100dvh - 4rem);
@@ -560,7 +713,7 @@ const Hero = styled.section`
 	align-items: flex-end;
 	justify-content: space-between;
 	gap: 2rem;
-	margin-bottom: 2rem;
+	margin-bottom: 1.35rem;
 
 	@media (max-width: 50rem) {
 		align-items: flex-start;
@@ -576,43 +729,33 @@ const Title = styled.h1`
 	margin: 0;
 	color: ${theme.colors.foreground};
 	font-family: ${theme.fonts.serif};
-	font-size: clamp(3rem, 8vw, 5.5rem);
-	line-height: 0.95;
+	font-size: clamp(2.35rem, 5vw, 3.8rem);
+	line-height: 1;
 `;
 
 const Lead = styled.p`
 	max-width: 44rem;
-	margin: 1rem 0 0;
+	margin: 0.65rem 0 0;
 	color: ${theme.colors.softForeground};
-	font-size: 1.05rem;
+	font-size: 0.98rem;
 	line-height: 1.5;
 `;
 
-const HeroActions = styled.div`
-	display: flex;
-	flex-wrap: wrap;
-	gap: 0.75rem;
-`;
-
-const TopGrid = styled.div`
+const ReadingCard = styled.section`
 	display: grid;
-	gap: 1rem;
-	grid-template-columns: minmax(0, 1.2fr) minmax(18rem, 0.8fr);
-	margin-bottom: 1rem;
+	align-items: center;
+	grid-template-columns: minmax(0, 1fr) minmax(18rem, 24rem);
+	gap: clamp(1.5rem, 5vw, 4rem);
+	min-width: 0;
+	width: min(100%, 58rem);
+	max-width: 100%;
+	margin: 0 auto 1rem;
+	padding: 0.2rem 0 0.35rem;
 
-	@media (max-width: 54rem) {
+	@media (max-width: 50rem) {
 		grid-template-columns: 1fr;
 	}
 `;
-
-const ReadingCard = styled.section`
-	border: 0.0625rem solid rgb(211 202 196 / 0.72);
-	border-radius: 1rem;
-	background: rgb(255 255 255 / 0.58);
-	padding: 1.25rem;
-`;
-
-const ChallengeCard = styled(ReadingCard)``;
 
 const CardEyebrow = styled.p`
 	margin: 0 0 0.35rem;
@@ -638,99 +781,311 @@ const CardText = styled.p`
 	line-height: 1.45;
 `;
 
-const ReadingList = styled.div`
-	display: grid;
-	gap: 0.75rem;
-`;
-
-const ReadingItem = styled.article`
-	display: grid;
+const ChallengeCard = styled(ReadingCard)`
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
 	align-items: center;
-	grid-template-columns: 2.8rem minmax(0, 1fr);
-	gap: 0.75rem;
-`;
+	margin: 0;
+	justify-self: center;
+	padding: 0;
+	max-width: 24rem;
+	width: auto;
 
-const ReadingCover = styled.div<{ $coverUrl?: string }>`
-	width: 2.8rem;
-	aspect-ratio: 2 / 3;
-	border-radius: 0.42rem;
-	background:
-		linear-gradient(rgb(4 18 26 / 0.1), rgb(4 18 26 / 0.1)),
-		url("${({ $coverUrl }) => $coverUrl || "/images/book-placeholder.svg"}")
-			center / cover;
-`;
+	${CardText} {
+		margin-bottom: 0;
+	}
 
-const ReadingMeta = styled.div`
-	min-width: 0;
-`;
-
-const ReadingTitle = styled(Link)`
-	display: block;
-	overflow: hidden;
-	color: ${theme.colors.foreground};
-	font-family: ${theme.fonts.serif};
-	font-size: 1rem;
-	font-weight: 600;
-	line-height: 1.15;
-	text-decoration: none;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-
-	&:hover,
-	&:focus-visible {
-		color: ${theme.colors.orangeDark};
-		outline: none;
+	${CardTitle} {
+		font-size: 1.28rem;
 	}
 `;
 
-const ReadingDetails = styled.p`
-	overflow: hidden;
-	margin: 0.2rem 0 0;
-	color: ${theme.colors.softForeground};
-	font-size: 0.82rem;
-	text-overflow: ellipsis;
-	white-space: nowrap;
+const ChallengeCopy = styled.div`
+	min-width: 0;
+	width: 100%;
 `;
 
-const ProgressTrack = styled.div`
-	overflow: hidden;
-	height: 0.5rem;
+const ChallengeHeading = styled.div`
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.55rem;
+	margin-bottom: 0.75rem;
+
+	${CardEyebrow} {
+		margin-bottom: 0;
+	}
+`;
+
+const ChallengeCount = styled.span`
+	display: inline-flex;
+	width: fit-content;
+	border: 0.0625rem solid rgb(212 100 28 / 0.26);
 	border-radius: 999px;
-	background: rgb(242 239 237 / 0.88);
-	margin-top: 0.85rem;
+	padding: 0.16rem 0.5rem;
+	color: ${theme.colors.orangeDark};
+	font-size: 0.72rem;
+	font-weight: 700;
+	line-height: 1.1;
 `;
 
-const ProgressFill = styled.div<{ $width: number }>`
-	width: ${({ $width }) => `${$width}%`};
-	height: 100%;
-	border-radius: inherit;
-	background: ${theme.colors.orangeLight};
+const ChallengeCarouselRow = styled.div`
+	display: flex;
+	align-items: center;
+	gap: 0.55rem;
+	justify-content: center;
 `;
 
-const LibraryPanel = styled.section`
-	border: 0.0625rem solid rgb(211 202 196 / 0.72);
-	border-radius: 1rem;
-	background: rgb(255 255 255 / 0.58);
-	padding: 1.25rem;
-`;
-
-const CollectionsPanel = styled(LibraryPanel)`
-	margin-bottom: 1rem;
+const ChallengeNavButton = styled.button`
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 1.875rem;
+	height: 1.875rem;
+	border: 0.0625rem solid ${theme.colors.orangeDark};
+	border-radius: 999px;
+	background: ${theme.colors.transparent};
+	color: ${theme.colors.orangeDark};
 	cursor: pointer;
+	font-family: ${theme.fonts.serif};
+	font-size: 2rem;
+	line-height: 1;
 	transition:
-		box-shadow 180ms ease,
+		background 180ms ease,
+		border-color 180ms ease,
+		color 180ms ease,
+		opacity 180ms ease,
 		transform 180ms ease;
 
 	&:hover,
 	&:focus-visible {
-		box-shadow: 0 0.75rem 1.5rem rgb(4 18 26 / 0.08);
+		background: ${theme.colors.orangePrimary};
+		border-color: ${theme.colors.orangePrimary};
+		color: ${theme.colors.lightText};
 		outline: none;
 		transform: translateY(-0.0625rem);
 	}
 `;
 
-const MyGenresPanel = styled(LibraryPanel)`
+const ChallengeGraph = styled(Link)<{ $timePercent: number }>`
+	position: relative;
+	display: grid;
+	width: clamp(10.8rem, 16vw, 13rem);
+	aspect-ratio: 1;
+	place-items: center;
+	border-radius: 50%;
+	color: inherit;
+	text-decoration: none;
+	transition: transform 180ms ease;
+
+	&:hover,
+	&:focus-visible {
+		outline: none;
+		transform: translateY(-0.125rem);
+	}
+
+	&:focus-visible {
+		box-shadow: 0 0 0 0.2rem ${theme.alpha.orangeFocus};
+	}
+
+	&::before {
+		position: absolute;
+		inset: 0;
+		border-radius: inherit;
+		background: conic-gradient(
+			${theme.colors.bluePrimary} ${({ $timePercent }) => `${$timePercent}%`},
+			rgb(35 61 77 / 0.12) 0
+		);
+		content: "";
+		mask: radial-gradient(
+			farthest-side,
+			transparent calc(100% - 0.72rem),
+			#000 calc(100% - 0.7rem)
+		);
+	}
+`;
+
+const ChallengeValueRing = styled.div<{ $valuePercent: number }>`
+	position: relative;
+	z-index: 1;
+	display: grid;
+	width: calc(100% - 2.1rem);
+	height: calc(100% - 2.1rem);
+	place-items: center;
+	border-radius: inherit;
+	background: conic-gradient(
+		${theme.colors.orangeLight} ${({ $valuePercent }) => `${$valuePercent}%`},
+		rgb(254 127 45 / 0.16) 0
+	);
+	padding: 0.54rem;
+`;
+
+const ChallengeGraphCenter = styled.div`
+	display: grid;
+	width: 100%;
+	height: 100%;
+	align-content: center;
+	justify-items: center;
+	border-radius: inherit;
+	background: ${theme.colors.background};
+	padding: 0.65rem;
+	text-align: center;
+`;
+
+const ChallengeGraphLabel = styled.span`
+	color: ${theme.colors.orangeDark};
+	font-size: 0.68rem;
+	font-weight: 700;
+	line-height: 1.1;
+	text-transform: uppercase;
+`;
+
+const ChallengeGraphValue = styled.span`
+	margin-top: 0.2rem;
+	color: ${theme.colors.foreground};
+	font-family: ${theme.fonts.serif};
+	font-size: 1.15rem;
+	font-weight: 700;
+	line-height: 1.05;
+`;
+
+const ChallengeGraphMeta = styled.span`
+	margin-top: 0.2rem;
+	color: ${theme.colors.softForeground};
+	font-size: 0.66rem;
+	line-height: 1.12;
+`;
+
+const ChallengeSlideLabel = styled.p`
+	margin: 0.45rem 0 0;
+	color: ${theme.colors.softForeground};
+	font-size: 0.72rem;
+	line-height: 1.2;
+	text-align: center;
+`;
+
+const ChallengeProgress = styled.div`
+	display: grid;
+	gap: 0.35rem;
+	justify-items: center;
+	margin-top: 0.55rem;
+	min-width: 0;
+	width: 100%;
+`;
+
+const ChallengeDetailsLink = styled(Link)`
+	color: ${theme.colors.orangeDark};
+	font-size: 0.82rem;
+	font-weight: 700;
+	text-decoration: none;
+
+	&:hover,
+	&:focus-visible {
+		text-decoration: underline;
+		text-underline-offset: 0.16rem;
+		outline: none;
+	}
+`;
+
+const ReadingShelf = styled.div`
+	justify-self: center;
+	min-width: 0;
+`;
+
+const ReadingHeader = styled.div`
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+	margin-bottom: 0.55rem;
+`;
+
+const ReadingCarouselWrap = styled.div<{ $bookCount: number }>`
+	min-width: 0;
+	width: ${({ $bookCount }) =>
+		`min(100%, ${Math.min(Math.max($bookCount * 7.6, 7.6), 34)}rem)`};
+`;
+
+const MainGrid = styled.div`
 	margin-bottom: 1rem;
+`;
+
+const LibraryPanel = styled.section`
+	border: 0.0625rem solid rgb(211 202 196 / 0.72);
+	border-radius: 1rem;
+	background: rgb(255 255 255 / 0.42);
+	padding: 1rem;
+`;
+
+const TreasureTabsPanel = styled.section`
+	--tabs-content-bg: rgb(255 255 255 / 0.42);
+`;
+
+const TreasureTabs = styled.div`
+	display: grid;
+	gap: 0.5rem;
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+	margin-bottom: 0.75rem;
+
+	@media (max-width: 48rem) {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+`;
+
+const TreasureTabButton = styled.button<{ $isActive: boolean }>`
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.7rem;
+	border: 0.0625rem solid
+		${({ $isActive }) =>
+			$isActive ? "transparent" : "rgb(211 202 196 / 0.82)"};
+	border-radius: 0.75rem;
+	background: ${({ $isActive }) =>
+		$isActive ? "var(--tabs-content-bg)" : theme.colors.transparent};
+	padding: 0.7rem 0.8rem;
+	color: ${({ $isActive }) =>
+		$isActive ? theme.colors.orangeDark : theme.colors.foreground};
+	cursor: pointer;
+	font: inherit;
+	font-size: 0.9rem;
+	font-weight: 700;
+	line-height: 1.15;
+	text-align: left;
+
+	&:hover,
+	&:focus-visible {
+		border-color: ${theme.colors.orangeLight};
+		background: ${({ $isActive }) =>
+			$isActive ? "var(--tabs-content-bg)" : "rgb(255 255 255 / 0.18)"};
+		color: ${theme.colors.orangeDark};
+		outline: none;
+	}
+`;
+
+const TreasureTabCount = styled.span`
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 1.75rem;
+	height: 1.75rem;
+	border-radius: 999px;
+	background: rgb(218 142 91 / 0.14);
+	color: ${theme.colors.orangeDark};
+	font-weight: 700;
+`;
+
+const TreasureTabContent = styled.div`
+	min-width: 0;
+	border: 0.0625rem solid rgb(211 202 196 / 0.72);
+	border-radius: 1rem;
+	background: var(--tabs-content-bg);
+	padding: 1rem;
+`;
+
+const CompactResourcePanel = styled.div`
+	min-width: 0;
 `;
 
 const MyGenresList = styled.div`
@@ -763,18 +1118,30 @@ const MyGenreChip = styled(Link)`
 	}
 `;
 
+const CollectionFilterRow = styled.div`
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+	margin-bottom: 1rem;
+
+	@media (max-width: 40rem) {
+		align-items: flex-start;
+		flex-direction: column;
+	}
+`;
+
 const CollectionSummary = styled.div`
 	display: flex;
 	align-items: baseline;
-	gap: 0.6rem;
-	margin-bottom: 1rem;
+	flex: 0 0 auto;
+	gap: 0.45rem;
 `;
 
 const CollectionFilterTabs = styled.div`
 	display: flex;
 	flex-wrap: wrap;
 	gap: 0.45rem;
-	margin-bottom: 1rem;
 `;
 
 const CollectionFilterTab = styled.button<{ $isActive: boolean }>`
@@ -803,14 +1170,14 @@ const CollectionFilterTab = styled.button<{ $isActive: boolean }>`
 const CollectionCount = styled.span`
 	color: ${theme.colors.orangeDark};
 	font-family: ${theme.fonts.serif};
-	font-size: 2rem;
+	font-size: 1.25rem;
 	font-weight: 600;
 	line-height: 1;
 `;
 
 const CollectionText = styled.span`
 	color: ${theme.colors.softForeground};
-	font-size: 0.95rem;
+	font-size: 0.86rem;
 	line-height: 1.35;
 `;
 
@@ -818,8 +1185,14 @@ const MyCollectionsRail = styled.div`
 	display: flex;
 	gap: 0.75rem;
 	overflow-x: auto;
-	padding-bottom: 0.25rem;
+	overscroll-behavior-inline: contain;
+	padding: 0.1rem 0 0.25rem;
 	scroll-snap-type: x proximity;
+	scrollbar-width: none;
+
+	&::-webkit-scrollbar {
+		display: none;
+	}
 `;
 
 const MyCollectionChip = styled.article`
@@ -894,7 +1267,7 @@ const PanelHeader = styled.div`
 	align-items: center;
 	justify-content: space-between;
 	gap: 1rem;
-	margin-bottom: 1rem;
+	margin-bottom: 0.75rem;
 `;
 
 const HeaderActions = styled.div`
@@ -913,25 +1286,37 @@ const RailControls = styled.div`
 
 const RailControlButton = styled.button`
 	display: inline-flex;
-	width: 1.8rem;
-	height: 1.8rem;
 	align-items: center;
 	justify-content: center;
+	width: 1.875rem;
+	height: 1.875rem;
 	border: 0.0625rem solid ${theme.colors.orangeDark};
 	border-radius: 999px;
 	background: ${theme.colors.transparent};
 	color: ${theme.colors.orangeDark};
 	cursor: pointer;
 	font-family: ${theme.fonts.serif};
-	font-size: 1.9rem;
+	font-size: 2rem;
 	line-height: 1;
+	transition:
+		background 180ms ease,
+		border-color 180ms ease,
+		color 180ms ease,
+		opacity 180ms ease,
+		transform 180ms ease;
 
-	&:hover,
-	&:focus-visible {
-		background: ${theme.colors.orangeLight};
-		border-color: ${theme.colors.orangeLight};
-		color: ${theme.colors.invertedText};
+	&:not(:disabled):hover,
+	&:not(:disabled):focus-visible {
+		background: ${theme.colors.orangePrimary};
+		border-color: ${theme.colors.orangePrimary};
+		color: ${theme.colors.lightText};
 		outline: none;
+		transform: translateY(-0.0625rem);
+	}
+
+	&:disabled {
+		cursor: default;
+		opacity: 0.38;
 	}
 `;
 
@@ -939,7 +1324,7 @@ const PanelTitle = styled.h2`
 	margin: 0;
 	color: ${theme.colors.foreground};
 	font-family: ${theme.fonts.serif};
-	font-size: 1.55rem;
+	font-size: 1.35rem;
 	line-height: 1.15;
 `;
 
@@ -957,11 +1342,7 @@ const SmallAction = styled(Link)`
 	}
 `;
 
-const InlineAction = styled.button`
-	border: 0;
-	background: transparent;
-	padding: 0;
-	color: ${theme.colors.orangeDark};
+const InlineAction = styled(Button)`
 	cursor: pointer;
 	font: inherit;
 	font-size: 0.9rem;
@@ -978,7 +1359,7 @@ const InlineAction = styled.button`
 const StatusTabs = styled.div`
 	display: flex;
 	flex-wrap: wrap;
-	gap: 0.55rem;
+	gap: 0.42rem;
 `;
 
 const StatusTab = styled.button<{ $isActive: boolean }>`
@@ -991,12 +1372,12 @@ const StatusTab = styled.button<{ $isActive: boolean }>`
 	border-radius: 999px;
 	background: ${({ $isActive }) =>
 		$isActive ? "rgb(218 142 91 / 0.14)" : theme.colors.surface};
-	padding: 0.45rem 0.85rem;
+	padding: 0.34rem 0.65rem;
 	color: ${({ $isActive }) =>
 		$isActive ? theme.colors.orangeDark : theme.colors.foreground};
 	cursor: pointer;
 	font: inherit;
-	font-size: 0.9rem;
+	font-size: 0.8rem;
 	font-weight: ${({ $isActive }) => ($isActive ? 700 : 400)};
 
 	&:hover,
@@ -1014,52 +1395,19 @@ const StatusCount = styled.span`
 
 const BookRail = styled.div`
 	display: flex;
-	gap: 1rem;
+	gap: 0.55rem;
 	overflow-x: auto;
-	margin-top: 1.2rem;
-	padding-bottom: 0.4rem;
+	margin-top: 0.8rem;
+	padding-bottom: 0.1rem;
 	scroll-snap-type: x proximity;
 `;
 
 const TrackedBook = styled.article`
-	min-width: 8.5rem;
+	min-width: 5.75rem;
 	flex: 0 0 auto;
 	display: grid;
-	gap: 0.45rem;
 	justify-items: start;
 	scroll-snap-align: start;
-`;
-
-const TrackingInfo = styled.p`
-	margin: 0;
-	color: ${theme.colors.orangeDark};
-	font-size: 0.78rem;
-	font-weight: 700;
-	line-height: 1.25;
-`;
-
-const RemoveTrackingButton = styled.button`
-	border: 0;
-	background: transparent;
-	padding: 0;
-	color: ${theme.colors.lightText};
-	cursor: pointer;
-	font: inherit;
-	font-size: 0.76rem;
-	line-height: 1.2;
-
-	&:hover,
-	&:focus-visible {
-		color: ${theme.colors.orangeDark};
-		outline: none;
-		text-decoration: underline;
-		text-underline-offset: 0.15rem;
-	}
-
-	&:disabled {
-		cursor: wait;
-		opacity: 0.55;
-	}
 `;
 
 const BookEmptyState = styled.div`
@@ -1084,28 +1432,6 @@ const BookEmptyText = styled.p`
 	line-height: 1.45;
 `;
 
-const SectionsGrid = styled.div`
-	display: grid;
-	gap: 1rem;
-	grid-template-columns: repeat(4, minmax(0, 1fr));
-	margin-top: 1rem;
-
-	@media (max-width: 64rem) {
-		grid-template-columns: repeat(2, minmax(0, 1fr));
-	}
-
-	@media (max-width: 38rem) {
-		grid-template-columns: 1fr;
-	}
-`;
-
-const ResourceCard = styled.section`
-	border: 0.0625rem solid rgb(211 202 196 / 0.72);
-	border-radius: 1rem;
-	background: rgb(255 255 255 / 0.48);
-	padding: 1rem;
-`;
-
 const ResourceTitle = styled.h2`
 	margin: 0;
 	color: ${theme.colors.foreground};
@@ -1119,44 +1445,4 @@ const ResourceText = styled.p`
 	color: ${theme.colors.softForeground};
 	font-size: 0.9rem;
 	line-height: 1.4;
-`;
-
-const ResourceFooter = styled.div`
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: 0.75rem;
-`;
-
-const ResourceCount = styled.span`
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	min-width: 2rem;
-	height: 2rem;
-	border-radius: 999px;
-	background: rgb(218 142 91 / 0.12);
-	color: ${theme.colors.orangeDark};
-	font-weight: 700;
-`;
-
-const ResourceLink = styled(Link)`
-	color: ${theme.colors.orangeDark};
-	font-size: 0.88rem;
-	font-weight: 700;
-	text-decoration: none;
-
-	&:hover,
-	&:focus-visible {
-		text-decoration: underline;
-		text-underline-offset: 0.16rem;
-		outline: none;
-	}
-`;
-
-const EmptyState = styled.p`
-	margin: 1rem 0 0;
-	color: ${theme.colors.softForeground};
-	font-size: 1rem;
-	line-height: 1.5;
 `;

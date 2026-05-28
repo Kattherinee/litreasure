@@ -89,6 +89,17 @@ const Header = () => {
 		isMounted && !user && isAuthRequiredRedirect();
 	const visibleAuthModalMode = authModalMode ?? (showAuthRequiredModal ? "login" : null);
 	const authModalMessage = showAuthRequiredModal ? AUTH_REQUIRED_MESSAGE : "";
+	const userNavItems = user
+		? [
+				{
+					href: "/treasures/books",
+					label: "Мои книги",
+					match: (currentPathname: string) =>
+						currentPathname.startsWith("/treasures/books"),
+				},
+			]
+		: [];
+	const visibleNavItems = [...navItems, ...userNavItems];
 
 	const closeProfileMenu = () => setIsProfileMenuOpen(false);
 
@@ -141,7 +152,7 @@ const Header = () => {
 					</BrandLink>
 
 					<DesktopNav id="main-navigation" aria-label="Main navigation">
-						{navItems.map((item) => (
+						{visibleNavItems.map((item) => (
 							<NavItem key={item.label}>
 								<NavButton href={item.href} $active={item.match(pathname)}>
 									{item.label}
@@ -213,10 +224,6 @@ const Header = () => {
 											<ProfileMenuEmail>{profileMeta}</ProfileMenuEmail>
 										) : null}
 									</ProfileMenuUser>
-									<ProfileMenuLink href="/profile" onClick={closeProfileMenu}>
-										Профиль
-										<ProfileMenuHint>Редактирование</ProfileMenuHint>
-									</ProfileMenuLink>
 									{profileItems.map((item) =>
 										item.href ? (
 											<ProfileMenuLink
@@ -236,6 +243,10 @@ const Header = () => {
 											</ProfileMenuItem>
 										),
 									)}
+									<ProfileMenuLink href="/profile" onClick={closeProfileMenu}>
+										Профиль
+										<ProfileMenuHint>Редактирование</ProfileMenuHint>
+									</ProfileMenuLink>
 									<ProfileMenuDivider />
 									<ProfileLogoutItem type="button" onClick={openLogoutConfirm}>
 										Выйти

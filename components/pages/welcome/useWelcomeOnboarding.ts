@@ -12,7 +12,34 @@ import {
 	canOpenWelcomeOnboarding,
 	markWelcomeOnboardingCompleted,
 } from "./onboardingStorage";
-import { MIN_SELECTED_GENRES, STEPS, type IWelcomeStep } from "./types";
+import {
+	type IGoalStartMode,
+	MIN_SELECTED_GENRES,
+	STEPS,
+	type IWelcomeStep,
+} from "./types";
+
+const getDateInputValue = (date: Date) => date.toISOString().slice(0, 10);
+
+const getGoalDateRange = (startMode: IGoalStartMode) => {
+	const today = new Date();
+	const startDate =
+		startMode === "yearStart" ? new Date(today.getFullYear(), 0, 1) : today;
+	const endDate =
+		startMode === "yearStart"
+			? new Date(today.getFullYear(), 11, 31)
+			: (() => {
+					const nextDate = new Date(startDate);
+					nextDate.setFullYear(nextDate.getFullYear() + 1);
+					nextDate.setDate(nextDate.getDate() - 1);
+					return nextDate;
+				})();
+
+	return {
+		endDate: getDateInputValue(endDate),
+		startDate: getDateInputValue(startDate),
+	};
+};
 
 export const useWelcomeOnboarding = () => {
 	const router = useRouter();
@@ -25,7 +52,9 @@ export const useWelcomeOnboarding = () => {
 	const [username, setUsername] = useState("");
 	const [avatarUrl, setAvatarUrl] = useState("");
 	const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
-	const [yearGoal, setYearGoal] = useState(24);
+	const [yearGoal, setYearGoal] = useState(0);
+	const [goalStartMode, setGoalStartMode] =
+		useState<IGoalStartMode>("yearStart");
 	const [formError, setFormError] = useState("");
 	const [hasUsernameError, setHasUsernameError] = useState(false);
 	const [isCheckingUsername, setIsCheckingUsername] = useState(false);
@@ -81,6 +110,11 @@ export const useWelcomeOnboarding = () => {
 
 	const changeYearGoal = (value: number) => {
 		setYearGoal(value);
+		setFormError("");
+	};
+
+	const changeGoalStartMode = (value: IGoalStartMode) => {
+		setGoalStartMode(value);
 		setFormError("");
 	};
 
@@ -228,13 +262,13 @@ export const useWelcomeOnboarding = () => {
 			const challengePromise =
 				yearGoal > 0
 					? (() => {
-							const year = new Date().getFullYear();
+							const { endDate, startDate } = getGoalDateRange(goalStartMode);
 							return createChallenge({
 								type: "books",
 								periodType: "year",
 								targetValue: yearGoal,
-								startDate: `${year}-01-01`,
-								endDate: `${year}-12-31`,
+								startDate,
+								endDate,
 								isActive: true,
 							}).catch(() => {});
 						})()
@@ -267,6 +301,7 @@ export const useWelcomeOnboarding = () => {
 		isNextDisabled,
 		isSavingProfile,
 		isSubmitting,
+		goalStartMode,
 		name,
 		selectedGenres,
 		username,
@@ -279,6 +314,7 @@ export const useWelcomeOnboarding = () => {
 		setName: changeName,
 		setUsername: changeUsername,
 		setYearGoal: changeYearGoal,
+		setGoalStartMode: changeGoalStartMode,
 		skipStep,
 		toggleGenre,
 	};

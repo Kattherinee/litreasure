@@ -1,4 +1,5 @@
 export type IWelcomeStep = "profile" | "avatar" | "genres" | "goal";
+export type IGoalStartMode = "yearStart" | "today";
 
 export interface IStepConfig {
 	id: IWelcomeStep;

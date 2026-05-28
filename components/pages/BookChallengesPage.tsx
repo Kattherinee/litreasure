@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { type FormEvent, useEffect, useState } from "react";
+import { Fragment, type FormEvent, useCallback, useEffect, useState } from "react";
+import type { EmblaCarouselType } from "embla-carousel";
+import useEmblaCarousel from "embla-carousel-react";
 import styled from "styled-components";
 
 import {
@@ -25,7 +27,11 @@ const periodOptions: Array<{ label: string; value: IChallengePeriodType }> = [
 	{ label: "Год", value: "year" },
 ];
 
-const typeOptions: Array<{ label: string; unit: string; value: IChallengeType }> = [
+const typeOptions: Array<{
+	label: string;
+	unit: string;
+	value: IChallengeType;
+}> = [
 	{ label: "Книги", unit: "книг", value: "books" },
 	{ label: "Страницы", unit: "страниц", value: "pages" },
 ];
@@ -43,7 +49,10 @@ type IChallengeModalMode = "create" | "edit";
 
 const getDateInputValue = (date: Date) => date.toISOString().slice(0, 10);
 
-const getDefaultEndDate = (periodType: IChallengePeriodType, startDate: string) => {
+const getDefaultEndDate = (
+	periodType: IChallengePeriodType,
+	startDate: string,
+) => {
 	const endDate = new Date(`${startDate}T00:00:00`);
 
 	if (periodType === "week") {
@@ -83,7 +92,9 @@ const getFormFromChallenge = (
 	type: challenge.type,
 });
 
-const getPayload = (form: IChallengeFormState): ICreateBookChallengePayload => ({
+const getPayload = (
+	form: IChallengeFormState,
+): ICreateBookChallengePayload => ({
 	endDate: form.endDate,
 	isActive: form.isActive,
 	periodType: form.periodType,
@@ -99,7 +110,10 @@ const getTypeOption = (type: IChallengeType) =>
 	typeOptions.find((option) => option.value === type) ?? typeOptions[0];
 
 const clampPercent = (value?: number) =>
-	Math.max(0, Math.min(100, Number.isFinite(value ?? NaN) ? (value as number) : 0));
+	Math.max(
+		0,
+		Math.min(100, Number.isFinite(value ?? NaN) ? (value as number) : 0),
+	);
 
 const formatDate = (value: string) =>
 	new Intl.DateTimeFormat("ru-RU", {
@@ -108,11 +122,221 @@ const formatDate = (value: string) =>
 		year: "numeric",
 	}).format(new Date(value));
 
+const getLocalDate = (value: string) =>
+	new Date(`${value.slice(0, 10)}T00:00:00`);
+
+const addDays = (date: Date, days: number) => {
+	const nextDate = new Date(date);
+	nextDate.setDate(nextDate.getDate() + days);
+
+	return nextDate;
+};
+
+const addMonths = (date: Date, months: number) => {
+	const nextDate = new Date(date);
+	nextDate.setMonth(nextDate.getMonth() + months);
+
+	return nextDate;
+};
+
+const getInclusiveDays = (startDate: Date, endDate: Date) =>
+	Math.max(
+		1,
+		Math.round((endDate.getTime() - startDate.getTime()) / 86_400_000) + 1,
+	);
+
+interface IChallengeTimelinePoint {
+	actual: number | null;
+	actualSegment: number | null;
+	endDate: Date;
+	label: string;
+	startDate: Date;
+	targetSegment: number;
+	target: number;
+}
+
+type IPlanGranularity = "day" | "week" | "month";
+
+interface IChallengePlanRange {
+	endDate: Date;
+	label: string;
+	startDate: Date;
+}
+
+const getDefaultPlanGranularity = (
+	periodType: IChallengePeriodType,
+): IPlanGranularity =>
+	periodType === "year" ? "month" : periodType === "month" ? "week" : "day";
+
+const getNextPlanGranularity = (
+	granularity: IPlanGranularity,
+): IPlanGranularity | null =>
+	granularity === "month" ? "week" : granularity === "week" ? "day" : null;
+
+const getPlanGranularityLabel = (granularity: IPlanGranularity) =>
+	granularity === "month"
+		? "по месяцам"
+		: granularity === "week"
+			? "по неделям"
+			: "по дням";
+
+const formatPlanMonth = (date: Date) =>
+	new Intl.DateTimeFormat("ru-RU", {
+		month: "2-digit",
+		year: "2-digit",
+	}).format(date);
+
+const formatPlanDay = (date: Date) =>
+	new Intl.DateTimeFormat("ru-RU", {
+		day: "2-digit",
+		month: "2-digit",
+	}).format(date);
+
+const formatPlanWeek = (startDate: Date, endDate: Date) =>
+	`${formatPlanDay(startDate)}-${formatPlanDay(endDate)}`;
+
+const formatPlanAmount = (value: number) => {
+	const rounded = Math.round(value * 10) / 10;
+
+	return Number.isInteger(rounded)
+		? String(rounded)
+		: rounded.toLocaleString("ru-RU", { maximumFractionDigits: 1 });
+};
+
+const createPlanSegments = (
+	rangeStartDate: Date,
+	rangeEndDate: Date,
+	granularity: IPlanGranularity,
+) => {
+	const totalRangeDays = getInclusiveDays(rangeStartDate, rangeEndDate);
+
+	if (granularity === "day") {
+		return Array.from({ length: totalRangeDays }, (_, index) => {
+			const date = addDays(rangeStartDate, index);
+
+			return {
+				endDate: date,
+				label: formatPlanDay(date),
+				startDate: date,
+			};
+		});
+	}
+
+	if (granularity === "week") {
+		const segments = [];
+
+		for (let offset = 0; offset < totalRangeDays; offset += 7) {
+			const segmentStart = addDays(rangeStartDate, offset);
+			const segmentEnd = addDays(
+				rangeStartDate,
+				Math.min(offset + 6, totalRangeDays - 1),
+			);
+
+			segments.push({
+				endDate: segmentEnd,
+				label: formatPlanWeek(segmentStart, segmentEnd),
+				startDate: segmentStart,
+			});
+		}
+
+		return segments;
+	}
+
+	const segments = [];
+	let cursor = rangeStartDate;
+
+	while (cursor <= rangeEndDate) {
+		const nextMonth = addMonths(cursor, 1);
+		const segmentEnd = addDays(
+			nextMonth > rangeEndDate ? addDays(rangeEndDate, 1) : nextMonth,
+			-1,
+		);
+
+		segments.push({
+			endDate: segmentEnd,
+			label: formatPlanMonth(cursor),
+			startDate: cursor,
+		});
+
+		cursor = addDays(segmentEnd, 1);
+	}
+
+	return segments;
+};
+
+const getChallengeTimelinePoints = (
+	challenge: IBookChallenge,
+	granularity = getDefaultPlanGranularity(challenge.periodType),
+	range?: IChallengePlanRange | null,
+): IChallengeTimelinePoint[] => {
+	const startDate = getLocalDate(challenge.startDate);
+	const endDate = getLocalDate(challenge.endDate);
+	const totalDays =
+		challenge.progress?.time.totalDays ?? getInclusiveDays(startDate, endDate);
+	const elapsedDays = Math.min(
+		totalDays,
+		Math.max(0, challenge.progress?.time.elapsedDays ?? 0),
+	);
+	const targetValue = challenge.progress?.value.target ?? challenge.targetValue;
+	const currentValue = challenge.progress?.value.current ?? 0;
+	const rangeStartDate = range?.startDate ?? startDate;
+	const rangeEndDate = range?.endDate ?? endDate;
+	const segments = createPlanSegments(
+		rangeStartDate,
+		rangeEndDate,
+		granularity,
+	);
+
+	return segments.map((segment) => {
+		const daysBeforeSegment = Math.max(
+			0,
+			getInclusiveDays(startDate, segment.startDate) - 1,
+		);
+		const daysThroughSegment = Math.min(
+			totalDays,
+			getInclusiveDays(startDate, segment.endDate),
+		);
+		const targetStart = (targetValue * daysBeforeSegment) / totalDays;
+		const target = (targetValue * daysThroughSegment) / totalDays;
+		const actualStart =
+			elapsedDays <= 0
+				? null
+				: Math.round(
+						(currentValue * Math.min(daysBeforeSegment, elapsedDays)) /
+							elapsedDays,
+					);
+		const actual =
+			elapsedDays <= 0 || daysBeforeSegment >= elapsedDays
+				? null
+				: Math.round(
+						(currentValue * Math.min(daysThroughSegment, elapsedDays)) /
+							elapsedDays,
+					);
+		const targetSegment = Math.max(0, target - targetStart);
+		const actualSegment =
+			actual === null ? null : Math.max(0, actual - (actualStart ?? 0));
+
+		return {
+			actual,
+			actualSegment,
+			endDate: segment.endDate,
+			label: segment.label,
+			startDate: segment.startDate,
+			targetSegment,
+			target,
+		};
+	});
+};
+
 const BookChallengesPage = () => {
 	const router = useRouter();
 	const session = useAuthStore((state) => state.session);
 	const isSessionReady = Boolean(session);
-	const { data: challenges = [], isError, isLoading } = useChallengesQuery({
+	const {
+		data: challenges = [],
+		isError,
+		isLoading,
+	} = useChallengesQuery({
 		enabled: isSessionReady,
 	});
 	const createMutation = useCreateChallengeMutation();
@@ -123,6 +347,15 @@ const BookChallengesPage = () => {
 	const [form, setForm] = useState<IChallengeFormState>(() =>
 		createDefaultForm(),
 	);
+	const [challengeSliderRef, challengeSliderApi] = useEmblaCarousel({
+		align: "center",
+		containScroll: false,
+		dragFree: false,
+		loop: false,
+		skipSnaps: false,
+	});
+	const [canScrollChallengesNext, setCanScrollChallengesNext] = useState(false);
+	const [canScrollChallengesPrev, setCanScrollChallengesPrev] = useState(false);
 	const isMutating =
 		createMutation.isPending ||
 		updateMutation.isPending ||
@@ -137,6 +370,35 @@ const BookChallengesPage = () => {
 			router.replace("/?auth=required");
 		}
 	}, [router, session]);
+
+	const syncChallengeSlider = useCallback((api: EmblaCarouselType) => {
+		setSelectedIndex(api.selectedScrollSnap());
+		setCanScrollChallengesPrev(api.canScrollPrev());
+		setCanScrollChallengesNext(api.canScrollNext());
+	}, []);
+
+	useEffect(() => {
+		if (!challengeSliderApi) return;
+
+		challengeSliderApi.on("select", syncChallengeSlider);
+		challengeSliderApi.on("reInit", syncChallengeSlider);
+
+		return () => {
+			challengeSliderApi.off("select", syncChallengeSlider);
+			challengeSliderApi.off("reInit", syncChallengeSlider);
+		};
+	}, [challengeSliderApi, syncChallengeSlider]);
+
+	useEffect(() => {
+		if (!challengeSliderApi || !challenges.length) return;
+
+		challengeSliderApi.reInit();
+		const frame = requestAnimationFrame(() => {
+			syncChallengeSlider(challengeSliderApi);
+		});
+
+		return () => cancelAnimationFrame(frame);
+	}, [challengeSliderApi, challenges.length, syncChallengeSlider]);
 
 	if (!session) return null;
 
@@ -183,6 +445,7 @@ const BookChallengesPage = () => {
 			onSuccess: () => {
 				closeModal();
 				setSelectedIndex(0);
+				challengeSliderApi?.scrollTo(0);
 			},
 		});
 	};
@@ -204,18 +467,13 @@ const BookChallengesPage = () => {
 		});
 	};
 
-	const goToPrev = () => {
-		setSelectedIndex(
-			challenges.length
-				? (activeIndex - 1 + challenges.length) % challenges.length
-				: 0,
-		);
-	};
+	const goToPrev = () => challengeSliderApi?.scrollPrev();
 
-	const goToNext = () => {
-		setSelectedIndex(
-			challenges.length ? (activeIndex + 1) % challenges.length : 0,
-		);
+	const goToNext = () => challengeSliderApi?.scrollNext();
+
+	const selectChallenge = (index: number) => {
+		setSelectedIndex(index);
+		challengeSliderApi?.scrollTo(index);
 	};
 
 	return (
@@ -230,9 +488,9 @@ const BookChallengesPage = () => {
 					</HeroTop>
 					<Title>Книжные вызовы</Title>
 					<Lead>
-						Следи за целями по книгам и страницам: прогресс чтения и время
-						идут рядом, чтобы было видно не только сколько осталось, но и в
-						каком темпе ты движешься.
+						Следи за целями по книгам и страницам: прогресс чтения и время идут
+						рядом, чтобы было видно не только сколько осталось, но и в каком
+						темпе ты движешься.
 					</Lead>
 				</Hero>
 
@@ -242,47 +500,66 @@ const BookChallengesPage = () => {
 					<StateMessage>Не удалось загрузить книжные вызовы.</StateMessage>
 				) : challenges.length > 0 && selectedChallenge ? (
 					<>
-						<CarouselStage>
-							<ArrowButton type="button" onClick={goToPrev}>
-								‹
-							</ArrowButton>
-							<ChallengeSpotlight challenge={selectedChallenge} />
-							<ArrowButton type="button" onClick={goToNext}>
-								›
-							</ArrowButton>
-						</CarouselStage>
+						<ChallengeWorkspace>
+							<CarouselStage>
+								{canScrollChallengesPrev ? (
+									<ArrowButton
+										$side="prev"
+										type="button"
+										aria-label="Предыдущий вызов"
+										onClick={goToPrev}
+									>
+										‹
+									</ArrowButton>
+								) : null}
+								<ChallengeViewport ref={challengeSliderRef}>
+									<ChallengeTrack>
+										{challenges.map((challenge, index) => (
+											<ChallengeSlide
+												key={challenge.id}
+												$isActive={index === activeIndex}
+												$hasPreview={challenges.length > 1}
+											>
+												<ChallengeSpotlight
+													challenge={challenge}
+													isMutating={isMutating}
+													onActivate={handleActivate}
+													onEdit={() => openEditModal(challenge)}
+												/>
+											</ChallengeSlide>
+										))}
+									</ChallengeTrack>
+								</ChallengeViewport>
+								{canScrollChallengesNext ? (
+									<ArrowButton
+										$side="next"
+										type="button"
+										aria-label="Следующий вызов"
+										onClick={goToNext}
+									>
+										›
+									</ArrowButton>
+								) : null}
+							</CarouselStage>
 
-						<CarouselDots aria-label="Выбор вызова">
-							{challenges.map((challenge, index) => (
-								<DotButton
-									key={challenge.id}
-									type="button"
-									$isActive={index === activeIndex}
-									aria-label={`Показать вызов ${index + 1}`}
-									onClick={() => setSelectedIndex(index)}
-								/>
-							))}
-						</CarouselDots>
+							{challenges.length > 1 ? (
+								<CarouselDots aria-label="Выбор вызова">
+									{challenges.map((challenge, index) => (
+										<DotButton
+											key={challenge.id}
+											type="button"
+											$isActive={index === activeIndex}
+											aria-label={`Показать вызов ${index + 1}`}
+											onClick={() => selectChallenge(index)}
+										/>
+									))}
+								</CarouselDots>
+							) : null}
+						</ChallengeWorkspace>
 
-						<ActionsRow>
-							<ActionButton
-								type="button"
-								onClick={() => openEditModal(selectedChallenge)}
-							>
-								Редактировать
-							</ActionButton>
-							<ActionButton
-								disabled={selectedChallenge.isActive || isMutating}
-								type="button"
-								onClick={handleActivate}
-							>
-								Сделать активным
-							</ActionButton>
-						</ActionsRow>
-
-						<DetailsPanel>
+						<GraphsPanel>
 							<ChallengeDetails challenge={selectedChallenge} />
-						</DetailsPanel>
+						</GraphsPanel>
 					</>
 				) : (
 					<EmptyState>
@@ -291,7 +568,11 @@ const BookChallengesPage = () => {
 							Создай первый вызов и выбери цель так же спокойно, как в
 							приветствии: период, тип цели и число, к которому хочется прийти.
 						</EmptyText>
-						<Button buttonType="containedInverted" type="button" onClick={openCreateModal}>
+						<Button
+							buttonType="containedInverted"
+							type="button"
+							onClick={openCreateModal}
+						>
 							Создать вызов
 						</Button>
 					</EmptyState>
@@ -318,33 +599,62 @@ const BookChallengesPage = () => {
 
 export default BookChallengesPage;
 
-const ChallengeSpotlight = ({ challenge }: { challenge: IBookChallenge }) => {
+const ChallengeSpotlight = ({
+	challenge,
+	isMutating,
+	onActivate,
+	onEdit,
+}: {
+	challenge: IBookChallenge;
+	isMutating: boolean;
+	onActivate: () => void;
+	onEdit: () => void;
+}) => {
 	const valuePercent = clampPercent(challenge.progress?.value.percent);
 	const timePercent = clampPercent(challenge.progress?.time.percent);
 	const typeOption = getTypeOption(challenge.type);
+	const currentValue = challenge.progress?.value.current ?? 0;
+	const targetValue = challenge.progress?.value.target ?? challenge.targetValue;
+	const remainingValue = challenge.progress?.value.remaining ?? targetValue;
+	const elapsedDays = challenge.progress?.time.elapsedDays ?? 0;
 
 	return (
 		<SpotlightCard>
+			<EditSpotlightButton type="button" onClick={onEdit}>
+				Редактировать
+			</EditSpotlightButton>
 			<RingColumn>
 				<RingProgress
 					color="#da8e5b"
 					label="цель"
 					value={valuePercent}
-					footnote={`${challenge.progress?.value.current ?? 0} / ${
-						challenge.progress?.value.target ?? challenge.targetValue
-					} ${typeOption.unit}`}
+					footnote={`осталось ${remainingValue} ${typeOption.unit}`}
 				/>
 			</RingColumn>
 			<SpotlightCenter>
 				<SpotlightEyebrow>
 					{typeOption.label} · {getPeriodLabel(challenge.periodType)}
 				</SpotlightEyebrow>
-				<SpotlightTitle>{challenge.targetValue}</SpotlightTitle>
+				<SpotlightTitle>
+					{currentValue} / {targetValue}
+				</SpotlightTitle>
 				<SpotlightSubtitle>{typeOption.unit}</SpotlightSubtitle>
 				<DateRange>
 					{formatDate(challenge.startDate)} — {formatDate(challenge.endDate)}
 				</DateRange>
+				<SpotlightProgressText>{elapsedDays} дней прошло</SpotlightProgressText>
 				{challenge.isActive ? <ActiveBadge>Активный</ActiveBadge> : null}
+				<SpotlightActions>
+					{challenge.isActive ? null : (
+						<ActionButton
+							disabled={isMutating}
+							type="button"
+							onClick={onActivate}
+						>
+							Сделать активным
+						</ActionButton>
+					)}
+				</SpotlightActions>
 			</SpotlightCenter>
 			<RingColumn>
 				<RingProgress
@@ -403,36 +713,247 @@ const RingProgress = ({
 	);
 };
 
-const ChallengeDetails = ({ challenge }: { challenge: IBookChallenge }) => {
-	const progress = challenge.progress;
+const ChallengeTimelineChart = ({
+	challenge,
+}: {
+	challenge: IBookChallenge;
+}) => {
+	const points = getChallengeTimelinePoints(challenge);
+	const unit = getTypeOption(challenge.type).unit;
+	const width = 720;
+	const height = 260;
+	const padding = {
+		bottom: 42,
+		left: 42,
+		right: 20,
+		top: 22,
+	};
+	const chartWidth = width - padding.left - padding.right;
+	const chartHeight = height - padding.top - padding.bottom;
+	const maxValue = Math.max(
+		challenge.targetValue,
+		...points.map((point) => Math.max(point.target, point.actual ?? 0)),
+		1,
+	);
+	const getX = (index: number) =>
+		padding.left +
+		(points.length <= 1 ? 0 : (chartWidth * index) / (points.length - 1));
+	const getY = (value: number) =>
+		padding.top + chartHeight - (chartHeight * value) / maxValue;
+	const getPolyline = (values: Array<number | null>) =>
+		values
+			.map((value, index) =>
+				value === null
+					? null
+					: `${getX(index).toFixed(1)},${getY(value).toFixed(1)}`,
+			)
+			.filter(Boolean)
+			.join(" ");
+	const targetLine = getPolyline(points.map((point) => point.target));
+	const actualLine = getPolyline(points.map((point) => point.actual));
+	const visibleLabels = points.filter((_, index) => {
+		if (challenge.periodType !== "year") return true;
 
-	if (!progress) {
-		return <PanelText>Backend пока не вернул progress для этого вызова.</PanelText>;
-	}
-
-	const unit = progress.value.unit === "pages" ? "страниц" : "книг";
+		return index === 0 || index === points.length - 1 || index % 2 === 1;
+	});
 
 	return (
-		<DetailsGrid>
-			<Metric>
-				<MetricValue>
-					{progress.value.current} / {progress.value.target}
-				</MetricValue>
-				<MetricLabel>{unit} выполнено</MetricLabel>
-			</Metric>
-			<Metric>
-				<MetricValue>{progress.value.remaining}</MetricValue>
-				<MetricLabel>осталось до цели</MetricLabel>
-			</Metric>
-			<Metric>
-				<MetricValue>{progress.time.elapsedDays}</MetricValue>
-				<MetricLabel>дней прошло</MetricLabel>
-			</Metric>
-			<Metric>
-				<MetricValue>{progress.time.remainingDays}</MetricValue>
-				<MetricLabel>дней осталось</MetricLabel>
-			</Metric>
-		</DetailsGrid>
+		<TimelinePanel>
+			<TimelineHeader>
+				<TimelineTitle>Темп по отрезкам</TimelineTitle>
+				<TimelineLegend>
+					<TimelineLegendItem $color={theme.colors.orangeLight}>
+						план
+					</TimelineLegendItem>
+					<TimelineLegendItem $color={theme.colors.bluePrimary}>
+						прочитано
+					</TimelineLegendItem>
+				</TimelineLegend>
+			</TimelineHeader>
+			<TimelineSvg
+				role="img"
+				aria-label={`Линия прогресса вызова по ${unit}`}
+				viewBox={`0 0 ${width} ${height}`}
+			>
+				<line
+					x1={padding.left}
+					x2={width - padding.right}
+					y1={getY(0)}
+					y2={getY(0)}
+				/>
+				<line
+					x1={padding.left}
+					x2={padding.left}
+					y1={padding.top}
+					y2={height - padding.bottom}
+				/>
+				{[0.25, 0.5, 0.75, 1].map((tick) => {
+					const y = getY(maxValue * tick);
+
+					return (
+						<g key={tick}>
+							<line
+								className="grid-line"
+								x1={padding.left}
+								x2={width - padding.right}
+								y1={y}
+								y2={y}
+							/>
+							<text x={padding.left - 10} y={y + 4}>
+								{Math.round(maxValue * tick)}
+							</text>
+						</g>
+					);
+				})}
+				<polyline className="target-line" points={targetLine} />
+				{actualLine ? (
+					<polyline className="actual-line" points={actualLine} />
+				) : null}
+				{points.map((point, index) => (
+					<g key={`${point.label}-${index}`}>
+						<circle
+							className="target-dot"
+							cx={getX(index)}
+							cy={getY(point.target)}
+							r="4"
+						/>
+						{point.actual === null ? null : (
+							<circle
+								className="actual-dot"
+								cx={getX(index)}
+								cy={getY(point.actual)}
+								r="4"
+							/>
+						)}
+					</g>
+				))}
+				{visibleLabels.map((point) => {
+					const index = points.indexOf(point);
+
+					return (
+						<text
+							key={`${point.label}-label`}
+							className="x-label"
+							x={getX(index)}
+							y={height - 12}
+						>
+							{point.label}
+						</text>
+					);
+				})}
+			</TimelineSvg>
+		</TimelinePanel>
+	);
+};
+
+const ChallengePlanBreakdown = ({
+	challenge,
+}: {
+	challenge: IBookChallenge;
+}) => {
+	const [drilldownRange, setDrilldownRange] =
+		useState<IChallengePlanRange | null>(null);
+	const baseGranularity = getDefaultPlanGranularity(challenge.periodType);
+	const activeGranularity = drilldownRange
+		? (getNextPlanGranularity(baseGranularity) ?? baseGranularity)
+		: baseGranularity;
+	const points = getChallengeTimelinePoints(
+		challenge,
+		activeGranularity,
+		drilldownRange,
+	);
+	const canDrillDown = Boolean(
+		!drilldownRange && getNextPlanGranularity(baseGranularity),
+	);
+
+	return (
+		<PlanPanel>
+			<TimelineHeader>
+				<PlanTitleGroup>
+					<TimelineTitle>
+					{drilldownRange
+						? `План по вызову - ${drilldownRange.label}`
+						: "План по вызову"}
+					</TimelineTitle>
+					{drilldownRange ? (
+						<PlanBackButton
+							type="button"
+							onClick={() => setDrilldownRange(null)}
+						>
+							Назад
+						</PlanBackButton>
+					) : null}
+				</PlanTitleGroup>
+				<PlanHint>{getPlanGranularityLabel(activeGranularity)}</PlanHint>
+			</TimelineHeader>
+			{canDrillDown ? (
+				<PlanHelp>Нажми на точку, чтобы открыть раскладку выбранного периода.</PlanHelp>
+			) : null}
+			<PlanLine role="list">
+				{points.map((point, i) => (
+					<Fragment key={point.startDate.toISOString()}>
+						<PlanDotWrap role="listitem">
+							<PlanDot
+								$done={point.actual !== null}
+								$isClickable={canDrillDown}
+								aria-label={`Открыть раскладку: ${point.label}`}
+								disabled={!canDrillDown}
+								type="button"
+								onClick={() =>
+									canDrillDown &&
+									setDrilldownRange({
+										startDate: point.startDate,
+										endDate: point.endDate,
+										label: point.label,
+									})
+								}
+							/>
+							<PlanPeriod>{point.label}</PlanPeriod>
+						</PlanDotWrap>
+
+						{i < points.length - 1 && (
+							<PlanRail
+								$done={point.actual !== null}
+								$granularity={activeGranularity}
+							>
+								<PlanRailLabel $done={point.actual !== null}>
+									{formatPlanAmount(point.actualSegment ?? 0)}/
+									{formatPlanAmount(point.targetSegment)}
+								</PlanRailLabel>
+							</PlanRail>
+						)}
+					</Fragment>
+				))}
+			</PlanLine>
+		</PlanPanel>
+	);
+};
+
+const ChallengeDetails = ({ challenge }: { challenge: IBookChallenge }) => {
+	const progress = challenge.progress;
+	const [isTimelineOpen, setIsTimelineOpen] = useState(false);
+
+	if (!progress) {
+		return (
+			<PanelText>Backend пока не вернул progress для этого вызова.</PanelText>
+		);
+	}
+
+	return (
+		<>
+			<ChallengePlanBreakdown key={challenge.id} challenge={challenge} />
+			<TimelineDisclosure>
+				<TimelineToggle
+					type="button"
+					aria-expanded={isTimelineOpen}
+					onClick={() => setIsTimelineOpen((current) => !current)}
+				>
+					<span>Темп по отрезкам</span>
+					<span>{isTimelineOpen ? "Скрыть" : "Показать"}</span>
+				</TimelineToggle>
+				{isTimelineOpen ? <ChallengeTimelineChart challenge={challenge} /> : null}
+			</TimelineDisclosure>
+		</>
 	);
 };
 
@@ -608,7 +1129,11 @@ const ChallengeModal = ({
 						<SecondaryButton type="button" onClick={onClose}>
 							Отмена
 						</SecondaryButton>
-						<Button disabled={isMutating} buttonType="containedInverted" type="submit">
+						<Button
+							disabled={isMutating}
+							buttonType="containedInverted"
+							type="submit"
+						>
 							{mode === "edit" ? "Сохранить" : "Создать"}
 						</Button>
 					</ModalActions>
@@ -630,13 +1155,19 @@ const Content = styled.section`
 `;
 
 const Hero = styled.header`
+	position: relative;
 	margin-bottom: 1.5rem;
+	padding-right: min(13rem, 42vw);
+
+	@media (max-width: 42rem) {
+		padding-right: 0;
+	}
 `;
 
 const HeroTop = styled.div`
 	display: flex;
 	align-items: center;
-	justify-content: space-between;
+	justify-content: flex-start;
 	gap: 1rem;
 `;
 
@@ -648,6 +1179,9 @@ const BackLink = styled(Link)`
 `;
 
 const NewButton = styled.button`
+	position: absolute;
+	top: 1.95rem;
+	right: 0;
 	border: 0.0625rem solid rgb(218 142 91 / 0.45);
 	border-radius: 999px;
 	background: rgb(218 142 91 / 0.1);
@@ -656,14 +1190,19 @@ const NewButton = styled.button`
 	cursor: pointer;
 	font: inherit;
 	font-weight: 700;
+
+	@media (max-width: 42rem) {
+		position: static;
+		margin-top: 0.9rem;
+	}
 `;
 
 const Title = styled.h1`
 	margin: 0.45rem 0 0;
 	color: ${theme.colors.foreground};
 	font-family: ${theme.fonts.serif};
-	font-size: clamp(2.8rem, 6vw, 5rem);
-	line-height: 0.95;
+	font-size: clamp(2.2rem, 4.6vw, 3.8rem);
+	line-height: 1;
 `;
 
 const Lead = styled.p`
@@ -681,50 +1220,237 @@ const StateMessage = styled.p`
 	line-height: 1.5;
 `;
 
+const ChallengeWorkspace = styled.section`
+	width: 100vw;
+	margin-left: calc(50% - 50vw);
+	padding: clamp(0.5rem, 2vw, 1rem) 0;
+`;
+
 const CarouselStage = styled.section`
+	position: relative;
 	display: grid;
-	grid-template-columns: 3rem minmax(0, 1fr) 3rem;
+	grid-template-columns: minmax(0, 1fr);
 	align-items: center;
 	gap: 1rem;
-	width: min(100%, 58rem);
-	margin: 0 auto;
+	width: 100vw;
+	margin: 0;
+	overflow: visible;
 
 	@media (max-width: 48rem) {
 		grid-template-columns: 1fr;
 	}
 `;
 
-const ArrowButton = styled.button`
-	width: 3rem;
-	height: 3rem;
-	border: 0.0625rem solid rgb(211 202 196 / 0.82);
-	border-radius: 50%;
-	background: rgb(255 255 255 / 0.58);
-	color: ${theme.colors.foreground};
+const ChallengeViewport = styled.div`
+	overflow: hidden;
+	width: 100vw;
+`;
+
+const ChallengeTrack = styled.div`
+	display: flex;
+	align-items: stretch;
+`;
+
+const ChallengeSlide = styled.div<{ $hasPreview: boolean; $isActive: boolean }>`
+	flex: 0 0
+		${({ $hasPreview }) =>
+			$hasPreview ? "clamp(34rem, 54vw, 50rem)" : "min(100%, 50rem)"};
+	min-width: 0;
+	border-radius: 1.25rem;
+	background: rgb(242 239 237 / 0.32);
+	padding: clamp(0.85rem, 2vw, 1.25rem);
+	opacity: ${({ $isActive }) => ($isActive ? 1 : 0.38)};
+	pointer-events: ${({ $isActive }) => ($isActive ? "auto" : "none")};
+	transform: scale(${({ $isActive }) => ($isActive ? 1 : 0.94)});
+	transition:
+		opacity 180ms ease,
+		transform 180ms ease;
+
+	@media (max-width: 48rem) {
+		flex-basis: 100%;
+		padding-inline: 0;
+		opacity: 1;
+		transform: none;
+	}
+`;
+
+const ArrowButton = styled.button<{ $side: "next" | "prev" }>`
+	position: absolute;
+	top: 50%;
+	z-index: 5;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 1.875rem;
+	height: 1.875rem;
+	border: 0.0625rem solid ${theme.colors.orangeDark};
+	border-radius: 999px;
+	background: ${theme.colors.transparent};
+	color: ${theme.colors.orangeDark};
 	cursor: pointer;
-	font: inherit;
+	font-family: ${theme.fonts.serif};
 	font-size: 2rem;
 	line-height: 1;
+	transform: translateY(-50%);
+	transition:
+		background 180ms ease,
+		border-color 180ms ease,
+		color 180ms ease,
+		opacity 180ms ease,
+		transform 180ms ease;
+
+	&:hover,
+	&:focus-visible {
+		background: ${theme.colors.orangePrimary};
+		border-color: ${theme.colors.orangePrimary};
+		color: ${theme.colors.white};
+		outline: none;
+		transform: translateY(calc(-50% - 0.0625rem));
+	}
+
+	${({ $side }) =>
+		$side === "prev"
+			? "left: max(0.25rem, calc(50% - 27.5rem));"
+			: "right: max(0.25rem, calc(50% - 27.5rem));"}
 
 	@media (max-width: 48rem) {
 		display: none;
 	}
 `;
+const PlanLine = styled.div`
+	display: flex;
+	align-items: center;
+	width: 100%;
+	overflow-x: visible;
+	overflow-y: visible;
+	padding: 1.75rem 0 1.75rem;
+`;
+
+const PlanDotWrap = styled.div`
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	flex: 0 0 0;
+	width: 0;
+	position: relative;
+	z-index: 2;
+	/* убери gap — управляй отступами вручную */
+`;
+
+const PlanDot = styled.button<{ $done: boolean; $isClickable: boolean }>`
+	width: 14px;
+	height: 14px;
+	border: 0;
+	border-radius: 50%;
+	flex-shrink: 0;
+	/* ключевое — margin: 0, никаких смещений */
+	margin: 0;
+	padding: 0;
+	position: relative;
+	z-index: 3;
+	cursor: ${({ $isClickable }) => ($isClickable ? "pointer" : "default")};
+	background: ${({ $done }) =>
+		$done ? theme.colors.bluePrimary : theme.colors.orangeLight};
+	box-shadow:
+		0 0 0 3px ${theme.colors.background},
+		0 0 0 5px
+			${({ $done }) =>
+				$done ? theme.colors.bluePrimary : theme.colors.orangeLight};
+	transition: transform 0.15s;
+
+	&:not(:disabled):hover,
+	&:not(:disabled):focus-visible {
+		outline: none;
+		transform: scale(1.3);
+	}
+`;
+
+const PlanPeriod = styled.span`
+	position: absolute;
+	top: 1.35rem;
+	left: 50%;
+	transform: translateX(-50%);
+	margin: 0;
+	font-size: 0.72rem;
+	color: ${theme.colors.softForeground};
+	white-space: nowrap;
+`;
+
+const PlanRail = styled.div<{
+	$done: boolean;
+	$granularity: IPlanGranularity;
+}>`
+	height: 3px;
+	flex: ${({ $granularity }) =>
+		$granularity === "month"
+			? "1 1 6.875rem"
+			: $granularity === "week"
+				? "1 1 clamp(3.75rem, 6vw, 5.5rem)"
+				: "1 1 clamp(2.75rem, 4.5vw, 4rem)"};
+	border-radius: 2px;
+	background: ${({ $done }) =>
+		$done ? theme.colors.bluePrimary : "rgb(35 61 77 / 0.16)"};
+	position: relative;
+	z-index: 1;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+`;
+
+const PlanRailLabel = styled.span<{ $done: boolean }>`
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	z-index: 2;
+	border-radius: 999px;
+	background: ${theme.colors.background};
+	padding: 0.08rem 0.4rem;
+	font-family: ${theme.fonts.sans};
+	font-size: 0.78rem;
+	font-weight: 600;
+	line-height: 1.15;
+	color: ${({ $done }) =>
+		$done ? theme.colors.bluePrimary : theme.colors.softForeground};
+	white-space: nowrap;
+`;
 
 const SpotlightCard = styled.article`
+	position: relative;
 	display: grid;
-	grid-template-columns: minmax(8rem, 0.7fr) minmax(12rem, 1fr) minmax(8rem, 0.7fr);
+	grid-template-columns: minmax(7rem, 0.58fr) minmax(11rem, 0.9fr) minmax(
+			7rem,
+			0.7fr
+		);
 	align-items: center;
-	gap: clamp(1rem, 3vw, 2rem);
-	border: 0.0625rem solid rgb(211 202 196 / 0.72);
-	border-radius: 1.4rem;
-	background: rgb(255 255 255 / 0.58);
-	padding: clamp(1rem, 3vw, 2rem);
-	box-shadow: 0 1.5rem 4rem rgb(4 18 26 / 0.08);
+	gap: clamp(0.65rem, 1.8vw, 1.25rem);
+	padding: clamp(0.35rem, 1.4vw, 0.75rem);
 
 	@media (max-width: 42rem) {
 		grid-template-columns: 1fr;
 		text-align: center;
+	}
+`;
+
+const EditSpotlightButton = styled.button`
+	position: absolute;
+	top: 0;
+	right: 0;
+	border: 0;
+	background: transparent;
+	padding: 0.25rem;
+	color: ${theme.colors.orangeDark};
+	cursor: pointer;
+	font: inherit;
+	font-size: 0.78rem;
+	font-weight: 700;
+	line-height: 1.2;
+
+	&:hover,
+	&:focus-visible {
+		text-decoration: underline;
+		text-underline-offset: 0.16rem;
+		outline: none;
 	}
 `;
 
@@ -739,6 +1465,14 @@ const SpotlightCenter = styled.div`
 	text-align: center;
 `;
 
+const SpotlightActions = styled.div`
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	gap: 0.6rem;
+	margin-top: 0.85rem;
+`;
+
 const SpotlightEyebrow = styled.span`
 	color: ${theme.colors.orangeDark};
 	font-size: 0.78rem;
@@ -750,7 +1484,7 @@ const SpotlightTitle = styled.strong`
 	margin-top: 0.35rem;
 	color: ${theme.colors.foreground};
 	font-family: ${theme.fonts.serif};
-	font-size: clamp(3rem, 7vw, 5.8rem);
+	font-size: clamp(2.7rem, 5.8vw, 4.9rem);
 	line-height: 0.9;
 `;
 
@@ -765,6 +1499,12 @@ const DateRange = styled.span`
 	margin-top: 0.75rem;
 	color: ${theme.colors.softForeground};
 	font-size: 0.9rem;
+`;
+
+const SpotlightProgressText = styled.span`
+	margin-top: 0.35rem;
+	color: ${theme.colors.softForeground};
+	font-size: 0.86rem;
 `;
 
 const ActiveBadge = styled.span`
@@ -831,14 +1571,6 @@ const DotButton = styled.button<{ $isActive: boolean }>`
 		background 180ms ease;
 `;
 
-const ActionsRow = styled.div`
-	display: flex;
-	justify-content: center;
-	flex-wrap: wrap;
-	gap: 0.7rem;
-	margin-top: 1rem;
-`;
-
 const ActionButton = styled.button`
 	border: 0.0625rem solid rgb(218 142 91 / 0.32);
 	border-radius: 999px;
@@ -855,43 +1587,205 @@ const ActionButton = styled.button`
 	}
 `;
 
-const DetailsPanel = styled.section`
-	width: min(100%, 42rem);
-	margin: 1.2rem auto 0;
+const GraphsPanel = styled.section`
+	width: min(100%, 70rem);
+	margin: 0.7rem auto 0;
 `;
 
-const DetailsGrid = styled.div`
-	display: grid;
-	gap: 0.85rem;
-	grid-template-columns: repeat(4, minmax(0, 1fr));
+const TimelineDisclosure = styled.section`
+	width: 100%;
+	margin: 1rem auto 0;
+`;
 
-	@media (max-width: 42rem) {
-		grid-template-columns: repeat(2, minmax(0, 1fr));
+const TimelineToggle = styled.button`
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+	width: 100%;
+	border: 0;
+	background: transparent;
+	padding: 0.8rem 1rem;
+	color: ${theme.colors.foreground};
+	cursor: pointer;
+	font: inherit;
+
+	span:first-child {
+		font-family: ${theme.fonts.serif};
+		font-size: 1.2rem;
+		font-weight: 700;
+	}
+
+	span:last-child {
+		color: ${theme.colors.orangeDark};
+		font-size: 0.82rem;
+		font-weight: 700;
+	}
+
+	&:hover,
+	&:focus-visible {
+		outline: none;
+
+		span:last-child {
+			color: ${theme.colors.orangeLight};
+		}
 	}
 `;
 
-const Metric = styled.div`
-	border: 0.0625rem solid rgb(211 202 196 / 0.58);
-	border-radius: 0.85rem;
-	background: rgb(242 239 237 / 0.72);
-	padding: 0.85rem;
-	text-align: center;
+const TimelinePanel = styled.section`
+	width: 100%;
+	margin: 0 auto;
+	border-radius: 1rem;
+	background: transparent;
+	padding: 1rem;
 `;
 
-const MetricValue = styled.strong`
-	display: block;
+const TimelineHeader = styled.div`
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+	margin-bottom: 0.75rem;
+`;
+
+const TimelineTitle = styled.h3`
+	margin: 0;
 	color: ${theme.colors.foreground};
 	font-family: ${theme.fonts.serif};
-	font-size: 1.6rem;
-	line-height: 1;
+	font-size: 1.15rem;
+	line-height: 1.15;
 `;
 
-const MetricLabel = styled.span`
-	display: block;
-	margin-top: 0.35rem;
+const TimelineLegend = styled.div`
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.65rem;
+`;
+
+const TimelineLegendItem = styled.span<{ $color: string }>`
+	display: inline-flex;
+	align-items: center;
+	gap: 0.35rem;
 	color: ${theme.colors.softForeground};
-	font-size: 0.82rem;
-	line-height: 1.25;
+	font-size: 0.78rem;
+	font-weight: 700;
+
+	&::before {
+		width: 0.65rem;
+		height: 0.65rem;
+		border-radius: 50%;
+		background: ${({ $color }) => $color};
+		content: "";
+	}
+`;
+
+const TimelineSvg = styled.svg`
+	display: block;
+	width: 100%;
+	height: auto;
+	overflow: visible;
+
+	line {
+		stroke: rgb(35 61 77 / 0.18);
+		stroke-width: 1.5;
+	}
+
+	.grid-line {
+		stroke: rgb(35 61 77 / 0.08);
+	}
+
+	text {
+		fill: ${theme.colors.softForeground};
+		font-family: ${theme.fonts.sans};
+		font-size: 0.68rem;
+		text-anchor: end;
+	}
+
+	.x-label {
+		text-anchor: middle;
+	}
+
+	.target-line,
+	.actual-line {
+		fill: none;
+		stroke-linecap: round;
+		stroke-linejoin: round;
+		stroke-width: 4;
+	}
+
+	.target-line {
+		stroke: ${theme.colors.orangeLight};
+	}
+
+	.actual-line {
+		stroke: ${theme.colors.bluePrimary};
+	}
+
+	.target-dot {
+		fill: ${theme.colors.orangeLight};
+	}
+
+	.actual-dot {
+		fill: ${theme.colors.bluePrimary};
+	}
+`;
+
+const PlanPanel = styled.section`
+	width: 100%;
+	margin: 0 auto 1.1rem;
+	border-radius: 1rem;
+	background: transparent;
+	padding: 0.35rem 0 1rem;
+`;
+
+const PlanHint = styled.span`
+	display: inline-flex;
+	align-items: center;
+	border: 0.0625rem solid rgb(218 142 91 / 0.34);
+	border-radius: 999px;
+	background: rgb(255 255 255 / 0.38);
+	padding: 0.26rem 0.62rem;
+	color: ${theme.colors.orangeDark};
+	font-size: 0.78rem;
+	font-weight: 700;
+`;
+
+const PlanTitleGroup = styled.div`
+	display: inline-flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 0.55rem;
+`;
+
+const PlanHelp = styled.p`
+	margin: -0.2rem 0 0.15rem;
+	color: ${theme.colors.softForeground};
+	font-size: 0.86rem;
+	line-height: 1.35;
+`;
+
+const PlanBackButton = styled.button`
+	border: 0.0625rem solid rgb(218 142 91 / 0.4);
+	border-radius: 999px;
+	background: rgb(255 255 255 / 0.42);
+	color: ${theme.colors.orangeDark};
+	cursor: pointer;
+	font: inherit;
+	font-size: 0.76rem;
+	font-weight: 700;
+	padding: 0.24rem 0.62rem;
+	transition:
+		background 160ms ease,
+		border-color 160ms ease,
+		color 160ms ease;
+
+	&:hover,
+	&:focus-visible {
+		border-color: ${theme.colors.orangeLight};
+		background: rgb(255 255 255 / 0.72);
+		color: ${theme.colors.orangeLight};
+		outline: none;
+	}
 `;
 
 const PanelText = styled.p`

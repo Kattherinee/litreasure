@@ -4,7 +4,7 @@ import { AvatarStep } from "./AvatarStep";
 import { GenresStep } from "./GenresStep";
 import { GoalStep } from "./GoalStep";
 import { ProfileStep } from "./ProfileStep";
-import type { IWelcomeStep } from "./types";
+import type { IGoalStartMode, IWelcomeStep } from "./types";
 
 interface IWelcomeStepContentProps {
 	activeStep: IWelcomeStep;
@@ -14,11 +14,13 @@ interface IWelcomeStepContentProps {
 	avatarUrl: string;
 	selectedGenres: string[];
 	yearGoal: number;
+	goalStartMode: IGoalStartMode;
 	onNameChange: (value: string) => void;
 	onUsernameChange: (value: string) => void;
 	onAvatarChange: (url: string) => void;
 	onGenreToggle: (slug: string) => void;
 	onGoalChange: (value: number) => void;
+	onGoalStartModeChange: (value: IGoalStartMode) => void;
 }
 
 export const WelcomeStepContent = ({
@@ -29,11 +31,13 @@ export const WelcomeStepContent = ({
 	avatarUrl,
 	selectedGenres,
 	yearGoal,
+	goalStartMode,
 	onNameChange,
 	onUsernameChange,
 	onAvatarChange,
 	onGenreToggle,
 	onGoalChange,
+	onGoalStartModeChange,
 }: IWelcomeStepContentProps) => {
 	if (activeStep === "profile") {
 		return (
@@ -57,5 +61,12 @@ export const WelcomeStepContent = ({
 		);
 	}
 
-	return <GoalStep yearGoal={yearGoal} onGoalChange={onGoalChange} />;
+	return (
+		<GoalStep
+			goalStartMode={goalStartMode}
+			yearGoal={yearGoal}
+			onGoalChange={onGoalChange}
+			onGoalStartModeChange={onGoalStartModeChange}
+		/>
+	);
 };

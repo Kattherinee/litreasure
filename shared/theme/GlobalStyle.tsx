@@ -7,7 +7,7 @@ import { theme } from "@/shared/theme";
 const GlobalStyle = createGlobalStyle`
 	* {
 		box-sizing: border-box;
-		scrollbar-color: ${theme.colors.orangeLight} rgb(242 239 237 / 0.72);
+		scrollbar-color: rgb(186 178 172 / 0.74) rgb(242 239 237 / 0.52);
 		scrollbar-width: thin;
 	}
 
@@ -24,11 +24,11 @@ const GlobalStyle = createGlobalStyle`
 	*::-webkit-scrollbar-thumb {
 		border: 0.1875rem solid rgb(242 239 237 / 0.72);
 		border-radius: 999px;
-		background: ${theme.colors.orangeLight};
+		background: rgb(186 178 172 / 0.74);
 	}
 
 	*::-webkit-scrollbar-thumb:hover {
-		background: ${theme.colors.orangeDark};
+		background: rgb(158 149 143 / 0.82);
 	}
 
 	*::-webkit-scrollbar-corner {

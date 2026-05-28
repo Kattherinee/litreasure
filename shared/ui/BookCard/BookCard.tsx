@@ -85,7 +85,7 @@ export interface IBookCardData {
 	myStatus?: IUserBookStatus | null;
 }
 
-export type IBookCardSize = "default" | "compact";
+export type IBookCardSize = "default" | "compact" | "tiny";
 
 interface IBookCardProps {
 	book: IBookCardData;
@@ -488,7 +488,8 @@ const BookCover = styled.div<{ $size: IBookCardSize }>`
 	z-index: 2;
 	overflow: visible;
 	width: fit-content;
-	height: ${({ $size }) => ($size === "compact" ? "12.5rem" : "15.25rem")};
+	height: ${({ $size }) =>
+		$size === "tiny" ? "9.25rem" : $size === "compact" ? "12.5rem" : "15.25rem"};
 
 	border-radius: 0.7rem;
 	transition:
@@ -557,9 +558,11 @@ const BookTitle = styled.h2<{ $size: IBookCardSize }>`
 	margin-block: 0;
 	color: ${theme.colors.foreground};
 	font-family: ${theme.fonts.serif};
-	font-size: ${({ $size }) => ($size === "compact" ? "0.95rem" : "1.045rem")};
+	font-size: ${({ $size }) =>
+		$size === "tiny" ? "0.78rem" : $size === "compact" ? "0.95rem" : "1.045rem"};
 	font-weight: 500;
-	line-height: ${({ $size }) => ($size === "compact" ? "1.18rem" : "1.55rem")};
+	line-height: ${({ $size }) =>
+		$size === "tiny" ? "1.02rem" : $size === "compact" ? "1.18rem" : "1.55rem"};
 	transition: color 220ms ease;
 	overflow-wrap: anywhere;
 
@@ -572,7 +575,8 @@ const BookTitle = styled.h2<{ $size: IBookCardSize }>`
 const BookAuthor = styled.p<{ $size: IBookCardSize }>`
 	margin-block: 0;
 	color: ${theme.colors.lightText};
-	font-size: ${({ $size }) => ($size === "compact" ? "0.76rem" : "0.875rem")};
+	font-size: ${({ $size }) =>
+		$size === "tiny" ? "0.66rem" : $size === "compact" ? "0.76rem" : "0.875rem"};
 	line-height: 1.3334;
 	overflow-wrap: anywhere;
 `;
@@ -580,7 +584,8 @@ const BookAuthor = styled.p<{ $size: IBookCardSize }>`
 const BookAuthorLink = styled(Link)<{ $size: IBookCardSize }>`
 	margin-block: 0;
 	color: ${theme.colors.lightText};
-	font-size: ${({ $size }) => ($size === "compact" ? "0.76rem" : "0.875rem")};
+	font-size: ${({ $size }) =>
+		$size === "tiny" ? "0.66rem" : $size === "compact" ? "0.76rem" : "0.875rem"};
 	line-height: 1.3334;
 	overflow-wrap: anywhere;
 	text-decoration: none;

@@ -16,6 +16,7 @@ const WelcomePage = () => {
 		avatarUrl,
 		canRenderWelcome,
 		formError,
+		goalStartMode,
 		hasUsernameError,
 		isCheckingUsername,
 		isNextDisabled,
@@ -32,6 +33,7 @@ const WelcomePage = () => {
 		setAvatarUrl,
 		setName,
 		setUsername,
+		setGoalStartMode,
 		setYearGoal,
 		skipStep,
 		toggleGenre,
@@ -63,11 +65,13 @@ const WelcomePage = () => {
 					avatarUrl={avatarUrl}
 					selectedGenres={selectedGenres}
 					yearGoal={yearGoal}
+					goalStartMode={goalStartMode}
 					onNameChange={setName}
 					onUsernameChange={setUsername}
 					onAvatarChange={setAvatarUrl}
 					onGenreToggle={toggleGenre}
 					onGoalChange={setYearGoal}
+					onGoalStartModeChange={setGoalStartMode}
 				/>
 
 				{formError ? <ErrorText role="alert">{formError}</ErrorText> : null}
