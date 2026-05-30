@@ -31,15 +31,19 @@ interface ISearchTabBarProps {
 	isFetching: boolean;
 	shouldSearch: boolean;
 	total: number;
+	visibleTabs?: ISearchTabId[];
 	onTabChange: (tab: ISearchTabActiveId) => void;
 }
 
 export const SearchTabBar = ({
 	activeTab,
 	onTabChange,
+	visibleTabs,
 }: ISearchTabBarProps) => (
 	<>
-		{ALL_SEARCH_TAB_OPTIONS.map((tab) => {
+		{ALL_SEARCH_TAB_OPTIONS.filter(
+			(tab) => !visibleTabs || visibleTabs.includes(tab.id as ISearchTabId),
+		).map((tab) => {
 			const isActive = activeTab === tab.id;
 
 			return (

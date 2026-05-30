@@ -1,13 +1,24 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import styled from "styled-components";
 
+import type { IBook } from "@/shared/api/books";
 import { useBookQuery } from "@/shared/api/books";
+import { useRecomendationsByBookQuery } from "@/shared/api/recomendations/recomendations.hooks";
 import { theme } from "@/shared/theme";
+import BookCarousel from "@/shared/ui/BookCarousel/BookCarousel";
 import { SkeletonBlock } from "@/shared/ui/Skeleton";
-import BookSliderSection from "@/shared/ui/BookSliderSection/BookSliderSection";
+import { BookCardSkeleton } from "@/shared/ui/Skeleton";
 
 import BookDetailContent from "./book-details/BookDetailContent";
+
+interface ICarouselControls {
+	canScrollNext: boolean;
+	canScrollPrev: boolean;
+	scrollNext: () => void;
+	scrollPrev: () => void;
+}
 
 interface IBookDetailsPageProps {
 	slug: string;
@@ -102,16 +113,102 @@ const BookDetailsPage = ({ slug }: IBookDetailsPageProps) => {
 		);
 	}
 
+	return <BookDetailsContent book={book} />;
+};
+
+const BookDetailsContent = ({ book }: { book: IBook }) => {
+	const [carouselControls, setCarouselControls] =
+		useState<ICarouselControls | null>(null);
+	const {
+		data: relatedBooks = [],
+		error: relatedBooksError,
+		isError: isRelatedBooksError,
+		isLoading: isRelatedBooksLoading,
+	} = useRecomendationsByBookQuery(
+		{ bookId: book.id, limit: 15 },
+		{ enabled: Boolean(book.id) },
+	);
+	const carouselBooks = useMemo(
+		() =>
+			relatedBooks.map((relatedBook) => ({
+				author: relatedBook.author,
+				authors: relatedBook.authors,
+				coverUrl: relatedBook.coverUrl,
+				id: relatedBook.id,
+				isTracked: relatedBook.isTracked,
+				myStatus: relatedBook.myStatus,
+				orderInSeries: relatedBook.orderInSeries,
+				relationType: relatedBook.relationType,
+				seriesBookCount: relatedBook.bookCountInSeries,
+				seriesLabel: relatedBook.seriesLabel,
+				title: relatedBook.title,
+			})),
+		[relatedBooks],
+	);
+	const hasCarouselControls = Boolean(
+		carouselControls?.canScrollPrev || carouselControls?.canScrollNext,
+	);
+
 	return (
 		<Page>
 			<BookDetailContent book={book} />
 			<RelatedSection>
-				<BookSliderSection
-					genre={book.genres[0]?.slug}
-					limit={20}
-					sort="rating"
-					title="Вам понравится"
-				/>
+				<Section>
+					<SectionHeader>
+						<SectionTitle>Вам понравится</SectionTitle>
+						<Controls $isVisible={hasCarouselControls}>
+							<ControlButton
+								aria-label="Предыдущие книги"
+								disabled={!carouselControls?.canScrollPrev}
+								type="button"
+								onClick={carouselControls?.scrollPrev}
+							>
+								‹
+							</ControlButton>
+							<ControlButton
+								aria-label="Следующие книги"
+								disabled={!carouselControls?.canScrollNext}
+								type="button"
+								onClick={carouselControls?.scrollNext}
+							>
+								›
+							</ControlButton>
+						</Controls>
+					</SectionHeader>
+
+					{isRelatedBooksLoading ? (
+						<SkeletonCarousel aria-label="Загружаем рекомендации">
+							{Array.from({ length: 8 }, (_, index) => (
+								<BookCardSkeleton key={index} />
+							))}
+						</SkeletonCarousel>
+					) : isRelatedBooksError ? (
+						<StateMessage>
+							Не удалось загрузить рекомендации: {relatedBooksError.message}
+						</StateMessage>
+					) : carouselBooks.length > 0 ? (
+						<BookCarousel
+							books={carouselBooks}
+							size="compact"
+							onControlsChange={(controls) => {
+								setCarouselControls((currentControls) => {
+									if (
+										currentControls?.canScrollNext === controls.canScrollNext &&
+										currentControls?.canScrollPrev === controls.canScrollPrev &&
+										currentControls?.scrollNext === controls.scrollNext &&
+										currentControls?.scrollPrev === controls.scrollPrev
+									) {
+										return currentControls;
+									}
+
+									return controls;
+								});
+							}}
+						/>
+					) : (
+						<StateMessage>Пока нет рекомендаций.</StateMessage>
+					)}
+				</Section>
 			</RelatedSection>
 		</Page>
 	);
@@ -138,6 +235,78 @@ const StateMessage = styled.p`
 
 const RelatedSection = styled.section`
 	margin-top: 5rem;
+`;
+
+const Section = styled.section`
+	width: min(
+		calc(100% - (${theme.layout.contentGutter} * 2)),
+		${theme.layout.contentMaxWidth}
+	);
+	margin: 0 auto;
+	height: fit-content;
+`;
+
+const SectionHeader = styled.div`
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1.25rem;
+	margin-bottom: 1.75rem;
+`;
+
+const SectionTitle = styled.h2`
+	margin: 0;
+	color: ${theme.colors.textPrimary};
+	font-family: ${theme.fonts.serif};
+	font-size: 2rem;
+	font-weight: 600;
+	line-height: 1.1;
+`;
+
+const Controls = styled.div<{ $isVisible: boolean }>`
+	display: ${({ $isVisible }) => ($isVisible ? "flex" : "none")};
+	flex: 0 0 auto;
+	gap: 0.625rem;
+`;
+
+const ControlButton = styled.button`
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 1.875rem;
+	height: 1.875rem;
+	border: 0.0625rem solid ${theme.colors.orangeDark};
+	border-radius: 62.4375rem;
+	background: ${theme.colors.transparent};
+	color: ${theme.colors.orangeDark};
+	cursor: pointer;
+	font-family: ${theme.fonts.serif};
+	font-size: 2rem;
+	line-height: 1;
+	transition:
+		background 180ms ease,
+		border-color 180ms ease,
+		color 180ms ease,
+		opacity 180ms ease,
+		transform 180ms ease;
+
+	&:not(:disabled):hover {
+		background: ${theme.colors.orangeLight};
+		border-color: ${theme.colors.orangeLight};
+		color: ${theme.colors.invertedText};
+		transform: translateY(-0.0625rem);
+	}
+
+	&:disabled {
+		cursor: default;
+		opacity: 0.38;
+	}
+`;
+
+const SkeletonCarousel = styled.div`
+	display: flex;
+	gap: clamp(0.775rem, 1vw, 1.25rem);
+	overflow: hidden;
 `;
 
 const BookDetailSkeleton = styled.section`

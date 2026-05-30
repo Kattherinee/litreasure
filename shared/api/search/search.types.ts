@@ -9,6 +9,7 @@ export interface ISearchBook {
 	author: string;
 	bookCountInSeries?: number;
 	coverUrl?: string;
+	description?: string;
 	orderInSeries?: number;
 	searchMatches?: ISearchMatch[];
 	seriesTitle?: string;

@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from "react";
 import styled from "styled-components";
 
 import AuthModal, { type IAuthModalMode } from "@/components/pages/AuthModal";
+import { AuthorEditModal } from "@/components/pages/author/AuthorEditModal";
 import {
 	ResultsBadge as BaseResultsBadge,
 	ResultsNumber as TotalNumber,
@@ -29,6 +30,7 @@ import { useAuthStore } from "@/shared/store/auth-store";
 import { theme } from "@/shared/theme";
 import { AuthorAvatar } from "@/shared/ui/AuthorAvatar";
 import { BookCard } from "@/shared/ui/BookCard";
+import { ConfirmModal } from "@/shared/ui/ConfirmModal";
 import { GenrePill } from "@/shared/ui/GenrePill";
 import { BookCardSkeleton, SkeletonBlock } from "@/shared/ui/Skeleton";
 
@@ -515,95 +517,29 @@ const AuthorPage = ({ id }: IAuthorPageProps) => {
 					</Section>
 				) : null}
 				{isEditOpen ? (
-					<ModalOverlay
-						role="presentation"
-						onMouseDown={() => setIsEditOpen(false)}
-					>
-						<EditDialog
-							aria-modal="true"
-							role="dialog"
-							aria-labelledby="edit-author-title"
-							onMouseDown={(event) => event.stopPropagation()}
-						>
-							<ModalTitle id="edit-author-title">
-								Редактировать автора
-							</ModalTitle>
-							<EditForm onSubmit={(event) => event.preventDefault()}>
-								<EditField>
-									<span>Имя</span>
-									<input
-										value={editName}
-										onChange={(event) => setEditName(event.target.value)}
-									/>
-								</EditField>
-								<EditField>
-									<span>Фото URL</span>
-									<input
-										value={editPhotoUrl}
-										onChange={(event) => setEditPhotoUrl(event.target.value)}
-									/>
-								</EditField>
-								<EditField>
-									<span>Биография</span>
-									<textarea
-										value={editBio}
-										onChange={(event) => setEditBio(event.target.value)}
-									/>
-								</EditField>
-								<ModalActions>
-									<OwnerActionButton
-										type="button"
-										onClick={() => setIsEditOpen(false)}
-									>
-										Отмена
-									</OwnerActionButton>
-									<SaveActionButton
-										disabled={updateAuthorMutation.isPending}
-										type="button"
-										onClick={() => void saveAuthorChanges()}
-									>
-										{updateAuthorMutation.isPending
-											? "Сохраняем..."
-											: "Сохранить"}
-									</SaveActionButton>
-								</ModalActions>
-							</EditForm>
-						</EditDialog>
-					</ModalOverlay>
+					<AuthorEditModal
+						bio={editBio}
+						isSaving={updateAuthorMutation.isPending}
+						name={editName}
+						photoUrl={editPhotoUrl}
+						onBioChange={setEditBio}
+						onClose={() => setIsEditOpen(false)}
+						onNameChange={setEditName}
+						onPhotoUrlChange={setEditPhotoUrl}
+						onSave={() => void saveAuthorChanges()}
+					/>
 				) : null}
 				{isDeleteConfirmOpen ? (
-					<ModalOverlay
-						role="presentation"
-						onMouseDown={() => setIsDeleteConfirmOpen(false)}
+					<ConfirmModal
+						confirmLabel="Удалить"
+						confirmLoadingLabel="Удаляем..."
+						isLoading={deleteAuthorMutation.isPending}
+						title="Удалить автора?"
+						onCancel={() => setIsDeleteConfirmOpen(false)}
+						onConfirm={() => void deleteAuthor()}
 					>
-						<ConfirmDialog
-							aria-modal="true"
-							role="dialog"
-							aria-labelledby="delete-author-title"
-							onMouseDown={(event) => event.stopPropagation()}
-						>
-							<ModalTitle id="delete-author-title">Удалить автора?</ModalTitle>
-							<ConfirmText>
-								Автор исчезнет из вашего списка, а связь с его книгами будет
-								удалена.
-							</ConfirmText>
-							<ModalActions>
-								<OwnerActionButton
-									type="button"
-									onClick={() => setIsDeleteConfirmOpen(false)}
-								>
-									Отмена
-								</OwnerActionButton>
-								<DangerActionButton
-									type="button"
-									disabled={deleteAuthorMutation.isPending}
-									onClick={() => void deleteAuthor()}
-								>
-									{deleteAuthorMutation.isPending ? "Удаляем..." : "Удалить"}
-								</DangerActionButton>
-							</ModalActions>
-						</ConfirmDialog>
-					</ModalOverlay>
+						Автор исчезнет из вашего списка, а связь с его книгами будет удалена.
+					</ConfirmModal>
 				) : null}
 				{authModalMode ? (
 					<AuthModal
@@ -1061,86 +997,4 @@ const StateMessage = styled.p`
 	color: ${theme.colors.softForeground};
 	font-size: 1rem;
 	line-height: 1.5;
-`;
-
-const ModalOverlay = styled.div`
-	position: fixed;
-	z-index: 90;
-	inset: 0;
-	display: grid;
-	place-items: center;
-	background: rgb(4 18 26 / 0.52);
-	padding: 1rem;
-`;
-
-const EditDialog = styled.section`
-	width: min(100%, 34rem);
-	max-height: min(92dvh, 42rem);
-	overflow: auto;
-	border-radius: 1rem;
-	background: ${theme.colors.surface};
-	padding: 1.5rem;
-	box-shadow: 0 1.25rem 3rem rgb(4 18 26 / 0.18);
-`;
-
-const ConfirmDialog = styled(EditDialog)`
-	width: min(100%, 28rem);
-`;
-
-const ModalTitle = styled.h2`
-	margin: 0 0 1rem;
-	color: ${theme.colors.foreground};
-	font-family: ${theme.fonts.serif};
-	font-size: 1.55rem;
-	line-height: 1.2;
-`;
-
-const EditForm = styled.form`
-	display: grid;
-	gap: 0.9rem;
-`;
-
-const EditField = styled.label`
-	display: grid;
-	gap: 0.35rem;
-	color: ${theme.colors.foreground};
-	font-size: 0.88rem;
-	font-weight: 700;
-
-	input,
-	textarea {
-		width: 100%;
-		border: 0.0625rem solid rgb(211 202 196 / 0.82);
-		border-radius: 0.7rem;
-		background: rgb(255 255 255 / 0.56);
-		padding: 0.65rem 0.75rem;
-		color: ${theme.colors.foreground};
-		font: inherit;
-		font-weight: 400;
-	}
-
-	textarea {
-		min-height: 8rem;
-		resize: vertical;
-	}
-
-	input:focus,
-	textarea:focus {
-		border-color: ${theme.colors.orangeLight};
-		outline: none;
-	}
-`;
-
-const ConfirmText = styled.p`
-	margin: 0 0 1.15rem;
-	color: ${theme.colors.softForeground};
-	font-size: 0.95rem;
-	line-height: 1.45;
-`;
-
-const ModalActions = styled.div`
-	display: flex;
-	flex-wrap: wrap;
-	justify-content: flex-end;
-	gap: 0.65rem;
 `;

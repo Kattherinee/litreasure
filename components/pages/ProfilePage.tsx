@@ -15,6 +15,7 @@ import { getAvatarAssetUrl } from "@/shared/api/avatarsRepository";
 import { useAuthStore } from "@/shared/store/auth-store";
 import { theme } from "@/shared/theme";
 import { Button } from "@/shared/ui/Button";
+import { ConfirmModal } from "@/shared/ui/ConfirmModal";
 
 const ProfilePage = () => {
 	const router = useRouter();
@@ -289,41 +290,16 @@ const ProfilePage = () => {
 			) : null}
 
 			{isDeleteConfirmOpen ? (
-				<ConfirmOverlay
-					role="presentation"
-					onMouseDown={() => setIsDeleteConfirmOpen(false)}
+				<ConfirmModal
+					confirmLabel="Удалить"
+					confirmLoadingLabel="Удаляем..."
+					isLoading={deleteAccountMutation.isPending}
+					title="Удалить аккаунт?"
+					onCancel={() => setIsDeleteConfirmOpen(false)}
+					onConfirm={deleteAccount}
 				>
-					<ConfirmDialog
-						aria-modal="true"
-						role="dialog"
-						aria-labelledby="delete-account-title"
-						onMouseDown={(event) => event.stopPropagation()}
-					>
-						<ConfirmTitle id="delete-account-title">
-							Удалить аккаунт?
-						</ConfirmTitle>
-						<ConfirmText>
-							Профиль будет удален окончательно. Продолжить?
-						</ConfirmText>
-						<ConfirmActions>
-							<Button
-								type="button"
-								buttonType="outlined"
-								onClick={() => setIsDeleteConfirmOpen(false)}
-							>
-								Отмена
-							</Button>
-							<Button
-								type="button"
-								buttonType="containedInverted"
-								disabled={deleteAccountMutation.isPending}
-								onClick={deleteAccount}
-							>
-								{deleteAccountMutation.isPending ? "Удаляем..." : "Удалить"}
-							</Button>
-						</ConfirmActions>
-					</ConfirmDialog>
-				</ConfirmOverlay>
+					Профиль будет удален окончательно. Продолжить?
+				</ConfirmModal>
 			) : null}
 		</Page>
 	);
@@ -522,44 +498,4 @@ const DangerButton = styled(Button)`
 		color: ${theme.colors.orangeDark};
 		white-space: nowrap;
 	}
-`;
-
-const ConfirmOverlay = styled.div`
-	position: fixed;
-	z-index: 70;
-	inset: 0;
-	display: grid;
-	place-items: center;
-	background: rgb(4 18 26 / 0.48);
-	padding: 1rem;
-`;
-
-const ConfirmDialog = styled.section`
-	width: min(100%, 24rem);
-	border: 0.0625rem solid #eeb38d;
-	border-radius: 1rem;
-	background: #e8e2de;
-	padding: 1.5rem;
-	box-shadow: 0 1.25rem 3rem rgb(4 18 26 / 0.16);
-`;
-
-const ConfirmTitle = styled.h2`
-	margin: 0;
-	color: #04121a;
-	font-family: ${theme.fonts.serif};
-	font-size: 1.5rem;
-	line-height: 1.2;
-`;
-
-const ConfirmText = styled.p`
-	margin: 0.75rem 0 1.25rem;
-	color: ${theme.colors.softForeground};
-	font-size: 0.95rem;
-	line-height: 1.45;
-`;
-
-const ConfirmActions = styled.div`
-	display: flex;
-	justify-content: flex-end;
-	gap: 0.75rem;
 `;

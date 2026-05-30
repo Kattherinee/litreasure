@@ -17,6 +17,7 @@ import {
 	ResultLink,
 	ResultMain,
 	ResultMeta,
+	ResultDescription,
 	ResultSeries,
 	ResultTitle,
 } from "./SearchResultCard.styles";
@@ -110,6 +111,11 @@ export const BookResultCard = ({
 							<HighlightedText query={query} text={book.title} />
 						</ResultTitle>
 					</ResultLink>
+					{book.description ? (
+						<ResultDescription>
+							<HighlightedText query={query} text={book.description} />
+						</ResultDescription>
+					) : null}
 					<ResultAuthor>
 						<StyledResultLink
 							href={`/authors/${book.authorId}`}

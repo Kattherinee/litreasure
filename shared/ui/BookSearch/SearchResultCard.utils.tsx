@@ -5,11 +5,12 @@ import type { ISearchMatch, ISearchSeries } from "@/shared/api/search";
 import { theme } from "@/shared/theme";
 
 export const lineHasMatch = (
-	value: string,
+	value: string | null | undefined,
 	matches: ISearchMatch[] | undefined,
 	query: string,
 	fields: string[],
 ) => {
+	const safeValue = typeof value === "string" ? value : "";
 	const normalizedQuery = query.trim().toLowerCase();
 
 	if (!normalizedQuery) {
@@ -17,10 +18,11 @@ export const lineHasMatch = (
 	}
 
 	return (
-		value.toLowerCase().includes(normalizedQuery) ||
+		safeValue.toLowerCase().includes(normalizedQuery) ||
 		matches?.some(
 			(match) =>
 				fields.includes(match.field) &&
+				typeof match.value === "string" &&
 				match.value.toLowerCase().includes(normalizedQuery),
 		) === true
 	);
@@ -39,7 +41,10 @@ export const getSupplementalSearchMatch = (
 
 	return (
 		matches.find((match) => {
-			if (!match.value.toLowerCase().includes(normalizedQuery)) {
+			if (
+				typeof match.value !== "string" ||
+				!match.value.toLowerCase().includes(normalizedQuery)
+			) {
 				return false;
 			}
 
@@ -75,6 +80,7 @@ export const getEntitySupplementalMatch = (
 		matches.find(
 			(match) =>
 				!visibleFields.includes(match.field) &&
+				typeof match.value === "string" &&
 				match.value.toLowerCase().includes(normalizedQuery),
 		) ?? null
 	);
@@ -103,23 +109,26 @@ export const HighlightedText = ({
 	text,
 }: {
 	query: string;
-	text: string;
+	text: string | null | undefined;
 }) => {
+	const safeText = typeof text === "string" ? text : "";
 	const highlightValue = query.trim();
 
 	if (!highlightValue) {
-		return text;
+		return safeText;
 	}
 
-	const matchIndex = text.toLowerCase().indexOf(highlightValue.toLowerCase());
+	const matchIndex = safeText
+		.toLowerCase()
+		.indexOf(highlightValue.toLowerCase());
 
 	if (matchIndex === -1) {
-		return text;
+		return safeText;
 	}
 
-	const before = text.slice(0, matchIndex);
-	const match = text.slice(matchIndex, matchIndex + highlightValue.length);
-	const after = text.slice(matchIndex + highlightValue.length);
+	const before = safeText.slice(0, matchIndex);
+	const match = safeText.slice(matchIndex, matchIndex + highlightValue.length);
+	const after = safeText.slice(matchIndex + highlightValue.length);
 
 	return (
 		<Fragment>

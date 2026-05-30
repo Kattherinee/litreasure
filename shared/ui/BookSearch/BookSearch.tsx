@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import styled from "styled-components";
+import { useQuery } from "@tanstack/react-query";
 
 import type {
 	ISearchAllResponse,
@@ -12,6 +13,7 @@ import type {
 	ISearchGenre,
 	ISearchSeries,
 } from "@/shared/api/search";
+import { getRecomendationsByPrompt } from "@/shared/api/recomendations/recomendations.api";
 import {
 	useSearchAllQuery,
 	useSearchAuthorsQuery,
@@ -39,8 +41,11 @@ import { SeriesResultCard } from "./SeriesResultCard";
 
 const MIN_SEARCH_LENGTH = 2;
 const RECENT_SEARCHES_KEY = "litreasure:recent-searches";
+const RECOMMENDATION_RECENT_SEARCHES_KEY =
+	"litreasure:recent-recommendation-searches";
 const RECENT_SEARCHES_LIMIT = 6;
 const MODAL_SEARCH_LIMIT = 15;
+const RECOMMENDATION_LIMIT = 10;
 
 type ISearchResults = {
 	author: ISearchAuthor[];
@@ -58,12 +63,12 @@ const emptySearchResults: ISearchResults = {
 	series: [],
 };
 
-const getStoredRecentSearches = () => {
+const getStoredRecentSearches = (storageKey: string) => {
 	if (typeof window === "undefined") {
 		return [];
 	}
 
-	const savedSearches = window.localStorage.getItem(RECENT_SEARCHES_KEY);
+	const savedSearches = window.localStorage.getItem(storageKey);
 
 	if (!savedSearches) {
 		return [];
@@ -89,37 +94,56 @@ const getStoredRecentSearches = () => {
 const BookSearch = () => {
 	const router = useRouter();
 	const [searchValue, setSearchValue] = useState("");
-	const [recentSearches, setRecentSearches] = useState<string[]>(
-		getStoredRecentSearches,
+	const [recentSearches, setRecentSearches] = useState<string[]>(() =>
+		getStoredRecentSearches(RECENT_SEARCHES_KEY),
 	);
+	const [recommendationRecentSearches, setRecommendationRecentSearches] =
+		useState<string[]>(() =>
+			getStoredRecentSearches(RECOMMENDATION_RECENT_SEARCHES_KEY),
+		);
 	const [activeTab, setActiveTab] = useState<ISearchTabActiveId>("all");
+	const [isRecommendationMode, setIsRecommendationMode] = useState(false);
+	const [submittedRecommendationPrompt, setSubmittedRecommendationPrompt] =
+		useState("");
 	const [isOpen, setIsOpen] = useState(false);
 	const normalizedSearchValue = searchValue.trim();
 	const shouldSearch = normalizedSearchValue.length >= MIN_SEARCH_LENGTH;
+	const recommendationPrompt = submittedRecommendationPrompt.trim();
 	const { data: searchResponse, isFetching: isFetchingAll } = useSearchAllQuery(
 		normalizedSearchValue,
 		MODAL_SEARCH_LIMIT,
-		{ enabled: shouldSearch },
+		{ enabled: shouldSearch && !isRecommendationMode },
 	);
 	const { data: booksResponse, isFetching: isFetchingBooks } =
 		useSearchBooksQuery(normalizedSearchValue, 1, MODAL_SEARCH_LIMIT, {
-			enabled: shouldSearch,
+			enabled: shouldSearch && !isRecommendationMode,
 		});
 	const { data: authorsResponse, isFetching: isFetchingAuthors } =
 		useSearchAuthorsQuery(normalizedSearchValue, 1, MODAL_SEARCH_LIMIT, {
-			enabled: shouldSearch,
+			enabled: shouldSearch && !isRecommendationMode,
 		});
 	const { data: seriesResponse, isFetching: isFetchingSeries } =
 		useSearchSeriesQuery(normalizedSearchValue, 1, MODAL_SEARCH_LIMIT, {
-			enabled: shouldSearch,
+			enabled: shouldSearch && !isRecommendationMode,
 		});
 	const { data: genresResponse, isFetching: isFetchingGenres } =
 		useSearchGenresQuery(normalizedSearchValue, 1, MODAL_SEARCH_LIMIT, {
-			enabled: shouldSearch,
+			enabled: shouldSearch && !isRecommendationMode,
 		});
 	const { data: collectionsResponse, isFetching: isFetchingCollections } =
 		useSearchCollectionsQuery(normalizedSearchValue, 1, MODAL_SEARCH_LIMIT, {
-			enabled: shouldSearch,
+			enabled: shouldSearch && !isRecommendationMode,
+		});
+	const { data: recommendationBooks, isFetching: isFetchingRecommendations } =
+		useQuery({
+			enabled:
+				isRecommendationMode &&
+				recommendationPrompt.length >= MIN_SEARCH_LENGTH,
+			queryFn: () =>
+				getRecomendationsByPrompt({
+					params: { limit: RECOMMENDATION_LIMIT, prompt: recommendationPrompt },
+				}),
+			queryKey: ["recomendations", "prompt", recommendationPrompt],
 		});
 	const allSearchResults = useMemo(
 		() => getSearchResults(searchResponse),
@@ -177,15 +201,47 @@ const BookSearch = () => {
 						: activeTab === "genre"
 							? isFetchingGenres
 							: isFetchingCollections;
+
+	const handleRecommendationModeToggle = () => {
+		if (isRecommendationMode) {
+			setIsRecommendationMode(false);
+			setSubmittedRecommendationPrompt("");
+			return;
+		}
+
+		setIsRecommendationMode(true);
+	};
 	const visibleTabs =
 		activeTab === "all"
 			? SEARCH_TABS.map((tab) => tab.id)
 			: [activeTab as ISearchTabId];
+
+	const recommendationCards = useMemo(
+		() =>
+			(recommendationBooks ?? []).map((book) => ({
+				author: book.author ?? book.authors?.[0]?.name ?? "",
+				authorId: book.authors?.[0]?.id,
+				coverUrl: book.coverUrl,
+				description: book.description,
+				id: book.id,
+				orderInSeries: book.orderInSeries ?? undefined,
+				searchMatches: book.searchMatches,
+				seriesTitle: book.seriesTitle ?? undefined,
+				title: book.title,
+			})),
+		[recommendationBooks],
+	);
 	const hasVisibleResults = visibleTabs.some(
 		(tab) => searchResults[tab].length > 0,
 	);
 
-	const closeSearch = () => setIsOpen(false);
+	const closeSearchAndReset = () => {
+		setIsOpen(false);
+		setSearchValue("");
+		setSubmittedRecommendationPrompt("");
+		setIsRecommendationMode(false);
+		setActiveTab("all");
+	};
 
 	const saveRecentSearch = (value = normalizedSearchValue) => {
 		const nextSearch = value.trim();
@@ -212,6 +268,31 @@ const BookSearch = () => {
 		});
 	};
 
+	const saveRecommendationSearch = (value = normalizedSearchValue) => {
+		const nextSearch = value.trim();
+
+		if (nextSearch.length < MIN_SEARCH_LENGTH) {
+			return;
+		}
+
+		setRecommendationRecentSearches((currentSearches) => {
+			const deduplicatedSearches = currentSearches.filter(
+				(search) => search.toLowerCase() !== nextSearch.toLowerCase(),
+			);
+			const nextSearches = [nextSearch, ...deduplicatedSearches].slice(
+				0,
+				RECENT_SEARCHES_LIMIT,
+			);
+
+			window.localStorage.setItem(
+				RECOMMENDATION_RECENT_SEARCHES_KEY,
+				JSON.stringify(nextSearches),
+			);
+
+			return nextSearches;
+		});
+	};
+
 	const clearSearch = () => setSearchValue("");
 	const selectTab = (tab: ISearchTabActiveId) => setActiveTab(tab);
 	const selectSuggestion = (suggestion: string) => {
@@ -226,7 +307,7 @@ const BookSearch = () => {
 
 		const handleKeyDown = (event: KeyboardEvent) => {
 			if (event.key === "Escape") {
-				closeSearch();
+				closeSearchAndReset();
 			}
 		};
 
@@ -251,47 +332,151 @@ const BookSearch = () => {
 
 			{isOpen ? (
 				<ModalLayer>
-					<ModalBackdrop aria-hidden="true" onMouseDown={closeSearch} />
+					<ModalBackdrop aria-hidden="true" onMouseDown={closeSearchAndReset} />
 					<SearchPanel role="dialog" aria-label="Расширенный поиск">
 						<SearchPanelHeader>
-							<PanelSearchIcon aria-hidden="true" />
-							<PanelSearchInput
-								autoFocus
-								aria-label="Расширенный поиск"
-								placeholder="Название, автор, серия, жанр"
-								type="search"
-								value={searchValue}
-								onChange={(event) => setSearchValue(event.target.value)}
-								onKeyDown={(event) => {
-									if (event.key === "Enter") {
-										saveRecentSearch();
-									}
-								}}
-							/>
-							{searchValue ? (
-								<ClearButton
-									aria-label="Очистить поиск"
-									type="button"
-									onClick={clearSearch}
-								>
-									×
-								</ClearButton>
+							{isRecommendationMode ? (
+								<RecommendationBanner>Режим рекомендаций</RecommendationBanner>
 							) : null}
+							<PanelSearchInputWrap>
+								<PanelSearchIcon aria-hidden="true" />
+								<PanelSearchInput
+									$isRecommendationMode={isRecommendationMode}
+									autoFocus
+									aria-label="Расширенный поиск"
+									placeholder={
+										isRecommendationMode
+											? "Напишите ваши пожелания, и мы подберем вам подходящую книгу"
+											: "Название, автор, серия, жанр"
+									}
+									type="search"
+									value={searchValue}
+									onChange={(event) => setSearchValue(event.target.value)}
+									onKeyDown={(event) => {
+										if (event.key !== "Enter") return;
+										if (isRecommendationMode) {
+											setSubmittedRecommendationPrompt(normalizedSearchValue);
+											saveRecommendationSearch();
+											return;
+										}
+										saveRecentSearch();
+									}}
+								/>
+								{searchValue ? (
+									<ClearButton
+										aria-label="Очистить поиск"
+										type="button"
+										onClick={clearSearch}
+									>
+										×
+									</ClearButton>
+								) : null}
+							</PanelSearchInputWrap>
 						</SearchPanelHeader>
 
-						<Tabs role="tablist" aria-label="Фильтры поиска">
-							<SearchTabBar
-								activeTab={activeTab}
-								counts={resultCountsByTab}
-								isFetching={isFetching}
-								shouldSearch={shouldSearch}
-								total={searchTotal}
-								onTabChange={selectTab}
-							/>
-						</Tabs>
+						<TabsWrapper>
+							{isRecommendationMode ? (
+								<RecommendationActions>
+									<RecommendationButton
+										type="button"
+										onClick={() => {
+											setSubmittedRecommendationPrompt(normalizedSearchValue);
+											saveRecommendationSearch();
+										}}
+									>
+										Подобрать книгу
+									</RecommendationButton>
+									<RecommendationButton
+										$variant="ghost"
+										type="button"
+										onClick={handleRecommendationModeToggle}
+									>
+										Вернуться к обычному поиску
+									</RecommendationButton>
+								</RecommendationActions>
+							) : (
+								<>
+									<Tabs role="tablist" aria-label="Фильтры поиска">
+										<SearchTabBar
+											activeTab={activeTab}
+											counts={resultCountsByTab}
+											isFetching={isFetching}
+											shouldSearch={shouldSearch}
+											total={searchTotal}
+											onTabChange={selectTab}
+										/>
+									</Tabs>
+									<TabsMetaActions>
+										<RecommendationButton
+											$variant="ghost"
+											type="button"
+											onClick={handleRecommendationModeToggle}
+										>
+											В режим рекомендаций
+										</RecommendationButton>
+										{shouldSearch && !isFetching && activeTabTotal > 0 ? (
+											<ResultsBadge
+												aria-label={`Найдено ${activeTabTotal} ${getResultCountLabel(activeTabTotal)}`}
+											>
+												<ResultsNumber>{activeTabTotal}</ResultsNumber>
+												<ResultsText>
+													{getResultCountLabel(activeTabTotal)}
+												</ResultsText>
+											</ResultsBadge>
+										) : null}
+									</TabsMetaActions>
+								</>
+							)}
+						</TabsWrapper>
 
 						<ResultsArea>
-							{normalizedSearchValue.length < MIN_SEARCH_LENGTH ? (
+							{isRecommendationMode ? (
+								recommendationPrompt.length < MIN_SEARCH_LENGTH ? (
+									recommendationRecentSearches.length > 0 ? (
+										<RecentSearchesBlock>
+											<RecentHeading>
+												Недавние запросы рекомендаций
+											</RecentHeading>
+											<RecentList>
+												{recommendationRecentSearches.map((recentSearch) => (
+													<RecentButton
+														key={recentSearch}
+														type="button"
+														onClick={() => {
+															setSearchValue(recentSearch);
+															setSubmittedRecommendationPrompt(recentSearch);
+														}}
+													>
+														{recentSearch}
+													</RecentButton>
+												))}
+											</RecentList>
+										</RecentSearchesBlock>
+									) : (
+										<EmptyState>
+											Напишите пожелания и нажмите «Подобрать книгу».
+										</EmptyState>
+									)
+								) : isFetchingRecommendations ? (
+									<EmptyState>Подбираем книги...</EmptyState>
+								) : recommendationCards.length > 0 ? (
+									<>
+										{recommendationCards.map((book) => (
+											<BookResultCard
+												key={book.id}
+												book={book}
+												closeSearch={closeSearchAndReset}
+												query={recommendationPrompt}
+												saveRecentSearch={saveRecommendationSearch}
+											/>
+										))}
+									</>
+								) : (
+									<EmptyState>
+										Пока ничего не нашли. Попробуйте уточнить пожелания.
+									</EmptyState>
+								)
+							) : normalizedSearchValue.length < MIN_SEARCH_LENGTH ? (
 								<RecentSearchesBlock>
 									<RecentHeading>Недавние запросы</RecentHeading>
 									{recentSearches.length > 0 ? (
@@ -312,11 +497,12 @@ const BookSearch = () => {
 								</RecentSearchesBlock>
 							) : null}
 
-							{shouldSearch && isFetching ? (
+							{shouldSearch && !isRecommendationMode && isFetching ? (
 								<EmptyState>Ищем книги...</EmptyState>
 							) : null}
 
 							{shouldSearch &&
+							!isRecommendationMode &&
 							!isFetching &&
 							visibleTabs.includes("book") &&
 							searchResults.book.length > 0
@@ -324,7 +510,7 @@ const BookSearch = () => {
 										<BookResultCard
 											key={book.id}
 											book={book}
-											closeSearch={closeSearch}
+											closeSearch={closeSearchAndReset}
 											query={normalizedSearchValue}
 											saveRecentSearch={saveRecentSearch}
 										/>
@@ -332,6 +518,7 @@ const BookSearch = () => {
 								: null}
 
 							{shouldSearch &&
+							!isRecommendationMode &&
 							!isFetching &&
 							visibleTabs.includes("author") &&
 							searchResults.author.length > 0
@@ -339,7 +526,7 @@ const BookSearch = () => {
 										<AuthorResultCard
 											key={`author-${author.id}`}
 											author={author}
-											closeSearch={closeSearch}
+											closeSearch={closeSearchAndReset}
 											query={normalizedSearchValue}
 											saveRecentSearch={saveRecentSearch}
 										/>
@@ -347,6 +534,7 @@ const BookSearch = () => {
 								: null}
 
 							{shouldSearch &&
+							!isRecommendationMode &&
 							!isFetching &&
 							visibleTabs.includes("series") &&
 							searchResults.series.length > 0
@@ -361,13 +549,14 @@ const BookSearch = () => {
 								: null}
 
 							{shouldSearch &&
+							!isRecommendationMode &&
 							!isFetching &&
 							visibleTabs.includes("genre") &&
 							searchResults.genre.length > 0
 								? searchResults.genre.map((genre) => (
 										<GenreResultCard
 											key={`genre-${genre.id}`}
-											closeSearch={closeSearch}
+											closeSearch={closeSearchAndReset}
 											genre={genre}
 											query={normalizedSearchValue}
 											saveRecentSearch={saveRecentSearch}
@@ -376,13 +565,14 @@ const BookSearch = () => {
 								: null}
 
 							{shouldSearch &&
+							!isRecommendationMode &&
 							!isFetching &&
 							visibleTabs.includes("collection") &&
 							searchResults.collection.length > 0
 								? searchResults.collection.map((collection) => (
 										<CollectionResultCard
 											key={`collection-${collection.id}`}
-											closeSearch={closeSearch}
+											closeSearch={closeSearchAndReset}
 											collection={collection}
 											query={normalizedSearchValue}
 											saveRecentSearch={saveRecentSearch}
@@ -390,7 +580,10 @@ const BookSearch = () => {
 									))
 								: null}
 
-							{shouldSearch && !isFetching && !hasVisibleResults ? (
+							{shouldSearch &&
+							!isRecommendationMode &&
+							!isFetching &&
+							!hasVisibleResults ? (
 								<EmptyState>
 									Ничего не найдено.
 									{activeTab === "genre" && genresResponse?.suggestion ? (
@@ -407,25 +600,27 @@ const BookSearch = () => {
 							) : null}
 						</ResultsArea>
 
-						<SearchFooter>
-							<ResultCount>{getResultCountLabel(activeTabTotal)}</ResultCount>
-							<ViewAllButton
-								buttonType="containedInverted"
-								onClick={() => {
-									saveRecentSearch();
-									const params = new URLSearchParams();
-									if (normalizedSearchValue)
-										params.set("q", normalizedSearchValue);
-									if (activeTab !== "all") {
-										params.set("tab", activeTab);
-									}
-									closeSearch();
-									router.push(`/search?${params.toString()}`);
-								}}
-							>
-								Посмотреть все
-							</ViewAllButton>
-						</SearchFooter>
+						{!isRecommendationMode ? (
+							<SearchFooter>
+								<ResultCount>{getResultCountLabel(activeTabTotal)}</ResultCount>
+								<ViewAllButton
+									buttonType="containedInverted"
+									onClick={() => {
+										saveRecentSearch();
+										const params = new URLSearchParams();
+										if (normalizedSearchValue)
+											params.set("q", normalizedSearchValue);
+										if (activeTab !== "all") {
+											params.set("tab", activeTab);
+										}
+										closeSearchAndReset();
+										router.push(`/search?${params.toString()}`);
+									}}
+								>
+									Посмотреть все
+								</ViewAllButton>
+							</SearchFooter>
+						) : null}
 					</SearchPanel>
 				</ModalLayer>
 			) : null}
@@ -543,20 +738,49 @@ const SearchPanelHeader = styled.div`
 	z-index: 3;
 	display: flex;
 	flex: 0 0 auto;
-	align-items: center;
+	flex-direction: column;
+	align-items: stretch;
+	gap: 0.55rem;
 	background: ${theme.colors.background};
 	padding: 1rem 1.25rem 0.75rem;
 `;
 
+const PanelSearchInputWrap = styled.div`
+	position: relative;
+	display: flex;
+	align-items: center;
+	width: 100%;
+`;
+
+const RecommendationBanner = styled.div`
+	display: inline-flex;
+	align-self: flex-start;
+	border-radius: 999px;
+	background: rgb(218 142 91 / 0.16);
+	padding: 0.35rem 0.7rem;
+	color: ${theme.colors.orangeDark};
+	font-size: 0.78rem;
+	font-weight: 700;
+	letter-spacing: 0.02em;
+	text-transform: uppercase;
+`;
+
 const PanelSearchIcon = styled(SearchIcon)`
-	left: 2rem;
+	left: 1rem;
+	top: 50%;
 	width: 16px;
 	height: 16px;
 	color: ${theme.colors.lightText};
+	transform: translateY(-50%);
 `;
 
-const PanelSearchInput = styled(InputField)`
+const PanelSearchInput = styled(InputField)<{
+	$isRecommendationMode?: boolean;
+}>`
 	min-height: 3.25rem;
+	min-height: ${({ $isRecommendationMode }) =>
+		$isRecommendationMode ? "3.7rem" : "3.25rem"};
+	width: 100%;
 	border-color: ${theme.colors.orangeLight};
 	border-radius: 1.05rem;
 	background: rgb(242 239 237 / 0.88);
@@ -579,7 +803,7 @@ const PanelSearchInput = styled(InputField)`
 const ClearButton = styled.button`
 	position: absolute;
 	top: 50%;
-	right: 2rem;
+	right: 0.75rem;
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
@@ -632,6 +856,66 @@ const Tabs = styled.div`
 		content: "";
 		pointer-events: none;
 		transform: translateY(100%);
+	}
+`;
+
+const TabsWrapper = styled.div`
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 1rem;
+	padding: 0 1.25rem 1rem;
+
+	flex-wrap: wrap;
+`;
+
+const RecommendationActions = styled.div`
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.75rem;
+	width: 100%;
+	flex-wrap: wrap;
+`;
+
+const TabsMetaActions = styled.div`
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	margin-left: auto;
+	flex-wrap: wrap;
+`;
+
+const RecommendationButton = styled.button<{ $variant?: "ghost" }>`
+	border: 0.0625rem solid
+		${({ $variant }) =>
+			$variant === "ghost"
+				? theme.colors.orangeLight
+				: theme.colors.orangeDark};
+	border-radius: 62.4375rem;
+	background: ${({ $variant }) =>
+		$variant === "ghost"
+			? theme.colors.surface
+			: `linear-gradient(135deg, ${theme.colors.orangeDark}, ${theme.colors.orangeLight})`};
+	padding: 0.55rem 0.95rem;
+	color: ${({ $variant }) =>
+		$variant === "ghost" ? theme.colors.orangeDark : theme.colors.invertedText};
+	cursor: pointer;
+	font-family: ${theme.fonts.sans};
+	font-size: 0.9rem;
+	font-weight: 700;
+	line-height: 1;
+	transition:
+		transform 160ms ease,
+		border-color 160ms ease,
+		color 160ms ease,
+		background 160ms ease;
+
+	&:hover,
+	&:focus-visible {
+		outline: none;
+
+		border-color: ${theme.colors.orangeLight};
 	}
 `;
 
@@ -707,6 +991,35 @@ const SuggestionButton = styled.button`
 	&:focus-visible {
 		color: ${theme.colors.bluePrimary};
 		outline: none;
+	}
+`;
+
+const ResultsNumber = styled.span`
+	color: ${theme.colors.orangeDark};
+	font-family: ${theme.fonts.serif};
+	font-size: 1.3vw;
+	font-weight: 600;
+	line-height: 1;
+`;
+
+const ResultsText = styled.span`
+	color: ${theme.colors.softForeground};
+	font-size: 0.96vw;
+	line-height: 1;
+	font-weight: 500;
+`;
+
+const ResultsBadge = styled.div`
+	display: inline-flex;
+	min-height: 2.35rem;
+	align-items: baseline;
+	justify-content: center;
+	gap: 0.42rem;
+	padding: 0.48rem 0.85rem;
+	white-space: nowrap;
+
+	@media (max-width: 72rem) {
+		justify-self: start;
 	}
 `;
 

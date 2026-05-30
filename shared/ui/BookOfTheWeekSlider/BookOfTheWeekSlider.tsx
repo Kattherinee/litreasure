@@ -4,55 +4,29 @@ import { useCallback, useEffect, useState } from "react";
 import KeyboardArrowLeftIcon from "@mui/icons-material/KeyboardArrowLeft";
 import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
 import TagIcon from "@mui/icons-material/Tag";
+import { useRouter } from "next/navigation";
 import type { EmblaCarouselType } from "embla-carousel";
 import useEmblaCarousel from "embla-carousel-react";
 import styled from "styled-components";
 
+import { useRecomendationsWeekBooksQuery } from "@/shared/api/recomendations/recomendations.hooks";
 import { theme } from "@/shared/theme";
 import { CoverPlaceholder } from "@/shared/ui/Skeleton";
-
-interface IWeekBook {
-	id: string;
-	title: string;
-	description: string;
-	tag: string;
-	imageUrl: string;
-}
-
-const weekBooks: IWeekBook[] = [
-	{
-		id: "morana-shadow",
-		title: "Морана и Тень. Видящий",
-		description:
-			"Спокойные дни закончились: по неизвестной причине нечисть идет на восток, к своему последнему пристанищу, чтобы навсегда упокоиться вместе со всем миром.",
-		tag: "booksOfTheWeek",
-		imageUrl: "https://cv9.litres.ru/pub/c/cover_415/70756797.webp",
-	},
-	{
-		id: "royal-assassin-week",
-		title: "Королевский убийца",
-		description:
-			"Продолжение истории о долге, магии и выборе, который меняет не только судьбу героя, но и весь королевский двор.",
-		tag: "fantasyPick",
-		imageUrl: "https://covers.openlibrary.org/b/id/8231992-L.jpg",
-	},
-	{
-		id: "assassins-apprentice-week",
-		title: "Ученик убийцы",
-		description:
-			"Книга для тех, кто любит медленное погружение в мир, где политические интриги важны не меньше магии.",
-		tag: "shelfChoice",
-		imageUrl: "https://covers.openlibrary.org/b/id/8231856-L.jpg",
-	},
-];
 
 const SCROLL_EDGE_THRESHOLD = 0.002;
 
 const BookOfTheWeekSlider = () => {
+	const router = useRouter();
+	const {
+		data: weekBooks = [],
+		error,
+		isError,
+		isLoading,
+	} = useRecomendationsWeekBooksQuery();
 	const [emblaRef, emblaApi] = useEmblaCarousel({
 		align: "center",
 		containScroll: "trimSnaps",
-		loop: true,
+		loop: weekBooks.length > 1,
 	});
 	const [canScrollPrev, setCanScrollPrev] = useState(true);
 	const [canScrollNext, setCanScrollNext] = useState(true);
@@ -74,6 +48,13 @@ const BookOfTheWeekSlider = () => {
 		emblaApi?.scrollNext();
 	}, [emblaApi]);
 
+	const openBookPage = useCallback(
+		(bookId: string) => {
+			router.push(`/books/${bookId}`);
+		},
+		[router],
+	);
+
 	useEffect(() => {
 		if (!emblaApi) {
 			return;
@@ -90,22 +71,78 @@ const BookOfTheWeekSlider = () => {
 		};
 	}, [emblaApi, updateControls]);
 
+	if (isLoading) {
+		return (
+			<Slider aria-label="Книга недели">
+				<Viewport>
+					<Container>
+						<Slide>
+							<BookCoverWrap>
+								<CoverPlaceholder aria-hidden="true" />
+							</BookCoverWrap>
+							<BookInfo>
+								<BookTitle>Подбираем книгу недели...</BookTitle>
+								<BookDescription>
+									Скоро покажем персональную рекомендацию.
+								</BookDescription>
+							</BookInfo>
+						</Slide>
+					</Container>
+				</Viewport>
+			</Slider>
+		);
+	}
+
+	if (isError) {
+		return (
+			<Slider aria-label="Книга недели">
+				<StateMessage>
+					Не удалось загрузить книгу недели: {error.message}
+				</StateMessage>
+			</Slider>
+		);
+	}
+
+	if (weekBooks.length === 0) {
+		return (
+			<Slider aria-label="Книга недели">
+				<StateMessage>Пока нет персональной книги недели.</StateMessage>
+			</Slider>
+		);
+	}
+
 	return (
 		<Slider aria-label="Книга недели">
 			<Viewport ref={emblaRef}>
 				<Container>
 					{weekBooks.map((book) => (
-						<Slide key={book.id}>
+						<Slide
+							key={book.id}
+							tabIndex={0}
+							role="link"
+							onClick={() => openBookPage(book.id)}
+							onKeyDown={(event) => {
+								if (event.key === "Enter" || event.key === " ") {
+									event.preventDefault();
+									openBookPage(book.id);
+								}
+							}}
+						>
 							<WeekCoverImage
-								src={book.imageUrl}
+								src={book.coverUrl ?? "/images/book-placeholder.svg"}
 								alt={`Обложка «${book.title}»`}
 							/>
 							<BookInfo>
+								{getSeriesTag(book) ? (
+									<SeriesChip>{getSeriesTag(book)}</SeriesChip>
+								) : null}
 								<BookTitle>{book.title}</BookTitle>
-								<BookDescription>{book.description}</BookDescription>
+								{book.description ? (
+									<BookDescription>{book.description}</BookDescription>
+								) : null}
 								<BookTag>
 									<TagIcon aria-hidden="true" />
-									<span>{book.tag}</span>
+									<span>Book of the week</span>
 								</BookTag>
 							</BookInfo>
 						</Slide>
@@ -115,7 +152,7 @@ const BookOfTheWeekSlider = () => {
 
 			<ArrowButton
 				aria-label="Предыдущая книга недели"
-				disabled={!canScrollPrev}
+				disabled={weekBooks.length < 2 || !canScrollPrev}
 				type="button"
 				onClick={scrollPrev}
 			>
@@ -124,7 +161,7 @@ const BookOfTheWeekSlider = () => {
 			<ArrowButton
 				$side="right"
 				aria-label="Следующая книга недели"
-				disabled={!canScrollNext}
+				disabled={weekBooks.length < 2 || !canScrollNext}
 				type="button"
 				onClick={scrollNext}
 			>
@@ -135,6 +172,29 @@ const BookOfTheWeekSlider = () => {
 };
 
 export default BookOfTheWeekSlider;
+
+const getSeriesTag = (book: {
+	bookCountInSeries?: number | null;
+	orderInSeries?: number | null;
+	seriesTitle?: string | null;
+}) => {
+	const seriesTitle = book.seriesTitle?.trim();
+
+	if (!seriesTitle) {
+		return null;
+	}
+
+	const orderInSeries = book.orderInSeries ?? null;
+	const bookCountInSeries = book.bookCountInSeries ?? null;
+
+	if (orderInSeries && orderInSeries > 0) {
+		return bookCountInSeries && bookCountInSeries > 0
+			? `Book ${orderInSeries} of ${bookCountInSeries} in ${seriesTitle}`
+			: `Book ${orderInSeries} in ${seriesTitle}`;
+	}
+
+	return `Part of ${seriesTitle}`;
+};
 
 const WeekCoverImage = ({ alt, src }: { alt: string; src: string }) => {
 	const [isLoaded, setIsLoaded] = useState(false);
@@ -187,6 +247,17 @@ const Slide = styled.article`
 	gap: clamp(2rem, 5vw, 3.375rem);
 	min-width: 0;
 	padding: 2.5rem var(--content-side-space);
+	cursor: pointer;
+
+	&:hover h2,
+	&:focus-visible h2 {
+		color: ${theme.colors.orangeDark};
+	}
+
+	&:focus-visible {
+		outline: 0.125rem solid ${theme.colors.orangeDark};
+		outline-offset: 0.125rem;
+	}
 `;
 
 const BookCoverWrap = styled.div`
@@ -221,6 +292,7 @@ const BookTitle = styled.h2`
 	font-size: 2rem;
 	font-weight: 400;
 	line-height: 2.625rem;
+	transition: color 180ms ease;
 `;
 
 const BookDescription = styled.p`
@@ -229,6 +301,10 @@ const BookDescription = styled.p`
 	font-size: 1.125rem;
 	font-weight: 400;
 	line-height: 1.5rem;
+	display: -webkit-box;
+	overflow: hidden;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 5;
 `;
 
 const BookTag = styled.p`
@@ -245,6 +321,39 @@ const BookTag = styled.p`
 		width: 1.25rem;
 		height: 1.25rem;
 	}
+`;
+
+const SeriesChip = styled.p`
+	display: inline-flex;
+	align-items: center;
+	width: fit-content;
+	max-width: 100%;
+	overflow: hidden;
+	border: 0.0625rem solid rgb(242 239 237 / 0.22);
+	border-radius: 62.4375rem;
+	background: rgb(242 239 237 / 0.12);
+	padding: 0.42rem 0.78rem;
+	margin: 0;
+	color: ${theme.colors.orangeDark};
+	font-family: ${theme.fonts.sans};
+	font-size: 0.82rem;
+	font-weight: 600;
+	line-height: 1;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+
+	@media (max-width: 74.9375rem) {
+		font-size: 0.72rem;
+	}
+`;
+
+const StateMessage = styled.p`
+	margin: auto;
+	padding: 0 1.25rem;
+	color: ${theme.colors.softForeground};
+	font-size: 1rem;
+	line-height: 1.5;
+	text-align: center;
 `;
 
 const ArrowButton = styled.button<{ $side?: "right" }>`

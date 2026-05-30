@@ -16,6 +16,7 @@ import { useAuthStore } from "@/shared/store/auth-store";
 import { theme } from "@/shared/theme";
 import { BookSearch } from "@/shared/ui/BookSearch";
 import { Button } from "@/shared/ui/Button";
+import { ConfirmModal } from "@/shared/ui/ConfirmModal";
 
 const navItems = [
 	{
@@ -283,37 +284,14 @@ const Header = () => {
 				/>
 			) : null}
 			{isLogoutConfirmOpen ? (
-				<ConfirmOverlay role="presentation" onMouseDown={closeLogoutConfirm}>
-					<ConfirmDialog
-						aria-modal="true"
-						role="dialog"
-						aria-labelledby="logout-confirm-title"
-						onMouseDown={(event) => event.stopPropagation()}
-					>
-						<ConfirmTitle id="logout-confirm-title">
-							Выйти из профиля?
-						</ConfirmTitle>
-						<ConfirmText>
-							Вы сможете вернуться в аккаунт после повторного входа.
-						</ConfirmText>
-						<ConfirmActions>
-							<ConfirmSecondaryButton
-								type="button"
-								buttonType="outlined"
-								onClick={closeLogoutConfirm}
-							>
-								Отмена
-							</ConfirmSecondaryButton>
-							<ConfirmPrimaryButton
-								type="button"
-								buttonType="containedInverted"
-								onClick={confirmLogout}
-							>
-								Выйти
-							</ConfirmPrimaryButton>
-						</ConfirmActions>
-					</ConfirmDialog>
-				</ConfirmOverlay>
+				<ConfirmModal
+					confirmLabel="Выйти"
+					title="Выйти из профиля?"
+					onCancel={closeLogoutConfirm}
+					onConfirm={confirmLogout}
+				>
+					Вы сможете вернуться в аккаунт после повторного входа.
+				</ConfirmModal>
 			) : null}
 		</>
 	);
@@ -787,48 +765,3 @@ const ProfileLogoutItem = styled(ProfileMenuItem)`
 		color: #b64f12;
 	}
 `;
-
-const ConfirmOverlay = styled.div`
-	position: fixed;
-	z-index: 60;
-	inset: 0;
-	display: grid;
-	place-items: center;
-	background: rgb(4 18 26 / 0.48);
-	padding: 1rem;
-`;
-
-const ConfirmDialog = styled.section`
-	width: min(100%, 24rem);
-	border: 0.0625rem solid #eeb38d;
-	border-radius: 1rem;
-	background: #e8e2de;
-	padding: 1.5rem;
-	box-shadow: 0 1.25rem 3rem rgb(4 18 26 / 0.16);
-`;
-
-const ConfirmTitle = styled.h2`
-	margin: 0;
-	color: #04121a;
-	font-family: ${theme.fonts.serif};
-	font-size: 1.5rem;
-	font-weight: 600;
-	line-height: 1.2;
-`;
-
-const ConfirmText = styled.p`
-	margin: 0.75rem 0 1.25rem;
-	color: ${theme.colors.softForeground};
-	font-size: 0.95rem;
-	line-height: 1.45;
-`;
-
-const ConfirmActions = styled.div`
-	display: flex;
-	justify-content: flex-end;
-	gap: 0.75rem;
-`;
-
-const ConfirmSecondaryButton = styled(Button)``;
-
-const ConfirmPrimaryButton = styled(Button)``;
