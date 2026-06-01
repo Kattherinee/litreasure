@@ -15,12 +15,12 @@ export interface IDateFieldProps {
 	onChange: (value: string) => void;
 }
 
-const monthFormatter = new Intl.DateTimeFormat("ru-RU", {
+const monthFormatter = new Intl.DateTimeFormat("en-US", {
 	month: "long",
 	year: "numeric",
 });
 
-const displayFormatter = new Intl.DateTimeFormat("ru-RU", {
+const displayFormatter = new Intl.DateTimeFormat("en-US", {
 	day: "2-digit",
 	month: "2-digit",
 	year: "numeric",
@@ -105,14 +105,14 @@ const DateField = ({ label, max, min, value, onChange }: IDateFieldProps) => {
 						<CalendarControls>
 							<CalendarIconButton
 								type="button"
-								aria-label="Предыдущий месяц"
+								aria-label="Previous month"
 								onClick={() => shiftMonth(-1)}
 							>
 								<KeyboardArrowLeftIcon />
 							</CalendarIconButton>
 							<CalendarIconButton
 								type="button"
-								aria-label="Следующий месяц"
+								aria-label="Next month"
 								onClick={() => shiftMonth(1)}
 							>
 								<KeyboardArrowRightIcon />
@@ -120,7 +120,7 @@ const DateField = ({ label, max, min, value, onChange }: IDateFieldProps) => {
 						</CalendarControls>
 					</CalendarHeader>
 					<WeekGrid>
-						{["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"].map((day) => (
+						{["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
 							<WeekDay key={day}>{day}</WeekDay>
 						))}
 						{calendarDays.map((date) => {

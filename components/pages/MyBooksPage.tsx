@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -16,13 +16,13 @@ import { BookCard } from "@/shared/ui/BookCard";
 import { Button } from "@/shared/ui/Button";
 
 const statusTabs: Array<{ id: IUserBookStatus | "all"; label: string }> = [
-	{ id: "all", label: "Все книги" },
-	{ id: "reading", label: "Сейчас читаю" },
-	{ id: "planned", label: "В планах" },
-	{ id: "finished", label: "Прочитано" },
-	{ id: "paused", label: "Пауза" },
-	{ id: "rereading", label: "Перечитываю" },
-	{ id: "dropped", label: "Брошено" },
+	{ id: "all", label: "All books" },
+	{ id: "reading", label: "Currently reading" },
+	{ id: "planned", label: "Planned" },
+	{ id: "finished", label: "Finished" },
+	{ id: "paused", label: "Paused" },
+	{ id: "rereading", label: "Rereading" },
+	{ id: "dropped", label: "Dropped" },
 ];
 
 const MyBooksPage = () => {
@@ -101,19 +101,19 @@ const MyBooksPage = () => {
 			<Content>
 				<Hero>
 					<HeroCopy>
-						<Title>Мои книги</Title>
-						<Lead>Все книги, которые вы добавили в свои сокровища.</Lead>
+						<Title>My books</Title>
+						<Lead>All books you have added to your treasures.</Lead>
 					</HeroCopy>
 					<Button
 						buttonType="containedInverted"
 						type="button"
 						onClick={() => setIsCreateBookOpen(true)}
 					>
-						Добавить книгу
+						Add book
 					</Button>
 				</Hero>
 
-				<StatusTabs aria-label="Статусы книг">
+				<StatusTabs aria-label="Book statuses">
 					{statusTabs.map((status) => {
 						const isActive = activeStatus === status.id;
 
@@ -139,9 +139,9 @@ const MyBooksPage = () => {
 				</StatusTabs>
 
 				{isLoading ? (
-					<StateMessage>Загружаем книги...</StateMessage>
+					<StateMessage>Loading books...</StateMessage>
 				) : isError ? (
-					<StateMessage>Не удалось загрузить ваши книги.</StateMessage>
+					<StateMessage>Failed to load your books.</StateMessage>
 				) : books.length > 0 ? (
 					<>
 						<BookGrid>
@@ -161,9 +161,9 @@ const MyBooksPage = () => {
 					</>
 				) : (
 					<EmptyState>
-						<EmptyTitle>Книг пока нет</EmptyTitle>
+						<EmptyTitle>No books yet</EmptyTitle>
 						<EmptyText>
-							Добавьте книгу и назначьте ей статус, чтобы она появилась здесь.
+							Add a book and assign it a status to see it here.
 						</EmptyText>
 					</EmptyState>
 				)}

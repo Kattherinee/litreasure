@@ -31,10 +31,6 @@ export const GoalStep = ({
 	const hasGoal = draftGoal.length > 0 && yearGoal > 0;
 	const averageTarget = averageChallenge?.averageTargetValue ?? 0;
 	const roundedAverageTarget = Math.round(averageTarget);
-	const goalDifference = yearGoal - averageTarget;
-	const formattedDifference = Math.abs(goalDifference).toFixed(
-		Math.abs(goalDifference) >= 10 ? 0 : 1,
-	);
 
 	const commitDraftGoal = () => {
 		if (!draftGoal) {
@@ -66,38 +62,38 @@ export const GoalStep = ({
 
 	return (
 		<GoalStepBody>
-			<StepTitle>Цель на год</StepTitle>
+			<StepTitle>Yearly Goal</StepTitle>
 			<StepDescription>
-				Читательская цель поддерживает мотивацию. Сколько книг ты хочешь
-				прочитать в этом году?
+				A reading goal helps keep you motivated. How many books do you want to
+				read this year?
 			</StepDescription>
 			<GoalLayout>
 				<GoalLeft>
 					<GoalStartField>
-						<GoalStartLabel>Начать вызов</GoalStartLabel>
+						<GoalStartLabel>Start challenge</GoalStartLabel>
 						<GoalStartOptions>
 							<GoalStartOption
 								type="button"
 								$isActive={goalStartMode === "yearStart"}
 								onClick={() => onGoalStartModeChange("yearStart")}
 							>
-								С начала года
+								From the start of the year
 							</GoalStartOption>
 							<GoalStartOption
 								type="button"
 								$isActive={goalStartMode === "today"}
 								onClick={() => onGoalStartModeChange("today")}
 							>
-								С текущей даты
+								From today
 							</GoalStartOption>
 						</GoalStartOptions>
 					</GoalStartField>
 					<GoalInputRow>
 						<GoalInputColumn>
-							<GoalInputLabel>Введи количество книг на год</GoalInputLabel>
+							<GoalInputLabel>Enter your yearly book goal</GoalInputLabel>
 							<GoalCounter>
 								<GoalNumberInput
-									aria-label="Количество книг на год"
+									aria-label="Number of books per year"
 									inputMode="numeric"
 									$isEmpty={!draftGoal}
 									placeholder="24"
@@ -106,21 +102,18 @@ export const GoalStep = ({
 									onChange={(event) => handleDraftChange(event.target.value)}
 								/>
 							</GoalCounter>
-							{/* <GoalInputHelp>
-								Это число станет целью книжного вызова.
-							</GoalInputHelp> */}
 						</GoalInputColumn>
 						<AverageComparison>
-							<AverageLabel>Средняя цель читателей</AverageLabel>
+							<AverageLabel>Average reader goal</AverageLabel>
 							{isAverageLoading ? (
-								<AverageText>Сверяем с другими целями...</AverageText>
+								<AverageText>Comparing with other goals...</AverageText>
 							) : isAverageError || !averageChallenge ? (
-								<AverageText>
-									Пока не удалось загрузить среднее значение.
-								</AverageText>
+								<AverageText>Could not load the average value yet.</AverageText>
 							) : (
 								<>
-									<AverageValue>{roundedAverageTarget} книг в год</AverageValue>
+									<AverageValue>
+										{roundedAverageTarget} books per year
+									</AverageValue>
 								</>
 							)}
 						</AverageComparison>
@@ -139,14 +132,14 @@ export const GoalStep = ({
 					</GoalPresetsRow>
 					<GoalHint>
 						{!hasGoal
-							? "Например, две книги в месяц — хорошая привычка"
+							? "For example, two books per month is a great habit"
 							: yearGoal <= 12
-								? "Отличное начало — одна книга в месяц"
+								? "Great start - one book per month"
 								: yearGoal <= 24
-									? "Две книги в месяц — хорошая привычка"
+									? "Two books per month is a solid habit"
 									: yearGoal <= 52
-										? "Почти по книге в неделю — настоящий читатель"
-										: "Легендарный темп! Ты точно готов?"}
+										? "Almost one book per week - true reader mode"
+										: "Legendary pace! Are you sure you're ready?"}
 					</GoalHint>
 				</GoalLeft>
 			</GoalLayout>
@@ -203,15 +196,6 @@ const GoalInputLabel = styled.span`
 	color: ${theme.colors.foreground};
 	font-size: 0.86rem;
 	font-weight: 700;
-	text-align: center;
-`;
-
-const GoalInputHelp = styled.p`
-	max-width: 12.5rem;
-	margin: 0;
-	color: ${theme.colors.softForeground};
-	font-size: 0.78rem;
-	line-height: 1.35;
 	text-align: center;
 `;
 

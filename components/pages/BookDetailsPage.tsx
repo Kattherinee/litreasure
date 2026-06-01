@@ -30,7 +30,7 @@ const BookDetailsPage = ({ slug }: IBookDetailsPageProps) => {
 	if (isLoading) {
 		return (
 			<Page>
-				<BookDetailSkeleton aria-label="Загружаем книгу">
+				<BookDetailSkeleton aria-label="Loading book">
 					<SkeletonBackdrop />
 					<SkeletonGrid>
 						<SkeletonAside>
@@ -100,7 +100,7 @@ const BookDetailsPage = ({ slug }: IBookDetailsPageProps) => {
 	if (isError) {
 		return (
 			<Page>
-				<StateMessage>Не удалось загрузить книгу: {error.message}</StateMessage>
+				<StateMessage>Could not load book: {error.message}</StateMessage>
 			</Page>
 		);
 	}
@@ -108,7 +108,7 @@ const BookDetailsPage = ({ slug }: IBookDetailsPageProps) => {
 	if (!book) {
 		return (
 			<Page>
-				<StateMessage>Книга не найдена.</StateMessage>
+				<StateMessage>Book not found.</StateMessage>
 			</Page>
 		);
 	}
@@ -155,10 +155,10 @@ const BookDetailsContent = ({ book }: { book: IBook }) => {
 			<RelatedSection>
 				<Section>
 					<SectionHeader>
-						<SectionTitle>Вам понравится</SectionTitle>
+						<SectionTitle>You may also like</SectionTitle>
 						<Controls $isVisible={hasCarouselControls}>
 							<ControlButton
-								aria-label="Предыдущие книги"
+								aria-label="Previous books"
 								disabled={!carouselControls?.canScrollPrev}
 								type="button"
 								onClick={carouselControls?.scrollPrev}
@@ -166,7 +166,7 @@ const BookDetailsContent = ({ book }: { book: IBook }) => {
 								‹
 							</ControlButton>
 							<ControlButton
-								aria-label="Следующие книги"
+								aria-label="Next books"
 								disabled={!carouselControls?.canScrollNext}
 								type="button"
 								onClick={carouselControls?.scrollNext}
@@ -177,14 +177,14 @@ const BookDetailsContent = ({ book }: { book: IBook }) => {
 					</SectionHeader>
 
 					{isRelatedBooksLoading ? (
-						<SkeletonCarousel aria-label="Загружаем рекомендации">
+						<SkeletonCarousel aria-label="Loading recommendations">
 							{Array.from({ length: 8 }, (_, index) => (
 								<BookCardSkeleton key={index} />
 							))}
 						</SkeletonCarousel>
 					) : isRelatedBooksError ? (
 						<StateMessage>
-							Не удалось загрузить рекомендации: {relatedBooksError.message}
+							Could not load recommendations: {relatedBooksError.message}
 						</StateMessage>
 					) : carouselBooks.length > 0 ? (
 						<BookCarousel
@@ -206,7 +206,7 @@ const BookDetailsContent = ({ book }: { book: IBook }) => {
 							}}
 						/>
 					) : (
-						<StateMessage>Пока нет рекомендаций.</StateMessage>
+						<StateMessage>No recommendations yet.</StateMessage>
 					)}
 				</Section>
 			</RelatedSection>

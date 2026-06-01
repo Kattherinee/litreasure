@@ -36,7 +36,7 @@ export const CollectionResultCard = ({
 	saveRecentSearch,
 }: ICollectionResultCardProps) => {
 	const saveCollectionMutation = useSaveCollectionMutation();
-	const [isSaved, setIsSaved] = useState(false);
+	const [isSaved, setIsSaved] = useState(Boolean(collection.isSaved));
 
 	const handleOpenResult = () => {
 		saveRecentSearch();
@@ -85,12 +85,16 @@ export const CollectionResultCard = ({
 			</ResultContentLink>
 			<MiniSaveButton
 				$isSaved={isSaved}
-				aria-label={isSaved ? "Подборка сохранена" : "Сохранить подборку"}
+				aria-label={isSaved ? "Collection saved" : "Save collection"}
 				disabled={isSaved || saveCollectionMutation.isPending}
 				type="button"
 				onClick={() => void handleSaveCollection()}
 			>
-				{isSaved ? <CheckIcon aria-hidden="true" /> : <AddIcon aria-hidden="true" />}
+				{isSaved ? (
+					<CheckIcon aria-hidden="true" />
+				) : (
+					<AddIcon aria-hidden="true" />
+				)}
 			</MiniSaveButton>
 		</ResultActionCard>
 	);

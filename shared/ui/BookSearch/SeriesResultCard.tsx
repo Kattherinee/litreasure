@@ -39,7 +39,7 @@ export const SeriesResultCard = ({
 	series,
 }: ISeriesResultCardProps) => {
 	const saveSeriesMutation = useSaveSeriesMutation();
-	const [isSaved, setIsSaved] = useState(false);
+	const [isSaved, setIsSaved] = useState(Boolean(series.isSaved));
 	const coverUrl = getSeriesCoverUrl(series);
 	const authorLine = getSeriesAuthorLine(series);
 
@@ -62,7 +62,10 @@ export const SeriesResultCard = ({
 
 	return (
 		<ResultEntityCard>
-			<ResultContentLink href={`/series/${series.id}`} onClick={handleOpenResult}>
+			<ResultContentLink
+				href={`/series/${series.id}`}
+				onClick={handleOpenResult}
+			>
 				<SeriesStack>
 					{Array.from({ length: 3 }, (_, index) => (
 						<SeriesStackCover
@@ -98,12 +101,16 @@ export const SeriesResultCard = ({
 			</ResultContentLink>
 			<MiniSaveButton
 				$isSaved={isSaved}
-				aria-label={isSaved ? "Серия сохранена" : "Сохранить серию"}
+				aria-label={isSaved ? "Series saved" : "Save series"}
 				disabled={isSaved || saveSeriesMutation.isPending}
 				type="button"
 				onClick={() => void handleSaveSeries()}
 			>
-				{isSaved ? <CheckIcon aria-hidden="true" /> : <AddIcon aria-hidden="true" />}
+				{isSaved ? (
+					<CheckIcon aria-hidden="true" />
+				) : (
+					<AddIcon aria-hidden="true" />
+				)}
 			</MiniSaveButton>
 		</ResultEntityCard>
 	);

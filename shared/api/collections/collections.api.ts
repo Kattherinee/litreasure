@@ -35,7 +35,7 @@ const getCollectionsQuery = (params: ICollectionsListParams = {}) => {
 	if (params.limit) searchParams.set("limit", String(params.limit));
 	if (params.tags) searchParams.set("tags", params.tags);
 	if (params.tagMode) searchParams.set("tagMode", params.tagMode);
-	if (params.genres) searchParams.set("genres", params.genres);
+	if (params.genres?.length) searchParams.set("genres", params.genres.join(","));
 	if (params.genreMode) searchParams.set("genreMode", params.genreMode);
 	if (params.sort) searchParams.set("sort", params.sort);
 
@@ -63,7 +63,6 @@ export const getMyCollections = async (
 
 	return normalizeCollectionsList(response);
 };
-
 
 export const getSubscribedCollections = async (
 	params: ICollectionsListParams = {},

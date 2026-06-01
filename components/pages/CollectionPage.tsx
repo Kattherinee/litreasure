@@ -1,7 +1,6 @@
 "use client";
 
 import PersonIcon from "@mui/icons-material/Person";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import styled from "styled-components";
@@ -88,10 +87,10 @@ const CollectionPage = ({ id }: ICollectionPageProps) => {
 			await unsaveCollectionMutation.mutateAsync(collection.id);
 			setSavedOverride(false);
 			setSubscriberCountOverride(Math.max(0, subscriberCount - 1));
-			setActionMessage("Подписка на подборку отменена");
+			setActionMessage("Collection subscription canceled");
 		} catch (error) {
 			setActionMessage(
-				error instanceof Error ? error.message : "Не удалось отписаться",
+				error instanceof Error ? error.message : "Could not unsubscribe",
 			);
 		}
 	};
@@ -116,7 +115,7 @@ const CollectionPage = ({ id }: ICollectionPageProps) => {
 				{isLoading ? (
 					<>
 						<TitleSkeleton />
-						<BookGrid aria-label="Загружаем книги подборки">
+						<BookGrid aria-label="Loading collection books">
 							{Array.from({ length: 10 }, (_, index) => (
 								<BookItem key={index}>
 									<BookCardSkeleton />
@@ -126,7 +125,7 @@ const CollectionPage = ({ id }: ICollectionPageProps) => {
 					</>
 				) : isError ? (
 					<StateMessage>
-						Не удалось загрузить подборку: {error.message}
+						Could not load collection: {error.message}
 					</StateMessage>
 				) : collection ? (
 					<>
@@ -138,18 +137,18 @@ const CollectionPage = ({ id }: ICollectionPageProps) => {
 									onClick={() => void unsubscribeFromCollection()}
 								>
 									{unsaveCollectionMutation.isPending
-										? "Отписываем..."
-										: "Отписаться"}
+										? "Unsubscribing..."
+										: "Unsubscribe"}
 								</UnsubscribeButton>
 							) : null}
 							<HeroCopy>
 								<Kicker>
 									{collection.isPublic
-										? "Публичная подборка"
-										: "Приватная подборка"}
+										? "Public collection"
+										: "Private collection"}
 								</Kicker>
 								<Title>{collection.title}</Title>
-								<Lead>{collection.description || "Без описания."}</Lead>
+								<Lead>{collection.description || "No description."}</Lead>
 								<MetaButtons>
 									<Meta>
 										<OwnerMeta>
@@ -157,15 +156,15 @@ const CollectionPage = ({ id }: ICollectionPageProps) => {
 											<span>{ownerLabel}</span>
 										</OwnerMeta>
 										<BookTotalBadge
-											aria-label={`Всего книг: ${collection.bookCount}`}
+											aria-label={`Total books: ${collection.bookCount}`}
 										>
 											<TotalNumber>{collection.bookCount}</TotalNumber>
-											<TotalText>всего книг</TotalText>
+											<TotalText>total books</TotalText>
 										</BookTotalBadge>
 										{collection.isPublic && (
 											<TextMeta>
 												<PersonIcon aria-hidden="true" />
-												<span>{subscriberCount} подписчиков</span>
+												<span>{subscriberCount} subscribers</span>
 											</TextMeta>
 										)}
 									</Meta>
@@ -196,7 +195,7 @@ const CollectionPage = ({ id }: ICollectionPageProps) => {
 						) : null}
 
 						{collection.books.length === 0 ? (
-							<StateMessage>В этой подборке пока нет книг.</StateMessage>
+							<StateMessage>No books in this collection yet.</StateMessage>
 						) : (
 							<BookGrid>
 								{collection.books.map((book) => (

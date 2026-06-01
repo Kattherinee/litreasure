@@ -17,14 +17,14 @@ export default function NotFound() {
 					<IconWrap aria-hidden="true">
 						<SearchOffIcon />
 					</IconWrap>
-					<Title>Страница не найдена</Title>
+					<Title>Page Not Found</Title>
 					<Text>
-						Похоже, эта полка пока пустует. Вернитесь в книжную ленту или
-						попробуйте найти другую историю.
+						Looks like this shelf is empty for now. Return to your feed or try
+						searching for another story.
 					</Text>
 					<ActionRow>
 						<HomeButton component={Link} href="/">
-							На главную
+							Back to Home
 						</HomeButton>
 						<LibraryHint>
 							<AutoStoriesOutlinedIcon aria-hidden="true" />
@@ -206,7 +206,10 @@ const Book = styled.div<{ $tone: "blue" | "cream" | "orange" }>`
 		return theme.colors.surface;
 	}};
 	box-shadow: 0 1rem 2rem rgb(4 18 26 / 0.12);
-	transform: rotate(${({ $tone }) => ($tone === "blue" ? "-8deg" : $tone === "cream" ? "7deg" : "0deg")});
+	transform: rotate(
+		${({ $tone }) =>
+			$tone === "blue" ? "-8deg" : $tone === "cream" ? "7deg" : "0deg"}
+	);
 
 	&::before {
 		position: absolute;

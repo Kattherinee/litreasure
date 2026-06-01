@@ -1,4 +1,8 @@
-import type { IAuthorShort, IBookSeriesRelationType } from "../books";
+import type {
+	IAuthorShort,
+	IBookSeriesRelationType,
+	IBookSort,
+} from "../books";
 import type { IUserBookStatus } from "../user-books";
 
 export interface IByPromptRecomendationsParams {
@@ -9,6 +13,25 @@ export interface IByPromptRecomendationsParams {
 export interface IByBookRecomendationsParams {
 	bookId: string;
 	limit?: number;
+}
+
+export type IHomeSectionEntity = "books" | "collections" | "authors" | "series";
+
+export interface IHomeSectionQuery {
+	genre?: string;
+	genres?: string[];
+	genreIds?: string[];
+	limit?: number;
+	page?: number;
+	sort?: IBookSort;
+}
+
+export interface IHomeSection {
+	entity: IHomeSectionEntity;
+	endpoint: string;
+	key: string;
+	query: IHomeSectionQuery;
+	title: string;
 }
 
 export interface IWeekBookRecomendation {
@@ -33,6 +56,8 @@ export interface IBookRecomendation {
 	authors?: IAuthorShort[];
 	authorId?: string;
 	coverUrl?: string;
+	description?: string;
+	searchMatches?: Array<{ field: string; value: string }>;
 	publisher?: string;
 	isTracked?: boolean;
 	myStatus?: IUserBookStatus | null;

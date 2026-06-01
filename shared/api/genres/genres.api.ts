@@ -1,5 +1,10 @@
-import { request, requestOptionalAuth } from "../base";
-import type { IGenre, IGenresByCategoryResponse } from "./genres.types";
+import { request, requestAuth, requestOptionalAuth } from "../base";
+import type {
+	ICreateGenrePayload,
+	IGenre,
+	IGenresByCategoryResponse,
+	IUpdateGenrePayload,
+} from "./genres.types";
 
 export const getGenres = (): Promise<IGenre[]> => request<IGenre[]>("/genres");
 
@@ -29,3 +34,27 @@ export const getGenresByCategory = ({
 		`/genres/byCategory${query ? `?${query}` : ""}`,
 	);
 };
+
+export const saveGenre = (userId: string, genreId: string): Promise<unknown> =>
+	requestAuth(`/users/${userId}/genres`, {
+		body: JSON.stringify({ genreId }),
+		method: "POST",
+	});
+
+export const createGenre = (payload: ICreateGenrePayload): Promise<IGenre> =>
+	requestAuth<IGenre>("/genres", {
+		body: JSON.stringify(payload),
+		method: "POST",
+	});
+
+export const updateGenre = (
+	id: string,
+	payload: IUpdateGenrePayload,
+): Promise<IGenre> =>
+	requestAuth<IGenre>(`/genres/${id}`, {
+		body: JSON.stringify(payload),
+		method: "PATCH",
+	});
+
+export const deleteGenre = (id: string): Promise<IGenre> =>
+	requestAuth<IGenre>(`/genres/${id}`, { method: "DELETE" });

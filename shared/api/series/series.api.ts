@@ -36,9 +36,14 @@ export interface ISeriesDetails extends ISeriesPreview {
 }
 
 export interface ISeriesListParams {
+	genre?: string;
+	genreIds?: string[];
 	page?: number;
 	limit?: number;
+	sort?: ISeriesSort;
 }
+
+export type ISeriesSort = "popular" | "newest" | "title";
 
 export interface ISeriesListResponse {
 	items: ISeriesPreview[];
@@ -50,8 +55,12 @@ export interface ISeriesListResponse {
 const getSeriesQuery = (params: ISeriesListParams = {}) => {
 	const query = new URLSearchParams();
 
+	if (params.genre) query.set("genre", params.genre);
+	if (params.genreIds?.length) query.set("genreIds", params.genreIds.join(","));
 	if (params.page && params.page > 1) query.set("page", String(params.page));
-	if (params.limit && params.limit > 0) query.set("limit", String(params.limit));
+	if (params.limit && params.limit > 0)
+		query.set("limit", String(params.limit));
+	if (params.sort) query.set("sort", params.sort);
 
 	const queryString = query.toString();
 	return queryString ? `?${queryString}` : "";
@@ -61,6 +70,11 @@ export const getMySeries = (
 	params: ISeriesListParams = {},
 ): Promise<ISeriesListResponse> =>
 	requestAuth<ISeriesListResponse>(`/series/mine${getSeriesQuery(params)}`);
+
+export const getPublicSeries = (
+	params: ISeriesListParams = {},
+): Promise<ISeriesListResponse> =>
+	requestOptionalAuth<ISeriesListResponse>(`/series${getSeriesQuery(params)}`);
 
 export const getSeriesDetails = (id: string): Promise<ISeriesDetails> =>
 	requestOptionalAuth<ISeriesDetails>(`/series/${id}`);

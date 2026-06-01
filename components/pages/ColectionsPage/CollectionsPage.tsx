@@ -29,16 +29,16 @@ import { SkeletonBlock } from "@/shared/ui/Skeleton";
 import { CollectionRow } from "./CollectionsRow";
 
 const sortOptions: Array<{ label: string; value: ICollectionSort }> = [
-	{ label: "Сначала новые", value: "newest" },
-	{ label: "Сначала старые", value: "oldest" },
-	{ label: "Популярные", value: "popular" },
-	{ label: "Больше книг", value: "books_desc" },
-	{ label: "Меньше книг", value: "books_asc" },
+	{ label: "Newest first", value: "newest" },
+	{ label: "Oldest first", value: "oldest" },
+	{ label: "Popular", value: "popular" },
+	{ label: "More books", value: "books_desc" },
+	{ label: "Fewer books", value: "books_asc" },
 ];
 
 const modeOptions: Array<{ label: string; value: ICollectionFilterMode }> = [
-	{ label: "Любой", value: "any" },
-	{ label: "Все", value: "all" },
+	{ label: "Any", value: "any" },
+	{ label: "All", value: "all" },
 ];
 
 const CollectionsPage = () => {
@@ -74,7 +74,7 @@ const CollectionsPage = () => {
 		isLoading,
 	} = usePublicCollectionsQuery({
 		genreMode: selectedGenres.length > 0 ? genreMode : undefined,
-		genres: selectedGenres.join(",") || undefined,
+		genres: selectedGenres.length > 0 ? selectedGenres : undefined,
 		limit: 20,
 		page,
 		sort,
@@ -123,7 +123,7 @@ const CollectionsPage = () => {
 						genre.slug.toLowerCase().includes(normalizedGenreSearch)),
 			)
 			.sort((firstGenre, secondGenre) =>
-				firstGenre.name.localeCompare(secondGenre.name, "ru"),
+				firstGenre.name.localeCompare(secondGenre.name, "en"),
 			);
 	}, [allGenres, normalizedGenreSearch, selectedGenres]);
 
@@ -162,10 +162,7 @@ const CollectionsPage = () => {
 		const handlePointerDown = (event: PointerEvent) => {
 			const target = event.target;
 
-			if (
-				target instanceof Node &&
-				filtersRef.current?.contains(target)
-			) {
+			if (target instanceof Node && filtersRef.current?.contains(target)) {
 				return;
 			}
 
@@ -191,10 +188,8 @@ const CollectionsPage = () => {
 		<Page>
 			<Hero>
 				<HeroInner>
-					<PageTitle>Подборки</PageTitle>
-					<HeroText>
-						Публичные книжные полки от читателей и Litreasure.
-					</HeroText>
+					<PageTitle>Collections</PageTitle>
+					<HeroText>Public bookshelves from readers and Litreasure.</HeroText>
 				</HeroInner>
 			</Hero>
 
@@ -202,7 +197,7 @@ const CollectionsPage = () => {
 				<CollectionFilters ref={filtersRef}>
 					<SelectFilter
 						isOpen={isSortOpen}
-						label="Сортировка"
+						label="Sort"
 						options={sortOptions}
 						value={sort}
 						valueLabel={selectedSortOption.label}
@@ -218,10 +213,10 @@ const CollectionsPage = () => {
 					/>
 
 					<SearchDropdownFilter
-						ariaLabel="Найти тег"
+						ariaLabel="Find tag"
 						isOpen={isTagsOpen}
-						label="Теги"
-						placeholder={selectedTagLabels || "Найти тег"}
+						label="Tags"
+						placeholder={selectedTagLabels || "Find tag"}
 						searchValue={tagSearch}
 						onOpen={() => {
 							setIsTagsOpen(true);
@@ -236,7 +231,7 @@ const CollectionsPage = () => {
 								type="button"
 								onClick={() => handleFilterChange(() => setSelectedTags([]))}
 							>
-								Все
+								All
 							</FilterChip>
 							{visibleTagSuggestions.length > 0 ? (
 								visibleTagSuggestions.map((tag) => (
@@ -250,7 +245,7 @@ const CollectionsPage = () => {
 									</FilterChip>
 								))
 							) : (
-								<FilterEmpty>Ничего не найдено</FilterEmpty>
+								<FilterEmpty>Nothing found</FilterEmpty>
 							)}
 						</FilterChips>
 						{selectedTags.length > 0 ? (
@@ -258,23 +253,23 @@ const CollectionsPage = () => {
 								type="button"
 								onClick={() => handleFilterChange(() => setSelectedTags([]))}
 							>
-								Очистить
+								Clear
 							</ClearFilterButton>
 						) : null}
 					</SearchDropdownFilter>
 
 					<ModeFilter
-						label="Режим тегов"
+						label="Tag mode"
 						options={modeOptions}
 						value={tagMode}
 						onChange={(value) => handleFilterChange(() => setTagMode(value))}
 					/>
 
 					<SearchDropdownFilter
-						ariaLabel="Найти жанр"
+						ariaLabel="Find genre"
 						isOpen={isGenresOpen}
-						label="Жанры"
-						placeholder={selectedGenreLabels || "Найти жанр"}
+						label="Genres"
+						placeholder={selectedGenreLabels || "Find genre"}
 						searchValue={genreSearch}
 						onOpen={() => {
 							setIsGenresOpen(true);
@@ -289,7 +284,7 @@ const CollectionsPage = () => {
 								type="button"
 								onClick={() => handleFilterChange(() => setSelectedGenres([]))}
 							>
-								Все
+								All
 							</FilterChip>
 							{visibleGenreSuggestions.length > 0 ? (
 								visibleGenreSuggestions.map((genre) => (
@@ -303,7 +298,7 @@ const CollectionsPage = () => {
 									</FilterChip>
 								))
 							) : (
-								<FilterEmpty>Ничего не найдено</FilterEmpty>
+								<FilterEmpty>Nothing found</FilterEmpty>
 							)}
 						</FilterChips>
 						{selectedGenres.length > 0 ? (
@@ -311,44 +306,44 @@ const CollectionsPage = () => {
 								type="button"
 								onClick={() => handleFilterChange(() => setSelectedGenres([]))}
 							>
-								Очистить
+								Clear
 							</ClearFilterButton>
 						) : null}
 					</SearchDropdownFilter>
 
 					<ModeFilter
-						label="Режим жанров"
+						label="Genre mode"
 						options={modeOptions}
 						value={genreMode}
 						onChange={(value) => handleFilterChange(() => setGenreMode(value))}
 					/>
 
-					<ResultsFilterBadge label="подборок" total={total} />
+					<ResultsFilterBadge label="collections" total={total} />
 					<SelectedFilters
 						items={selectedTags.map((tag) => ({ label: tag, value: tag }))}
-						removeAriaLabel={(label) => `Убрать тег ${label}`}
+						removeAriaLabel={(label) => `Remove tag ${label}`}
 						onClear={() => handleFilterChange(() => setSelectedTags([]))}
 						onRemove={toggleTag}
 					/>
 					<SelectedFilters
 						items={selectedGenreItems}
-						removeAriaLabel={(label) => `Убрать жанр ${label}`}
+						removeAriaLabel={(label) => `Remove genre ${label}`}
 						onClear={() => handleFilterChange(() => setSelectedGenres([]))}
 						onRemove={toggleGenre}
 					/>
 				</CollectionFilters>
 				{isLoading ? (
-					<CollectionList aria-label="Загружаем подборки">
+					<CollectionList aria-label="Loading collections">
 						{Array.from({ length: 4 }, (_, index) => (
 							<CollectionSkeleton key={index} />
 						))}
 					</CollectionList>
 				) : isError ? (
 					<StateMessage>
-						Не удалось загрузить подборки: {error.message}
+						Could not load collections: {error.message}
 					</StateMessage>
 				) : collections.length === 0 ? (
-					<StateMessage>Публичных подборок пока нет.</StateMessage>
+					<StateMessage>No public collections yet.</StateMessage>
 				) : (
 					<>
 						<CollectionList>

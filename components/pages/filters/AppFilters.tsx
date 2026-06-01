@@ -126,8 +126,11 @@ interface IResultsFilterBadgeProps {
 	total: number;
 }
 
-export const ResultsFilterBadge = ({ label, total }: IResultsFilterBadgeProps) => (
-	<ResultsBadge aria-label={`Найдено ${label}: ${total}`}>
+export const ResultsFilterBadge = ({
+	label,
+	total,
+}: IResultsFilterBadgeProps) => (
+	<ResultsBadge aria-label={`Found ${label}: ${total}`}>
 		<ResultsNumber>{total}</ResultsNumber>
 		<ResultsText>{label}</ResultsText>
 	</ResultsBadge>
@@ -147,7 +150,7 @@ interface ISelectedFiltersProps {
 }
 
 export const SelectedFilters = ({
-	clearLabel = "Очистить все",
+	clearLabel = "Clear all",
 	items,
 	onClear,
 	onRemove,

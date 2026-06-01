@@ -27,8 +27,9 @@ export const WelcomeLayout = ({
 							{String(STEPS.length).padStart(2, "0")}
 						</LeftStep>
 						<LeftTitle>
-							Добро пожаловать
-							<br />в Litreasure
+							Welcome
+							<br />
+							to Litreasure
 						</LeftTitle>
 						<LeftSubtitle>{STEP_SUBTITLES[activeStep]}</LeftSubtitle>
 					</LeftContent>

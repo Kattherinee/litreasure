@@ -77,7 +77,7 @@ const BookDetailTabs = ({
 	const descriptionRef = useRef<HTMLParagraphElement | null>(null);
 	const description =
 		book.description ??
-		"Описание для этой книги пока не добавлено. Можно сохранить карточку в коллекцию и вернуться к ней позже.";
+		"A description has not been added for this book yet. You can save it to a collection and return later.";
 
 	const activeTab = controlledActiveTab ?? internalActiveTab;
 	const setActiveTab = onActiveTabChange ?? setInternalActiveTab;
@@ -170,11 +170,13 @@ const BookDetailTabs = ({
 		}
 
 		if (!reviewRating || !reviewText.trim()) {
-			setReviewStatus("Поставьте оценку и напишите отзыв.");
+			setReviewStatus("Set a rating and write a review.");
 			return;
 		}
 
-		setReviewStatus("Отзыв готов к отправке. Позже подключим метод API.");
+		setReviewStatus(
+			"Review is ready to submit. API method will be connected later.",
+		);
 	};
 
 	const handleSaveCollection = async (collection: IBookCollectionPreview) => {
@@ -196,7 +198,7 @@ const BookDetailTabs = ({
 				[collection.id]: true,
 			}));
 			await saveCollectionMutation.mutateAsync(collection.id);
-			setCollectionStatus("Подборка сохранена");
+			setCollectionStatus("Collection saved");
 		} catch (error) {
 			setSavedCollectionOverrides((currentState) => ({
 				...currentState,
@@ -205,7 +207,7 @@ const BookDetailTabs = ({
 			setCollectionStatus(
 				error instanceof Error
 					? error.message
-					: "Не удалось изменить сохранение подборки",
+					: "Could not update collection save state",
 			);
 		} finally {
 			setSavingCollectionId("");
@@ -214,7 +216,7 @@ const BookDetailTabs = ({
 
 	return (
 		<TabsBlock>
-			<Tabs role="tablist" aria-label="Разделы книги">
+			<Tabs role="tablist" aria-label="Book sections">
 				{tabs.map((tab) => {
 					const isActive = activeTab === tab.id;
 
@@ -257,7 +259,7 @@ const BookDetailTabs = ({
 									setIsDescriptionExpanded((currentState) => !currentState)
 								}
 							>
-								{isDescriptionExpanded ? "Свернуть" : "Показать больше"}
+								{isDescriptionExpanded ? "Collapse" : "Show more"}
 							</DescriptionToggle>
 						) : null}
 					</DescriptionWrap>
@@ -265,48 +267,48 @@ const BookDetailTabs = ({
 
 				{activeTab === "quotes" ? (
 					<PlaceholderText>
-						Цитаты для этой книги пока не добавлены.
+						No quotes have been added for this book yet.
 					</PlaceholderText>
 				) : null}
 
 				{activeTab === "collections" ? (
 					<CollectionsPanel>
 						{bookCollections.length > 0 ? (
-							<CollectionsFilter aria-label="Фильтр подборок">
+							<CollectionsFilter aria-label="Collection filter">
 								<CollectionsFilterButton
 									$isActive={collectionsFilter === "all"}
 									type="button"
 									onClick={() => setCollectionsFilter("all")}
 								>
-									Все
+									All
 								</CollectionsFilterButton>
 								<CollectionsFilterButton
 									$isActive={collectionsFilter === "saved"}
 									type="button"
 									onClick={() => setCollectionsFilter("saved")}
 								>
-									Сохранённые
+									Saved
 								</CollectionsFilterButton>
 								<CollectionsFilterButton
 									$isActive={collectionsFilter === "mine"}
 									type="button"
 									onClick={() => setCollectionsFilter("mine")}
 								>
-									Созданные мной
+									Created by me
 								</CollectionsFilterButton>
 							</CollectionsFilter>
 						) : null}
 						{isCollectionsLoading ? (
-							<PlaceholderText>Загружаем подборки...</PlaceholderText>
+							<PlaceholderText>Loading collections...</PlaceholderText>
 						) : null}
 						{isCollectionsError ? (
-							<PlaceholderText>Не удалось загрузить подборки.</PlaceholderText>
+							<PlaceholderText>Could not load collections.</PlaceholderText>
 						) : null}
 						{!isCollectionsLoading &&
 						!isCollectionsError &&
 						bookCollections.length === 0 ? (
 							<PlaceholderText>
-								Эта книга пока не добавлена в публичные подборки.
+								This book has not been added to public collections yet.
 							</PlaceholderText>
 						) : null}
 						{collectionsFilter !== "all" &&
@@ -316,8 +318,8 @@ const BookDetailTabs = ({
 						visibleCollections.length === 0 ? (
 							<PlaceholderText>
 								{collectionsFilter === "mine"
-									? "Для этой книги пока нет подборок, созданных вами."
-									: "Эта книга пока не сохранена в ваших подборках."}
+									? "There are no collections created by you for this book yet."
+									: "This book is not saved in your collections yet."}
 							</PlaceholderText>
 						) : null}
 						{visibleCollections.length > 0 ? (
@@ -347,7 +349,7 @@ const BookDetailTabs = ({
 													/>
 													<span>{getCollectionOwnerLabel(collection)}</span>
 													<MetaDot />
-													<span>{collection.bookCount} книг</span>
+													<span>{collection.bookCount} books</span>
 												</CompactCollectionMeta>
 												{collection.description ? (
 													<CompactDescription>
@@ -359,10 +361,10 @@ const BookDetailTabs = ({
 												<CompactSavedFlag
 													aria-label={
 														isMyCollection
-															? "Подборка создана вами и сохранена"
-															: "Подборка сохранена"
+															? "Collection created by you and saved"
+															: "Collection saved"
 													}
-													title={isMyCollection ? "Создано вами" : "Сохранено"}
+													title={isMyCollection ? "Created by you" : "Saved"}
 												>
 													<BookmarkIcon aria-hidden="true" />
 												</CompactSavedFlag>
@@ -373,9 +375,7 @@ const BookDetailTabs = ({
 													type="button"
 													onClick={() => void handleSaveCollection(collection)}
 												>
-													<span>
-														{isPending ? "Сохраняем..." : "Сохранить"}
-													</span>
+													<span>{isPending ? "Saving..." : "Save"}</span>
 												</CompactSaveButton>
 											)}
 										</CompactCollectionCard>
@@ -394,16 +394,14 @@ const BookDetailTabs = ({
 				{activeTab === "reviews" ? (
 					<ReviewsPanel>
 						<PlaceholderText>
-							Отзывы для этой книги пока не добавлены.
+							No reviews have been added for this book yet.
 						</PlaceholderText>
 
 						<ReviewForm onSubmit={handleReviewSubmit}>
 							<ReviewFormHeader>
-								<ReviewTitle>Оставить отзыв</ReviewTitle>
+								<ReviewTitle>Leave a review</ReviewTitle>
 								{!isAuthenticated ? (
-									<ReviewHint>
-										Чтобы оставить отзыв, нужно войти в аккаунт.
-									</ReviewHint>
+									<ReviewHint>Sign in to leave a review.</ReviewHint>
 								) : null}
 							</ReviewFormHeader>
 							<ReviewMuiRating
@@ -412,14 +410,14 @@ const BookDetailTabs = ({
 								onChange={(_, value) => handleRatingSelect(value ?? 0)}
 							/>
 
-							<RatingPicker aria-label="Оценка книги">
+							<RatingPicker aria-label="Book rating">
 								{[1, 2, 3, 4, 5].map((value) => {
 									const isActive = value <= reviewRating;
 
 									return (
 										<RatingButton
 											key={value}
-											aria-label={`${value} из 5`}
+											aria-label={`${value} out of 5`}
 											type="button"
 											onClick={() => handleRatingSelect(value)}
 										>
@@ -437,8 +435,8 @@ const BookDetailTabs = ({
 								disabled={!isAuthenticated}
 								placeholder={
 									isAuthenticated
-										? "Что запомнилось, зацепило или не сработало?"
-										: "Войдите, чтобы написать отзыв"
+										? "What stood out, resonated, or did not work for you?"
+										: "Sign in to write a review"
 								}
 								value={reviewText}
 								onChange={(event) => {
@@ -450,12 +448,10 @@ const BookDetailTabs = ({
 							<ReviewActions>
 								{!isAuthenticated ? (
 									<AuthRequiredButton type="button" onClick={requestAuth}>
-										Войти и оставить отзыв
+										Sign in and leave a review
 									</AuthRequiredButton>
 								) : (
-									<SubmitReviewButton type="submit">
-										Опубликовать
-									</SubmitReviewButton>
+									<SubmitReviewButton type="submit">Publish</SubmitReviewButton>
 								)}
 							</ReviewActions>
 

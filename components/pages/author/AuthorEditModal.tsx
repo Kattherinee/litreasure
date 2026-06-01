@@ -34,29 +34,35 @@ export const AuthorEditModal = ({
 			aria-labelledby="edit-author-title"
 			onMouseDown={(event) => event.stopPropagation()}
 		>
-			<Title id="edit-author-title">Редактировать автора</Title>
+			<Title id="edit-author-title">Edit author</Title>
 			<Form onSubmit={(event) => event.preventDefault()}>
 				<Field>
-					<span>Имя</span>
-					<input value={name} onChange={(event) => onNameChange(event.target.value)} />
+					<span>Name</span>
+					<input
+						value={name}
+						onChange={(event) => onNameChange(event.target.value)}
+					/>
 				</Field>
 				<Field>
-					<span>Фото URL</span>
+					<span>Photo URL</span>
 					<input
 						value={photoUrl}
 						onChange={(event) => onPhotoUrlChange(event.target.value)}
 					/>
 				</Field>
 				<Field>
-					<span>Биография</span>
-					<textarea value={bio} onChange={(event) => onBioChange(event.target.value)} />
+					<span>Biography</span>
+					<textarea
+						value={bio}
+						onChange={(event) => onBioChange(event.target.value)}
+					/>
 				</Field>
 				<Actions>
 					<SecondaryButton type="button" onClick={onClose}>
-						Отмена
+						Cancel
 					</SecondaryButton>
 					<PrimaryButton disabled={isSaving} type="button" onClick={onSave}>
-						{isSaving ? "Сохраняем..." : "Сохранить"}
+						{isSaving ? "Saving..." : "Save"}
 					</PrimaryButton>
 				</Actions>
 			</Form>

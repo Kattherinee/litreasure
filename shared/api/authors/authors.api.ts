@@ -29,7 +29,11 @@ const getAuthorsQuery = (params: IAuthorsListParams = {}) => {
 	const searchParams = new URLSearchParams();
 
 	appendSearchParam(searchParams, "genreMode", params.genreMode);
-	appendSearchParam(searchParams, "genres", params.genres);
+	appendSearchParam(
+		searchParams,
+		"genres",
+		params.genres?.length ? params.genres.join(",") : undefined,
+	);
 	appendSearchParam(searchParams, "limit", params.limit);
 	appendSearchParam(searchParams, "maxBooks", params.maxBooks);
 	appendSearchParam(searchParams, "minBooks", params.minBooks);

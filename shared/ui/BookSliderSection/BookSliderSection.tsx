@@ -5,10 +5,12 @@ import styled from "styled-components";
 
 import type { IBookSort } from "@/shared/api/books";
 import { useBookCardsQuery } from "@/shared/api/books";
+import { useRecomendationsForYouBooksQuery } from "@/shared/api/recomendations/recomendations.hooks";
 import { theme } from "@/shared/theme";
 import { Button } from "@/shared/ui/Button";
 import BookCarousel from "@/shared/ui/BookCarousel/BookCarousel";
 import { BookCardSkeleton } from "@/shared/ui/Skeleton";
+import { useLazyLoadTrigger } from "@/shared/utils/useLazyLoadTrigger";
 
 interface ICarouselControls {
 	canScrollNext: boolean;
@@ -19,15 +21,24 @@ interface ICarouselControls {
 
 interface IBookSliderSectionProps {
 	genre?: string;
+	genreIds?: string[];
+	lazy?: boolean;
 	limit?: number;
+	page?: number;
+	source?: "books" | "for-you";
 	sort?: IBookSort;
 	title: string;
 }
 
 const getSectionHref = ({
 	genre,
+	source,
 	sort,
-}: Pick<IBookSliderSectionProps, "genre" | "sort">) => {
+}: Pick<IBookSliderSectionProps, "genre" | "source" | "sort">) => {
+	if (source === "for-you") {
+		return "/catalog/for-you";
+	}
+
 	if (genre) {
 		const query = sort ? `?sort=${sort}` : "";
 
@@ -44,36 +55,56 @@ const getSectionHref = ({
 const BookSliderSection = ({
 	sort,
 	genre,
+	genreIds,
+	lazy = false,
 	limit,
+	page,
+	source = "books",
 	title,
 }: IBookSliderSectionProps) => {
 	const [carouselControls, setCarouselControls] =
 		useState<ICarouselControls | null>(null);
+	const { containerRef, isTriggered } = useLazyLoadTrigger(lazy);
+	const queryParams = { genre, genreIds, limit, page, sort };
 	const {
 		data: booksResponse,
 		error,
 		isError,
 		isLoading,
-	} = useBookCardsQuery({ sort, genre, limit });
-	const books = booksResponse?.items ?? [];
-	const sectionHref = getSectionHref({ genre, sort });
+	} = useBookCardsQuery(queryParams, {
+		enabled: source === "books" && isTriggered,
+	});
+	const {
+		data: forYouBooksResponse,
+		error: forYouError,
+		isError: isForYouError,
+		isLoading: isForYouLoading,
+	} = useRecomendationsForYouBooksQuery(queryParams, {
+		enabled: source === "for-you" && isTriggered,
+	});
+	const response = source === "for-you" ? forYouBooksResponse : booksResponse;
+	const currentError = source === "for-you" ? forYouError : error;
+	const currentIsError = source === "for-you" ? isForYouError : isError;
+	const currentIsLoading = source === "for-you" ? isForYouLoading : isLoading;
+	const books = response?.items ?? [];
+	const sectionHref = getSectionHref({ genre, source, sort });
 	const hasCarouselControls = Boolean(
 		carouselControls?.canScrollPrev || carouselControls?.canScrollNext,
 	);
 
 	return (
-		<Section>
+		<Section ref={containerRef}>
 			<SectionHeader>
 				<SectionHeading>
 					<SectionTitle>{title}</SectionTitle>
 					<ShowMoreButton buttonType="oxygenPill" href={sectionHref}>
-						Посмотреть все
+						See all
 					</ShowMoreButton>
 				</SectionHeading>
 
 				<Controls $isVisible={hasCarouselControls}>
 					<ControlButton
-						aria-label="Предыдущие книги"
+						aria-label="Previous books"
 						disabled={!carouselControls?.canScrollPrev}
 						type="button"
 						onClick={carouselControls?.scrollPrev}
@@ -81,7 +112,7 @@ const BookSliderSection = ({
 						‹
 					</ControlButton>
 					<ControlButton
-						aria-label="Следующие книги"
+						aria-label="Next books"
 						disabled={!carouselControls?.canScrollNext}
 						type="button"
 						onClick={carouselControls?.scrollNext}
@@ -91,16 +122,18 @@ const BookSliderSection = ({
 				</Controls>
 			</SectionHeader>
 
-			{isLoading ? (
-				<SkeletonCarousel aria-label="Загружаем книги">
+			{!isTriggered || currentIsLoading ? (
+				<SkeletonCarousel aria-label="Loading books">
 					{Array.from({ length: 8 }, (_, index) => (
 						<BookCardSkeleton key={index} />
 					))}
 				</SkeletonCarousel>
-			) : isError ? (
-				<StateMessage>Не удалось загрузить книги: {error.message}</StateMessage>
+			) : currentIsError ? (
+				<StateMessage>
+					Failed to load books: {currentError?.message ?? "Unknown error"}
+				</StateMessage>
 			) : books.length === 0 ? (
-				<StateMessage>Пока нет книг для отображения.</StateMessage>
+				<StateMessage>No books to display yet.</StateMessage>
 			) : (
 				<BookCarousel
 					books={books}

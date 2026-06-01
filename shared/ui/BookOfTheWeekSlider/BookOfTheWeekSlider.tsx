@@ -12,17 +12,23 @@ import styled from "styled-components";
 import { useRecomendationsWeekBooksQuery } from "@/shared/api/recomendations/recomendations.hooks";
 import { theme } from "@/shared/theme";
 import { CoverPlaceholder } from "@/shared/ui/Skeleton";
+import { useLazyLoadTrigger } from "@/shared/utils/useLazyLoadTrigger";
 
 const SCROLL_EDGE_THRESHOLD = 0.002;
 
-const BookOfTheWeekSlider = () => {
+interface IBookOfTheWeekSliderProps {
+	lazy?: boolean;
+}
+
+const BookOfTheWeekSlider = ({ lazy = false }: IBookOfTheWeekSliderProps) => {
 	const router = useRouter();
+	const { containerRef, isTriggered } = useLazyLoadTrigger(lazy);
 	const {
 		data: weekBooks = [],
 		error,
 		isError,
 		isLoading,
-	} = useRecomendationsWeekBooksQuery();
+	} = useRecomendationsWeekBooksQuery({ enabled: isTriggered });
 	const [emblaRef, emblaApi] = useEmblaCarousel({
 		align: "center",
 		containScroll: "trimSnaps",
@@ -71,9 +77,9 @@ const BookOfTheWeekSlider = () => {
 		};
 	}, [emblaApi, updateControls]);
 
-	if (isLoading) {
+	if (!isTriggered || isLoading) {
 		return (
-			<Slider aria-label="Книга недели">
+			<Slider ref={containerRef} aria-label="Book of the week">
 				<Viewport>
 					<Container>
 						<Slide>
@@ -81,9 +87,9 @@ const BookOfTheWeekSlider = () => {
 								<CoverPlaceholder aria-hidden="true" />
 							</BookCoverWrap>
 							<BookInfo>
-								<BookTitle>Подбираем книгу недели...</BookTitle>
+								<BookTitle>Selecting book of the week...</BookTitle>
 								<BookDescription>
-									Скоро покажем персональную рекомендацию.
+									Your personalized recommendation will appear soon.
 								</BookDescription>
 							</BookInfo>
 						</Slide>
@@ -95,9 +101,9 @@ const BookOfTheWeekSlider = () => {
 
 	if (isError) {
 		return (
-			<Slider aria-label="Книга недели">
+			<Slider aria-label="Book of the week">
 				<StateMessage>
-					Не удалось загрузить книгу недели: {error.message}
+					Failed to load book of the week: {error.message}
 				</StateMessage>
 			</Slider>
 		);
@@ -105,14 +111,14 @@ const BookOfTheWeekSlider = () => {
 
 	if (weekBooks.length === 0) {
 		return (
-			<Slider aria-label="Книга недели">
-				<StateMessage>Пока нет персональной книги недели.</StateMessage>
+			<Slider ref={containerRef} aria-label="Book of the week">
+				<StateMessage>No personalized book of the week yet.</StateMessage>
 			</Slider>
 		);
 	}
 
 	return (
-		<Slider aria-label="Книга недели">
+		<Slider ref={containerRef} aria-label="Book of the week">
 			<Viewport ref={emblaRef}>
 				<Container>
 					{weekBooks.map((book) => (
@@ -130,7 +136,7 @@ const BookOfTheWeekSlider = () => {
 						>
 							<WeekCoverImage
 								src={book.coverUrl ?? "/images/book-placeholder.svg"}
-								alt={`Обложка «${book.title}»`}
+								alt={`Cover of ${book.title}`}
 							/>
 							<BookInfo>
 								{getSeriesTag(book) ? (
@@ -151,7 +157,7 @@ const BookOfTheWeekSlider = () => {
 			</Viewport>
 
 			<ArrowButton
-				aria-label="Предыдущая книга недели"
+				aria-label="Previous book of the week"
 				disabled={weekBooks.length < 2 || !canScrollPrev}
 				type="button"
 				onClick={scrollPrev}
@@ -160,7 +166,7 @@ const BookOfTheWeekSlider = () => {
 			</ArrowButton>
 			<ArrowButton
 				$side="right"
-				aria-label="Следующая книга недели"
+				aria-label="Next book of the week"
 				disabled={weekBooks.length < 2 || !canScrollNext}
 				type="button"
 				onClick={scrollNext}
@@ -206,6 +212,8 @@ const WeekCoverImage = ({ alt, src }: { alt: string; src: string }) => {
 				$isLoaded={isLoaded}
 				src={src}
 				alt={alt}
+				decoding="async"
+				loading="lazy"
 				onLoad={() => setIsLoaded(true)}
 			/>
 		</BookCoverWrap>
@@ -263,14 +271,14 @@ const Slide = styled.article`
 const BookCoverWrap = styled.div`
 	position: relative;
 	overflow: hidden;
-	width: 10rem;
+	width: fit-content;
 	height: 15.75rem;
 	border-radius: 0.45rem;
 `;
 
 const BookCover = styled.img<{ $isLoaded: boolean }>`
 	display: block;
-	width: 10rem;
+	width: auto;
 	height: 15.75rem;
 	object-fit: cover;
 	opacity: ${({ $isLoaded }) => ($isLoaded ? 1 : 0)};

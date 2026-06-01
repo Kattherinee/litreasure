@@ -21,37 +21,36 @@ import { ConfirmModal } from "@/shared/ui/ConfirmModal";
 const navItems = [
 	{
 		href: "/",
-		label: "Главная",
+		label: "Home",
 		match: (pathname: string) => pathname === "/",
 	},
 	{
 		href: "/genres",
 		hasGenresDropdown: true,
-		label: "Жанры",
+		label: "Genres",
 		match: (pathname: string) => pathname.startsWith("/genres"),
 	},
 	{
 		href: "/authors",
-		label: "Авторы",
+		label: "Authors",
 		match: (pathname: string) => pathname.startsWith("/authors"),
 	},
 	{
 		href: "/collections",
-		label: "Подборки",
+		label: "Collections",
 		match: (pathname: string) => pathname.startsWith("/collections"),
 	},
 ];
 
 const profileItems = [
-	{ href: "/treasures", label: "Мои сокровища" },
-	{ href: "/book-challenge", label: "Книжный вызов" },
+	{ href: "/treasures", label: "My Treasures" },
+	{ href: "/book-challenge", label: "Book Challenge" },
 ];
 
 const emptySubscribe = () => () => undefined;
 const getClientSnapshot = () => true;
 const getServerSnapshot = () => false;
-const AUTH_REQUIRED_MESSAGE =
-	"Для данного действия, пожалуйста, авторизируйтесь.";
+const AUTH_REQUIRED_MESSAGE = "Please sign in to perform this action.";
 const isAuthRequiredRedirect = () =>
 	typeof window !== "undefined" &&
 	new URLSearchParams(window.location.search).get("auth") === "required";
@@ -85,7 +84,7 @@ const Header = () => {
 	const isWelcomePage = pathname === "/welcome";
 	const topGenres = [...genres]
 		.slice(0, 30)
-		.sort((a, b) => a.name.localeCompare(b.name, "ru"));
+		.sort((a, b) => a.name.localeCompare(b.name, "en"));
 	const showAuthRequiredModal = isMounted && !user && isAuthRequiredRedirect();
 	const visibleAuthModalMode =
 		authModalMode ?? (showAuthRequiredModal ? "login" : null);
@@ -94,7 +93,7 @@ const Header = () => {
 		? [
 				{
 					href: "/treasures",
-					label: "Мои сокровища",
+					label: "My Treasures",
 					match: (currentPathname: string) =>
 						currentPathname.startsWith("/treasures"),
 				},
@@ -161,7 +160,7 @@ const Header = () => {
 								{"hasGenresDropdown" in item && item.hasGenresDropdown ? (
 									<GenresDropdown>
 										<GenresDropdownInner>
-											<GenresDropdownTitle>Топ 30 жанров</GenresDropdownTitle>
+											<GenresDropdownTitle>Top 30 Genres</GenresDropdownTitle>
 											<GenresList>
 												{isGenresLoading
 													? Array.from({ length: 10 }, (_, index) => (
@@ -182,7 +181,7 @@ const Header = () => {
 												buttonType="containedInverted"
 												href="/genres"
 											>
-												Посмотреть все
+												View all
 											</ViewAllGenresButton>
 										</GenresDropdownFooter>
 									</GenresDropdown>
@@ -217,7 +216,7 @@ const Header = () => {
 									id="profile-navigation"
 									aria-hidden={!isProfileMenuOpen}
 									$isOpen={isProfileMenuOpen}
-									aria-label="Меню профиля"
+									aria-label="Profile menu"
 								>
 									<ProfileMenuUser>
 										<ProfileMenuName>{profileName}</ProfileMenuName>
@@ -245,12 +244,12 @@ const Header = () => {
 										),
 									)}
 									<ProfileMenuLink href="/profile" onClick={closeProfileMenu}>
-										Профиль
-										<ProfileMenuHint>Редактирование</ProfileMenuHint>
+										Profile
+										<ProfileMenuHint>Edit</ProfileMenuHint>
 									</ProfileMenuLink>
 									<ProfileMenuDivider />
 									<ProfileLogoutItem type="button" onClick={openLogoutConfirm}>
-										Выйти
+										Log out
 									</ProfileLogoutItem>
 								</ProfileMenu>
 							</ProfileMenuContainer>
@@ -261,14 +260,14 @@ const Header = () => {
 									buttonType="text"
 									onClick={() => openAuthModal("register")}
 								>
-									Регистрация
+									Sign up
 								</AuthButton>
 								<AuthButton
 									type="button"
 									buttonType="contained"
 									onClick={() => openAuthModal("login")}
 								>
-									Вход
+									Log in
 								</AuthButton>
 							</>
 						)}
@@ -285,12 +284,12 @@ const Header = () => {
 			) : null}
 			{isLogoutConfirmOpen ? (
 				<ConfirmModal
-					confirmLabel="Выйти"
-					title="Выйти из профиля?"
+					confirmLabel="Log out"
+					title="Log out of your profile?"
 					onCancel={closeLogoutConfirm}
 					onConfirm={confirmLogout}
 				>
-					Вы сможете вернуться в аккаунт после повторного входа.
+					You can return to your account by signing in again.
 				</ConfirmModal>
 			) : null}
 		</>

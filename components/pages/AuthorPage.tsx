@@ -39,10 +39,10 @@ interface IAuthorPageProps {
 }
 
 const bookSortOptions: Array<{ label: string; value: IAuthorBookSort }> = [
-	{ label: "Порядок серии", value: "series_order" },
-	{ label: "Популярные", value: "popular" },
-	{ label: "А-Z", value: "title_asc" },
-	{ label: "Z-А", value: "title_desc" },
+	{ label: "Series order", value: "series_order" },
+	{ label: "Popular", value: "popular" },
+	{ label: "A-Z", value: "title_asc" },
+	{ label: "Z-A", value: "title_desc" },
 ];
 
 const AuthorPage = ({ id }: IAuthorPageProps) => {
@@ -204,7 +204,7 @@ const AuthorPage = ({ id }: IAuthorPageProps) => {
 		setActionMessage("");
 
 		if (!name) {
-			setActionMessage("Имя автора обязательно");
+			setActionMessage("Author name is required");
 			return;
 		}
 
@@ -218,10 +218,10 @@ const AuthorPage = ({ id }: IAuthorPageProps) => {
 				},
 			});
 			setIsEditOpen(false);
-			setActionMessage("Автор обновлен");
+			setActionMessage("Author updated");
 		} catch (error) {
 			setActionMessage(
-				error instanceof Error ? error.message : "Не удалось обновить автора",
+				error instanceof Error ? error.message : "Could not update author",
 			);
 		}
 	};
@@ -235,7 +235,7 @@ const AuthorPage = ({ id }: IAuthorPageProps) => {
 			router.push("/authors");
 		} catch (error) {
 			setActionMessage(
-				error instanceof Error ? error.message : "Не удалось удалить автора",
+				error instanceof Error ? error.message : "Could not delete author",
 			);
 		}
 	};
@@ -267,9 +267,7 @@ const AuthorPage = ({ id }: IAuthorPageProps) => {
 		return (
 			<Page>
 				<Content>
-					<StateMessage>
-						Не удалось загрузить автора: {error.message}
-					</StateMessage>
+					<StateMessage>Could not load author: {error.message}</StateMessage>
 				</Content>
 			</Page>
 		);
@@ -279,7 +277,7 @@ const AuthorPage = ({ id }: IAuthorPageProps) => {
 		return (
 			<Page>
 				<Content>
-					<StateMessage>Автор не найден.</StateMessage>
+					<StateMessage>Author not found.</StateMessage>
 				</Content>
 			</Page>
 		);
@@ -288,7 +286,7 @@ const AuthorPage = ({ id }: IAuthorPageProps) => {
 	return (
 		<Page>
 			<Content>
-				<BackLink href="/authors">К авторам</BackLink>
+				<BackLink href="/authors">Back to authors</BackLink>
 				<Hero>
 					<AuthorAvatar
 						fontSize="2.5rem"
@@ -301,15 +299,15 @@ const AuthorPage = ({ id }: IAuthorPageProps) => {
 							<Title>{author.name}</Title>
 							{isAuthorSaved ? (
 								<SavedActionButton
-									aria-label="Убрать автора из сохраненных"
+									aria-label="Remove author from saved"
 									disabled={isAuthorSavePending}
-									title="Убрать из сохраненных"
+									title="Remove from saved"
 									type="button"
 									onClick={() => void handleToggleAuthorSave()}
 								>
 									<BookmarkIcon aria-hidden="true" />
 									<span>
-										{isAuthorSavePending ? "Сохраняем..." : "Вы подписаны"}
+										{isAuthorSavePending ? "Saving..." : "Subscribed"}
 									</span>
 								</SavedActionButton>
 							) : (
@@ -318,21 +316,21 @@ const AuthorPage = ({ id }: IAuthorPageProps) => {
 									type="button"
 									onClick={() => void handleToggleAuthorSave()}
 								>
-									{isAuthorSavePending ? "Сохраняем..." : "Подписаться"}
+									{isAuthorSavePending ? "Saving..." : "Subscribe"}
 								</SaveActionButton>
 							)}
 						</TitleRow>
 						{isMyAuthor ? (
-							<OwnerActions aria-label="Действия с вашим автором">
+							<OwnerActions aria-label="Actions for your author">
 								<OwnerActionButton type="button" onClick={openEditAuthor}>
-									Редактировать
+									Edit
 								</OwnerActionButton>
 								<DangerActionButton
 									type="button"
 									disabled={deleteAuthorMutation.isPending}
 									onClick={() => setIsDeleteConfirmOpen(true)}
 								>
-									Удалить
+									Delete
 								</DangerActionButton>
 							</OwnerActions>
 						) : null}
@@ -340,12 +338,14 @@ const AuthorPage = ({ id }: IAuthorPageProps) => {
 							<ActionMessage role="status">{actionMessage}</ActionMessage>
 						) : null}
 						<Facts>
-							<TotalBadge aria-label={`Всего книг автора: ${author.bookCount}`}>
+							<TotalBadge
+								aria-label={`Total author books: ${author.bookCount}`}
+							>
 								<TotalNumber>{author.bookCount}</TotalNumber>
-								<TotalText>всего книг</TotalText>
+								<TotalText>total books</TotalText>
 							</TotalBadge>
 							{author.topGenres && author.topGenres.length > 0 ? (
-								<GenreChips aria-label="Жанры автора">
+								<GenreChips aria-label="Author genres">
 									{author.topGenres.map((genre) => (
 										<AuthorGenrePill
 											key={genre.id}
@@ -370,7 +370,7 @@ const AuthorPage = ({ id }: IAuthorPageProps) => {
 											setIsBioExpanded((currentState) => !currentState)
 										}
 									>
-										{isBioExpanded ? "Свернуть" : "Показать больше"}
+										{isBioExpanded ? "Collapse" : "Show more"}
 									</BioToggle>
 								) : null}
 							</BioWrap>
@@ -380,7 +380,7 @@ const AuthorPage = ({ id }: IAuthorPageProps) => {
 
 				{author.bookCount > 0 ? (
 					<BooksToolbar>
-						<SortLabel htmlFor="author-books-sort">Сортировка книг</SortLabel>
+						<SortLabel htmlFor="author-books-sort">Book sorting</SortLabel>
 						<SortSelect
 							id="author-books-sort"
 							value={bookSort}
@@ -400,13 +400,15 @@ const AuthorPage = ({ id }: IAuthorPageProps) => {
 				{author.series.length > 0 ? (
 					<Section>
 						<SectionHeader>
-							<SectionTitle>Серии</SectionTitle>
+							<SectionTitle>Series</SectionTitle>
 							<SectionStats>
-								<TotalBadge aria-label={`Всего серий: ${author.series.length}`}>
+								<TotalBadge
+									aria-label={`Total series: ${author.series.length}`}
+								>
 									<TotalNumber>{author.series.length}</TotalNumber>
-									<TotalText>всего</TotalText>
+									<TotalText>total</TotalText>
 								</TotalBadge>
-								<SectionHint>книги можно пролистать горизонтально</SectionHint>
+								<SectionHint>books can be scrolled horizontally</SectionHint>
 							</SectionStats>
 						</SectionHeader>
 						<SeriesList>
@@ -423,17 +425,17 @@ const AuthorPage = ({ id }: IAuthorPageProps) => {
 											<SeriesCopy>
 												<SeriesTitle>{series.title}</SeriesTitle>
 												<SeriesMeta
-													aria-label={`Всего книг в серии: ${series.books.length}`}
+													aria-label={`Total books in series: ${series.books.length}`}
 												>
 													<TotalNumber>{series.books.length}</TotalNumber>
-													<TotalText>всего</TotalText>
+													<TotalText>total</TotalText>
 												</SeriesMeta>
 											</SeriesCopy>
 											{getIsSeriesSaved(series.id, series.isSaved) ? (
 												<SavedActionButton
-													aria-label="Убрать серию из сохраненных"
+													aria-label="Remove series from saved"
 													disabled={isSeriesSavePending}
-													title="Убрать из сохраненных"
+													title="Remove from saved"
 													type="button"
 													onClick={() =>
 														void handleToggleSeriesSave(
@@ -455,7 +457,7 @@ const AuthorPage = ({ id }: IAuthorPageProps) => {
 														)
 													}
 												>
-													{isSeriesSavePending ? "Сохраняем..." : "Подписаться"}
+													{isSeriesSavePending ? "Saving..." : "Subscribe"}
 												</SaveActionButton>
 											)}
 										</SeriesHeader>
@@ -480,8 +482,8 @@ const AuthorPage = ({ id }: IAuthorPageProps) => {
 											>
 												<span>
 													{isExpanded
-														? "Свернуть серию"
-														: `Показать всю серию (+${series.books.length - visibleBooks.length})`}
+														? "Collapse series"
+														: `Show full series (+${series.books.length - visibleBooks.length})`}
 												</span>
 												<KeyboardArrowDownIcon aria-hidden="true" />
 											</SeriesExpandButton>
@@ -496,10 +498,10 @@ const AuthorPage = ({ id }: IAuthorPageProps) => {
 				{author.books.length > 0 ? (
 					<Section>
 						<SectionHeader>
-							<SectionTitle>Книги</SectionTitle>
-							<TotalBadge aria-label={`Всего книг: ${author.books.length}`}>
+							<SectionTitle>Books</SectionTitle>
+							<TotalBadge aria-label={`Total books: ${author.books.length}`}>
 								<TotalNumber>{author.books.length}</TotalNumber>
-								<TotalText>всего</TotalText>
+								<TotalText>total</TotalText>
 							</TotalBadge>
 						</SectionHeader>
 						<BookGrid>
@@ -531,14 +533,15 @@ const AuthorPage = ({ id }: IAuthorPageProps) => {
 				) : null}
 				{isDeleteConfirmOpen ? (
 					<ConfirmModal
-						confirmLabel="Удалить"
-						confirmLoadingLabel="Удаляем..."
+						confirmLabel="Delete"
+						confirmLoadingLabel="Deleting..."
 						isLoading={deleteAuthorMutation.isPending}
-						title="Удалить автора?"
+						title="Delete author?"
 						onCancel={() => setIsDeleteConfirmOpen(false)}
 						onConfirm={() => void deleteAuthor()}
 					>
-						Автор исчезнет из вашего списка, а связь с его книгами будет удалена.
+						The author will be removed from your list, and links to their books
+						will be deleted.
 					</ConfirmModal>
 				) : null}
 				{authModalMode ? (

@@ -3,12 +3,16 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AddIcon from "@mui/icons-material/Add";
+import KeyboardArrowLeftIcon from "@mui/icons-material/KeyboardArrowLeft";
 import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
 import SearchIcon from "@mui/icons-material/Search";
-import { useEffect, useRef, useState } from "react";
+import type { EmblaCarouselType } from "embla-carousel";
+import useEmblaCarousel from "embla-carousel-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import styled from "styled-components";
 
 import { CreateCollectionModal } from "@/components/pages/book-details/CreateCollectionModal";
+import { CreateAuthorModal } from "@/components/pages/author/CreateAuthorModal";
 import { useMyAuthorsQuery } from "@/shared/api/authors";
 import {
 	useChallengesQuery,
@@ -26,19 +30,20 @@ import {
 } from "@/shared/api/user-books";
 import { useUserGenresQuery } from "@/shared/api/users";
 import { useAuthStore } from "@/shared/store/auth-store";
+import { AUTH_STORAGE_KEY, type IAuthSession } from "@/shared/store/auth-store";
 import { theme } from "@/shared/theme";
 import { AuthorAvatar } from "@/shared/ui/AuthorAvatar";
 import BookCarousel from "@/shared/ui/BookCarousel/BookCarousel";
 import { Button } from "@/shared/ui/Button";
 
 const statusTabs: Array<{ id: IUserBookStatus | "all"; label: string }> = [
-	{ id: "all", label: "Все книги" },
-	{ id: "reading", label: "Сейчас читаю" },
-	{ id: "planned", label: "В планах" },
-	{ id: "finished", label: "Прочитано" },
-	{ id: "paused", label: "Пауза" },
-	{ id: "rereading", label: "Перечитываю" },
-	{ id: "dropped", label: "Брошено" },
+	{ id: "all", label: "All books" },
+	{ id: "reading", label: "Currently reading" },
+	{ id: "planned", label: "Planned" },
+	{ id: "finished", label: "Finished" },
+	{ id: "paused", label: "Paused" },
+	{ id: "rereading", label: "Rereading" },
+	{ id: "dropped", label: "Dropped" },
 ];
 
 type ICollectionTreasureFilter = "all" | "created" | "subscribed";
@@ -48,20 +53,22 @@ const collectionFilterTabs: Array<{
 	id: ICollectionTreasureFilter;
 	label: string;
 }> = [
-	{ id: "all", label: "Все" },
-	{ id: "created", label: "Созданные" },
-	{ id: "subscribed", label: "Подписки" },
+	{ id: "all", label: "All" },
+	{ id: "created", label: "Created" },
+	{ id: "subscribed", label: "Subscribed" },
 ];
 
 const challengePeriodLabels: Record<IChallengePeriodType, string> = {
-	month: "месяц",
-	week: "неделю",
-	year: "год",
+	month: "month",
+	week: "week",
+	year: "year",
 };
 
 const MyTreasuresPage = () => {
 	const router = useRouter();
 	const session = useAuthStore((state) => state.session);
+	const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+	const hasAuth = Boolean(session) || isAuthenticated;
 	const [activeStatus, setActiveStatus] = useState<IUserBookStatus | "all">(
 		"all",
 	);
@@ -70,9 +77,15 @@ const MyTreasuresPage = () => {
 	const [activeTreasureTab, setActiveTreasureTab] =
 		useState<ITreasureTab>("collections");
 	const [selectedChallengeIndex, setSelectedChallengeIndex] = useState(0);
+	const [challengeCanScrollPrev, setChallengeCanScrollPrev] = useState(false);
+	const [challengeCanScrollNext, setChallengeCanScrollNext] = useState(false);
+	const [selectedReadingIndex, setSelectedReadingIndex] = useState(0);
+	const [readingCanScrollPrev, setReadingCanScrollPrev] = useState(false);
+	const [readingCanScrollNext, setReadingCanScrollNext] = useState(false);
 	const [isCreateCollectionOpen, setIsCreateCollectionOpen] = useState(false);
+	const [isCreateAuthorOpen, setIsCreateAuthorOpen] = useState(false);
 	const [isAuthHydrated, setIsAuthHydrated] = useState(
-		() => useAuthStore.persist?.hasHydrated?.() ?? true,
+		() => useAuthStore.persist?.hasHydrated?.() ?? false,
 	);
 	const [collectionRailControls, setCollectionRailControls] = useState({
 		canScrollNext: false,
@@ -85,6 +98,20 @@ const MyTreasuresPage = () => {
 		scrollNext: () => void;
 		scrollPrev: () => void;
 	} | null>(null);
+	const [readingSliderRef, readingSliderApi] = useEmblaCarousel({
+		align: "center",
+		containScroll: false,
+		dragFree: false,
+		duration: 30,
+		loop: false,
+	});
+	const [challengeSliderRef, challengeSliderApi] = useEmblaCarousel({
+		align: "center",
+		containScroll: false,
+		dragFree: false,
+		duration: 30,
+		loop: false,
+	});
 	const collectionsRailRef = useRef<HTMLDivElement | null>(null);
 	const isSessionReady = Boolean(session);
 	const activeStatusParam = activeStatus === "all" ? undefined : activeStatus;
@@ -137,20 +164,18 @@ const MyTreasuresPage = () => {
 	const activeChallengeIndex = activeChallenges.length
 		? Math.min(selectedChallengeIndex, activeChallenges.length - 1)
 		: 0;
-	const activeChallenge = activeChallenges[activeChallengeIndex];
-	const activeChallengeProgress = clampPercent(
-		activeChallenge?.progress?.value.percent,
-	);
-	const activeChallengeTimeProgress = clampPercent(
-		activeChallenge?.progress?.time.percent,
-	);
-	const activeChallengeCurrentValue =
-		activeChallenge?.progress?.value.current ?? 0;
-	const activeChallengeRemainingDays =
-		activeChallenge?.progress?.time.remainingDays ?? 0;
-	const activeChallengeUnit =
-		activeChallenge?.type === "pages" ? "стр." : "книг";
 	const readingBooks = readingBooksData?.items ?? [];
+	const readingBooksCount = readingBooks.length;
+	const updateReadingSliderIndex = useCallback((api: EmblaCarouselType) => {
+		setSelectedReadingIndex(api.selectedScrollSnap());
+		setReadingCanScrollPrev(api.canScrollPrev());
+		setReadingCanScrollNext(api.canScrollNext());
+	}, []);
+	const updateChallengeSliderIndex = useCallback((api: EmblaCarouselType) => {
+		setSelectedChallengeIndex(api.selectedScrollSnap());
+		setChallengeCanScrollPrev(api.canScrollPrev());
+		setChallengeCanScrollNext(api.canScrollNext());
+	}, []);
 	const trackedBooks = userBooksData?.items ?? [];
 	const myCollections = myCollectionsData?.items ?? [];
 	const myCollectionsTotal = myCollectionsData?.total ?? 0;
@@ -227,14 +252,24 @@ const MyTreasuresPage = () => {
 		window.setTimeout(updateCollectionRailControls, 260);
 	};
 	const showChallenge = (direction: "next" | "prev") => {
-		if (activeChallenges.length < 2) return;
-
-		setSelectedChallengeIndex((currentIndex) =>
-			direction === "next"
-				? (currentIndex + 1) % activeChallenges.length
-				: (currentIndex - 1 + activeChallenges.length) %
-					activeChallenges.length,
-		);
+		if (!challengeSliderApi) return;
+		if (direction === "next") {
+			if (!challengeSliderApi.canScrollNext()) return;
+			challengeSliderApi.scrollNext();
+			return;
+		}
+		if (!challengeSliderApi.canScrollPrev()) return;
+		challengeSliderApi.scrollPrev();
+	};
+	const showReadingBook = (direction: "next" | "prev") => {
+		if (!readingSliderApi) return;
+		if (direction === "next") {
+			if (!readingSliderApi.canScrollNext()) return;
+			readingSliderApi.scrollNext();
+			return;
+		}
+		if (!readingSliderApi.canScrollPrev()) return;
+		readingSliderApi.scrollPrev();
 	};
 	const resourceCounts = {
 		authors: myAuthorsData?.total ?? 0,
@@ -247,27 +282,23 @@ const MyTreasuresPage = () => {
 		id: ITreasureTab;
 		label: string;
 	}> = [
-		{ id: "authors", label: "Мои авторы", count: resourceCounts.authors },
-		{ id: "series", label: "Мои серии", count: resourceCounts.series },
-		{ id: "genres", label: "Мои жанры", count: resourceCounts.genres },
+		{ id: "authors", label: "My authors", count: resourceCounts.authors },
+		{ id: "series", label: "My series", count: resourceCounts.series },
+		{ id: "genres", label: "My genres", count: resourceCounts.genres },
 		{
 			id: "collections",
-			label: "Мои подборки",
+			label: "My collections",
 			count: resourceCounts.collections,
 		},
 	];
 	const shouldShowAllBooksLink =
 		(userBooksData?.total ?? 0) > trackedBooks.length ||
 		trackedBooks.length > 6;
-	const bookCarouselItems = trackedBooks.map((item) =>
-		activeStatus === "all"
-			? {
-					...item.book,
-					isTracked: true,
-					myStatus: item.status,
-				}
-			: item.book,
-	);
+	const bookCarouselItems = trackedBooks.map((item) => ({
+		...item.book,
+		isTracked: true,
+		myStatus: item.status,
+	}));
 	const hasBookCarouselControls = Boolean(
 		bookCarouselControls?.canScrollPrev || bookCarouselControls?.canScrollNext,
 	);
@@ -281,6 +312,16 @@ const MyTreasuresPage = () => {
 
 		if (!persistApi) {
 			return;
+		}
+
+		if (persistApi.hasHydrated()) {
+			const frame = window.requestAnimationFrame(() => {
+				setIsAuthHydrated(true);
+			});
+
+			return () => {
+				window.cancelAnimationFrame(frame);
+			};
 		}
 
 		const unsubscribeHydrate = persistApi.onHydrate(() => {
@@ -297,10 +338,68 @@ const MyTreasuresPage = () => {
 	}, []);
 
 	useEffect(() => {
-		if (isAuthHydrated && !session) {
-			router.replace("/?auth=required");
+		if (!isAuthHydrated || hasAuth) {
+			return;
 		}
-	}, [isAuthHydrated, router, session]);
+
+		if (typeof window !== "undefined") {
+			try {
+				const raw = window.localStorage.getItem(AUTH_STORAGE_KEY);
+				if (raw) {
+					const parsed = JSON.parse(raw) as {
+						state?: { session?: IAuthSession | null };
+					};
+					const persistedSession = parsed.state?.session;
+					if (persistedSession?.user?.email) {
+						useAuthStore.getState().setSession(persistedSession);
+						return;
+					}
+				}
+			} catch {
+				// ignore malformed storage and continue to auth redirect
+			}
+		}
+
+		router.replace("/?auth=required");
+	}, [hasAuth, isAuthHydrated, router]);
+
+	useEffect(() => {
+		if (!challengeSliderApi) return;
+		challengeSliderApi.on("select", updateChallengeSliderIndex);
+		challengeSliderApi.on("reInit", updateChallengeSliderIndex);
+		const frame = window.requestAnimationFrame(() =>
+			updateChallengeSliderIndex(challengeSliderApi),
+		);
+		return () => {
+			window.cancelAnimationFrame(frame);
+			challengeSliderApi.off("select", updateChallengeSliderIndex);
+			challengeSliderApi.off("reInit", updateChallengeSliderIndex);
+		};
+	}, [challengeSliderApi, updateChallengeSliderIndex]);
+
+	useEffect(() => {
+		if (!challengeSliderApi) return;
+		challengeSliderApi.reInit();
+	}, [activeChallenges.length, challengeSliderApi]);
+
+	useEffect(() => {
+		if (!readingSliderApi) return;
+		readingSliderApi.on("select", updateReadingSliderIndex);
+		readingSliderApi.on("reInit", updateReadingSliderIndex);
+		const frame = window.requestAnimationFrame(() =>
+			updateReadingSliderIndex(readingSliderApi),
+		);
+		return () => {
+			window.cancelAnimationFrame(frame);
+			readingSliderApi.off("select", updateReadingSliderIndex);
+			readingSliderApi.off("reInit", updateReadingSliderIndex);
+		};
+	}, [readingSliderApi, updateReadingSliderIndex]);
+
+	useEffect(() => {
+		if (!readingSliderApi) return;
+		readingSliderApi.reInit();
+	}, [readingBooksCount, readingSliderApi]);
 
 	useEffect(() => {
 		const rail = collectionsRailRef.current;
@@ -334,47 +433,92 @@ const MyTreasuresPage = () => {
 		visibleCollectionsTotal,
 	]);
 
-	if (!isAuthHydrated || !session) {
+	if (!isAuthHydrated || !hasAuth || !session) {
 		return null;
 	}
 
 	return (
 		<Page>
 			<Content>
-				<Hero>
+				<ReadingCard>
 					<HeroCopy>
-						<Title>Мои сокровища</Title>
+						<Title>My Treasures</Title>
 						<Lead>
-							Ваши книги, подборки, авторы, серии и цитаты. Все сохраненное и
-							созданное лично вами собирается здесь.
+							Your books, collections, authors, series, and quotes. Everything
+							you save or create is gathered here.
 						</Lead>
 					</HeroCopy>
-				</Hero>
-
-				<ReadingCard>
 					<ReadingShelf>
 						<ReadingHeader>
-							<CardEyebrow>Сейчас читаю</CardEyebrow>
+							<CardEyebrow>Currently Reading</CardEyebrow>
 						</ReadingHeader>
 						{isReadingBooksLoading ? (
-							<CardText>Загружаем текущие книги...</CardText>
+							<CardText>Loading current books...</CardText>
 						) : readingBooks.length > 0 ? (
-							<ReadingCarouselWrap $bookCount={readingBooks.length}>
-								<BookCarousel
-									bleed={false}
-									books={readingBooks.map((item) => item.book)}
-									size="tiny"
-								/>
-							</ReadingCarouselWrap>
+							<ReadingSpotlight>
+								<ReadingViewport ref={readingSliderRef}>
+									<ReadingTrack>
+										{readingBooks.map((item, index) => {
+											const book = item.book;
+											const author = book.author ?? "Unknown author";
+
+											return (
+												<ReadingSlide key={book.id}>
+													<ReadingCoverLink href={`/books/${book.id}`}>
+														<ReadingCoverImage
+															$isSingle={readingBooksCount === 1}
+															$isActive={index === selectedReadingIndex}
+															alt={book.title ?? "Current book"}
+															aria-label={book.title ?? "Current book"}
+															src={
+																book.coverUrl || "/images/book-placeholder.svg"
+															}
+														/>
+														<ReadingBookTooltip>
+															<TooltipTitle>
+																{book.title ?? "Untitled"}
+															</TooltipTitle>
+															<TooltipAuthor>{author}</TooltipAuthor>
+														</ReadingBookTooltip>
+													</ReadingCoverLink>
+												</ReadingSlide>
+											);
+										})}
+									</ReadingTrack>
+								</ReadingViewport>
+								{readingBooksCount > 1 ? (
+									<ReadingNav>
+										<RailControlButton
+											aria-label="Previous reading book"
+											disabled={!readingCanScrollPrev}
+											type="button"
+											onClick={() => showReadingBook("prev")}
+										>
+											<KeyboardArrowLeftIcon aria-hidden="true" />
+										</RailControlButton>
+										<ReadingIndex>
+											{selectedReadingIndex + 1} of {readingBooksCount}
+										</ReadingIndex>
+										<RailControlButton
+											aria-label="Next reading book"
+											disabled={!readingCanScrollNext}
+											type="button"
+											onClick={() => showReadingBook("next")}
+										>
+											<KeyboardArrowRightIcon aria-hidden="true" />
+										</RailControlButton>
+									</ReadingNav>
+								) : null}
+							</ReadingSpotlight>
 						) : (
 							<>
-								<CardTitle>Пока пусто</CardTitle>
+								<CardTitle>Nothing Here Yet</CardTitle>
 								<CardText>
-									Книги со статусом “читаю” будут закреплены здесь отдельно от
-									общего списка.
+									Books with the reading status will be pinned here separately
+									from the main list.
 								</CardText>
 								<Button buttonType="oxygenPill" href="/search">
-									Выбрать книгу
+									Choose a book
 								</Button>
 							</>
 						)}
@@ -383,77 +527,94 @@ const MyTreasuresPage = () => {
 					<ChallengeCard>
 						<ChallengeCopy>
 							<ChallengeHeading>
-								<CardEyebrow>Книжный вызов</CardEyebrow>
-								{activeChallenges.length > 1 ? (
-									<ChallengeCount>
-										{activeChallenges.length} активных
-									</ChallengeCount>
-								) : null}
+								<CardEyebrow>Book Challenge</CardEyebrow>
+
+								<ChallengeDetailsLink href="/book-challenge">
+									View details
+								</ChallengeDetailsLink>
 							</ChallengeHeading>
-							<ChallengeCarouselRow>
-								{activeChallenges.length > 1 ? (
-									<ChallengeNavButton
-										aria-label="Предыдущий вызов"
+							<ChallengeViewport ref={challengeSliderRef}>
+								<ChallengeTrack>
+									{(activeChallenges.length > 0
+										? activeChallenges
+										: [null]
+									).map((challenge, index) => {
+										const challengeProgress = clampPercent(
+											challenge?.progress?.value.percent,
+										);
+										const challengeTimeProgress = clampPercent(
+											challenge?.progress?.time.percent,
+										);
+										const challengeCurrentValue =
+											challenge?.progress?.value.current ?? 0;
+										const challengeRemainingDays =
+											challenge?.progress?.time.remainingDays ?? 0;
+										const challengeUnit =
+											challenge?.type === "pages" ? "pages" : "books";
+										return (
+											<ChallengeSlide
+												key={challenge?.id ?? `challenge-empty-${index}`}
+											>
+												<ChallengeGraph
+													href="/book-challenge"
+													$timePercent={challengeTimeProgress}
+													aria-label="Book challenge progress"
+												>
+													<ChallengeValueRing $valuePercent={challengeProgress}>
+														<ChallengeGraphCenter>
+															<ChallengeGraphLabel>
+																{challenge
+																	? `For ${challengePeriodLabels[challenge.periodType]}`
+																	: "No challenge"}
+															</ChallengeGraphLabel>
+															<ChallengeGraphValue>
+																{challenge
+																	? `${challengeCurrentValue} / ${challenge.targetValue} ${challengeUnit}`
+																	: "0"}
+															</ChallengeGraphValue>
+															{challenge ? (
+																<ChallengeGraphMeta>
+																	{challengeRemainingDays} days left · until{" "}
+																	{formatChallengeDate(challenge.endDate)}
+																</ChallengeGraphMeta>
+															) : (
+																<ChallengeGraphMeta>
+																	Create a reading goal
+																</ChallengeGraphMeta>
+															)}
+														</ChallengeGraphCenter>
+													</ChallengeValueRing>
+												</ChallengeGraph>
+											</ChallengeSlide>
+										);
+									})}
+								</ChallengeTrack>
+							</ChallengeViewport>
+							{activeChallenges.length > 1 ? (
+								<ReadingNav>
+									<RailControlButton
+										aria-label="Previous challenge"
+										disabled={!challengeCanScrollPrev}
 										type="button"
 										onClick={() => showChallenge("prev")}
 									>
-										{"‹"}
-									</ChallengeNavButton>
-								) : null}
-								<ChallengeGraph
-									href="/book-challenge"
-									$timePercent={activeChallengeTimeProgress}
-									aria-label="Прогресс книжного вызова"
-								>
-									<ChallengeValueRing $valuePercent={activeChallengeProgress}>
-										<ChallengeGraphCenter>
-											<ChallengeGraphLabel>
-												{activeChallenge
-													? `На ${challengePeriodLabels[activeChallenge.periodType]}`
-													: "Нет вызова"}
-											</ChallengeGraphLabel>
-											<ChallengeGraphValue>
-												{activeChallenge
-													? `	${activeChallengeCurrentValue} /${" "}
-														${activeChallenge.targetValue} ${activeChallengeUnit}`
-													: "0"}
-											</ChallengeGraphValue>
-											{activeChallenge ? (
-												<>
-													<ChallengeGraphMeta>
-														{activeChallengeRemainingDays} дн. · до{" "}
-														{formatChallengeDate(activeChallenge.endDate)}
-													</ChallengeGraphMeta>
-												</>
-											) : (
-												<ChallengeGraphMeta>
-													Создайте цель для чтения
-												</ChallengeGraphMeta>
-											)}
-										</ChallengeGraphCenter>
-									</ChallengeValueRing>
-								</ChallengeGraph>
-								{activeChallenges.length > 1 ? (
-									<ChallengeNavButton
-										aria-label="Следующий вызов"
+										<KeyboardArrowLeftIcon aria-hidden="true" />
+									</RailControlButton>
+									<ReadingIndex>
+										{activeChallengeIndex + 1} of {activeChallenges.length}
+									</ReadingIndex>
+									<RailControlButton
+										aria-label="Next challenge"
+										disabled={!challengeCanScrollNext}
 										type="button"
 										onClick={() => showChallenge("next")}
 									>
-										{"›"}
-									</ChallengeNavButton>
-								) : null}
-							</ChallengeCarouselRow>
-							{activeChallenges.length > 1 ? (
-								<ChallengeSlideLabel>
-									{activeChallengeIndex + 1} из {activeChallenges.length}
-								</ChallengeSlideLabel>
+										<KeyboardArrowRightIcon aria-hidden="true" />
+									</RailControlButton>
+								</ReadingNav>
 							) : null}
 						</ChallengeCopy>
-						<ChallengeProgress>
-							<ChallengeDetailsLink href="/book-challenge">
-								Посмотреть подробнее
-							</ChallengeDetailsLink>
-						</ChallengeProgress>
+						<ChallengeProgress></ChallengeProgress>
 					</ChallengeCard>
 				</ReadingCard>
 
@@ -461,30 +622,30 @@ const MyTreasuresPage = () => {
 					<LibraryPanel>
 						<PanelHeader>
 							<PanelTitleRow>
-								<PanelTitle>Мои книги</PanelTitle>
+								<PanelTitle>My Books</PanelTitle>
 								{shouldShowAllBooksLink ? (
 									<ViewAllAction href="/treasures/books">
-										<span>Посмотреть все</span>
+										<span>View all</span>
 										<KeyboardArrowRightIcon aria-hidden="true" />
 									</ViewAllAction>
 								) : null}
 							</PanelTitleRow>
 							<HeaderActions>
-								<IconTextAction href="/search" title="Найти книгу">
+								<IconTextAction href="/search" title="Find a book">
 									<SearchIcon aria-hidden="true" />
-									<span>Найти книгу</span>
+									<span>Find a book</span>
 								</IconTextAction>
 								<IconTextAction
 									href="/treasures/books?create=1"
-									title="Создать книгу"
+									title="Create a book"
 								>
 									<AddIcon aria-hidden="true" />
-									<span>Создать</span>
+									<span>Create</span>
 								</IconTextAction>
 							</HeaderActions>
 						</PanelHeader>
 						<BooksToolbar>
-							<StatusTabs aria-label="Статусы книг">
+							<StatusTabs aria-label="Book statuses">
 								{statusTabs.map((status) => {
 									const isActive = activeStatus === status.id;
 
@@ -502,9 +663,9 @@ const MyTreasuresPage = () => {
 								})}
 							</StatusTabs>
 							{hasBookCarouselControls ? (
-								<RailControls aria-label="Перелистывание книг">
+								<RailControls aria-label="Book carousel controls">
 									<RailControlButton
-										aria-label="Предыдущие книги"
+										aria-label="Previous books"
 										disabled={!bookCarouselControls?.canScrollPrev}
 										type="button"
 										onClick={bookCarouselControls?.scrollPrev}
@@ -512,7 +673,7 @@ const MyTreasuresPage = () => {
 										{"‹"}
 									</RailControlButton>
 									<RailControlButton
-										aria-label="Следующие книги"
+										aria-label="Next books"
 										disabled={!bookCarouselControls?.canScrollNext}
 										type="button"
 										onClick={bookCarouselControls?.scrollNext}
@@ -525,13 +686,13 @@ const MyTreasuresPage = () => {
 
 						{isUserBooksLoading ? (
 							<BookEmptyState>
-								<BookEmptyTitle>Загружаем книги...</BookEmptyTitle>
+								<BookEmptyTitle>Loading books...</BookEmptyTitle>
 							</BookEmptyState>
 						) : isUserBooksError ? (
 							<BookEmptyState>
-								<BookEmptyTitle>Не удалось загрузить книги</BookEmptyTitle>
+								<BookEmptyTitle>Failed to load books</BookEmptyTitle>
 								<BookEmptyText>
-									Проверьте авторизацию и попробуйте открыть страницу еще раз.
+									Check your authorization and try opening the page again.
 								</BookEmptyText>
 							</BookEmptyState>
 						) : bookCarouselItems.length > 0 ? (
@@ -539,6 +700,7 @@ const MyTreasuresPage = () => {
 								<BookCarousel
 									bleed={false}
 									books={bookCarouselItems}
+									showStatusBadge={activeStatus === "all"}
 									size="tiny"
 									onControlsChange={(controls) => {
 										setBookCarouselControls((currentControls) => {
@@ -560,10 +722,10 @@ const MyTreasuresPage = () => {
 							</BookCarouselFrame>
 						) : (
 							<BookEmptyState>
-								<BookEmptyTitle>Книг пока нет</BookEmptyTitle>
+								<BookEmptyTitle>No books yet</BookEmptyTitle>
 								<BookEmptyText>
-									Добавьте книгу и назначьте статус: планирую, читаю, прочитано,
-									пауза, перечитываю или брошено.
+									Add a book and assign a status: planned, reading, finished,
+									paused, rereading, or dropped.
 								</BookEmptyText>
 							</BookEmptyState>
 						)}
@@ -571,7 +733,7 @@ const MyTreasuresPage = () => {
 				</MainGrid>
 
 				<TreasureTabsPanel>
-					<TreasureTabs aria-label="Разделы сокровищ">
+					<TreasureTabs aria-label="Treasure sections">
 						{treasureTabs.map((tab) => (
 							<TreasureTabButton
 								key={tab.id}
@@ -590,22 +752,30 @@ const MyTreasuresPage = () => {
 							<CompactResourcePanel>
 								<PanelHeader>
 									<PanelTitleRow>
-										<PanelTitle>Мои авторы</PanelTitle>
-										<ViewAllAction href="/authors">
-											<span>Посмотреть все</span>
+										<PanelTitle>My Authors</PanelTitle>
+										<ViewAllAction href="/treasures/authors">
+											<span>View all</span>
 											<KeyboardArrowRightIcon aria-hidden="true" />
 										</ViewAllAction>
 									</PanelTitleRow>
 									<HeaderActions>
-										<IconTextAction href="/authors" title="Добавить автора">
-											<AddIcon aria-hidden="true" />
-											<span>Добавить автора</span>
+										<IconTextAction href="/authors" title="Find author">
+											<SearchIcon aria-hidden="true" />
+											<span>Find</span>
 										</IconTextAction>
+										<IconButtonAction
+											title="Create author"
+											type="button"
+											onClick={() => setIsCreateAuthorOpen(true)}
+										>
+											<AddIcon aria-hidden="true" />
+											<span>Create</span>
+										</IconButtonAction>
 									</HeaderActions>
 								</PanelHeader>
 								{isMyAuthorsLoading ? (
 									<CollectionPreviewText>
-										Загружаем сохранённых авторов...
+										Loading saved authors...
 									</CollectionPreviewText>
 								) : myAuthors.length > 0 ? (
 									<TreasureResourceGrid>
@@ -625,7 +795,7 @@ const MyTreasuresPage = () => {
 														{author.name}
 													</TreasureResourceTitle>
 													<TreasureResourceText>
-														{author.bookCount} книг
+														{author.bookCount} books
 													</TreasureResourceText>
 												</TreasureResourceMeta>
 											</AuthorTreasureCard>
@@ -633,7 +803,7 @@ const MyTreasuresPage = () => {
 									</TreasureResourceGrid>
 								) : (
 									<CollectionPreviewText>
-										Сохранённые авторы появятся здесь после добавления.
+										Saved authors will appear here after you add them.
 									</CollectionPreviewText>
 								)}
 							</CompactResourcePanel>
@@ -643,19 +813,19 @@ const MyTreasuresPage = () => {
 							<CompactResourcePanel>
 								<PanelHeader>
 									<PanelTitleRow>
-										<PanelTitle>Мои серии</PanelTitle>
+										<PanelTitle>My Series</PanelTitle>
 										<ViewAllAction href="/search?tab=series">
-											<span>Посмотреть все</span>
+											<span>View all</span>
 											<KeyboardArrowRightIcon aria-hidden="true" />
 										</ViewAllAction>
 									</PanelTitleRow>
 									<HeaderActions>
 										<IconTextAction
 											href="/search?tab=series"
-											title="Добавить серию"
+											title="Add series"
 										>
 											<AddIcon aria-hidden="true" />
-											<span>Добавить серию</span>
+											<span>Add series</span>
 										</IconTextAction>
 									</HeaderActions>
 								</PanelHeader>
@@ -687,12 +857,12 @@ const MyTreasuresPage = () => {
 														<TreasureResourceText>
 															{series.authorName}
 															{series.bookCount
-																? ` · ${series.bookCount} книг`
+																? ` - ${series.bookCount} books`
 																: ""}
 														</TreasureResourceText>
 													) : (
 														<TreasureResourceText>
-															Сохранённая серия
+															Saved series
 														</TreasureResourceText>
 													)}
 												</TreasureResourceMeta>
@@ -701,7 +871,7 @@ const MyTreasuresPage = () => {
 									</TreasureResourceGrid>
 								) : (
 									<CollectionPreviewText>
-										Серии, за которыми вы следите, появятся здесь.
+										Series you follow will appear here.
 									</CollectionPreviewText>
 								)}
 							</CompactResourcePanel>
@@ -711,25 +881,25 @@ const MyTreasuresPage = () => {
 							<CompactResourcePanel>
 								<PanelHeader>
 									<PanelTitleRow>
-										<PanelTitle>Мои жанры</PanelTitle>
+										<PanelTitle>My Genres</PanelTitle>
 										<ViewAllAction href="/genres">
-											<span>Посмотреть все</span>
+											<span>View all</span>
 											<KeyboardArrowRightIcon aria-hidden="true" />
 										</ViewAllAction>
 									</PanelTitleRow>
 									<HeaderActions>
-										<IconTextAction href="/genres" title="Добавить жанры">
+										<IconTextAction href="/genres" title="Add genres">
 											<AddIcon aria-hidden="true" />
-											<span>Добавить жанры</span>
+											<span>Add genres</span>
 										</IconTextAction>
 									</HeaderActions>
 								</PanelHeader>
 								{isMyGenresLoading ? (
 									<CollectionPreviewText>
-										Загружаем ваши жанры...
+										Loading your genres...
 									</CollectionPreviewText>
 								) : myGenres.length > 0 ? (
-									<MyGenresList aria-label="Мои сохранённые жанры">
+									<MyGenresList aria-label="My saved genres">
 										{myGenres.map((genre) => (
 											<MyGenreChip
 												key={genre.id}
@@ -741,8 +911,8 @@ const MyTreasuresPage = () => {
 									</MyGenresList>
 								) : (
 									<CollectionPreviewText>
-										Сохранённые жанры появятся здесь после нажатия на плюс в
-										каталоге жанров.
+										Saved genres will appear here after you add them in the
+										genre catalog.
 									</CollectionPreviewText>
 								)}
 							</CompactResourcePanel>
@@ -752,25 +922,25 @@ const MyTreasuresPage = () => {
 							<CompactResourcePanel>
 								<PanelHeader>
 									<PanelTitleRow>
-										<PanelTitle>Мои подборки</PanelTitle>
+										<PanelTitle>My Collections</PanelTitle>
 										<ViewAllAction href="/collections/_username">
-											<span>Смотреть все</span>
+											<span>View all</span>
 											<KeyboardArrowRightIcon aria-hidden="true" />
 										</ViewAllAction>
 									</PanelTitleRow>
 									<HeaderActions>
 										<IconButtonAction
-											title="Создать подборку"
+											title="Create collection"
 											type="button"
 											onClick={() => setIsCreateCollectionOpen(true)}
 										>
 											<AddIcon aria-hidden="true" />
-											<span>Создать</span>
+											<span>Create</span>
 										</IconButtonAction>
 									</HeaderActions>
 								</PanelHeader>
 								<CollectionFilterRow>
-									<CollectionFilterTabs aria-label="Фильтр подборок">
+									<CollectionFilterTabs aria-label="Collection filter">
 										{collectionFilterTabs.map((filter) => (
 											<CollectionFilterTab
 												key={filter.id}
@@ -784,9 +954,9 @@ const MyTreasuresPage = () => {
 									</CollectionFilterTabs>
 									<CollectionToolbarActions>
 										{collectionRailControls.hasOverflow ? (
-											<RailControls aria-label="Перелистывание подборок">
+											<RailControls aria-label="Collection carousel controls">
 												<RailControlButton
-													aria-label="Предыдущие подборки"
+													aria-label="Previous collections"
 													disabled={!collectionRailControls.canScrollPrev}
 													type="button"
 													onClick={() => scrollCollectionsRail("prev")}
@@ -794,7 +964,7 @@ const MyTreasuresPage = () => {
 													{"‹"}
 												</RailControlButton>
 												<RailControlButton
-													aria-label="Следующие подборки"
+													aria-label="Next collections"
 													disabled={!collectionRailControls.canScrollNext}
 													type="button"
 													onClick={() => scrollCollectionsRail("next")}
@@ -809,22 +979,22 @@ const MyTreasuresPage = () => {
 											</CollectionCount>
 											<CollectionText>
 												{visibleCollectionsTotal === 1
-													? "подборка"
-													: "подборок"}
+													? "collection"
+													: "collections"}
 											</CollectionText>
 										</CollectionSummary>
 									</CollectionToolbarActions>
 								</CollectionFilterRow>
 								{isCollectionsLoading ? (
 									<CollectionPreviewText>
-										Загружаем ваши подборки...
+										Loading your collections...
 									</CollectionPreviewText>
 								) : visibleCollections.length > 0 ? (
 									<MyCollectionsRail ref={collectionsRailRef}>
 										{visibleCollections.map((collection) => (
 											<MyCollectionChip
 												key={collection.id}
-												aria-label={`Открыть подборку ${collection.title}`}
+												aria-label={`Open collection ${collection.title}`}
 												role="link"
 												tabIndex={0}
 												onClick={() =>
@@ -847,7 +1017,7 @@ const MyTreasuresPage = () => {
 														{collection.title}
 													</CollectionChipTitle>
 													<CollectionChipText>
-														{collection.bookCount} книг
+														{collection.bookCount} books
 													</CollectionChipText>
 												</CollectionChipMeta>
 											</MyCollectionChip>
@@ -855,8 +1025,8 @@ const MyTreasuresPage = () => {
 									</MyCollectionsRail>
 								) : (
 									<CollectionPreviewText>
-										Создайте первую подборку для любимых книг, настроений и
-										будущих полок.
+										Create your first collection for favorite books, moods, and
+										future shelves.
 									</CollectionPreviewText>
 								)}
 							</CompactResourcePanel>
@@ -868,6 +1038,9 @@ const MyTreasuresPage = () => {
 						onClose={() => setIsCreateCollectionOpen(false)}
 					/>
 				) : null}
+				{isCreateAuthorOpen ? (
+					<CreateAuthorModal onClose={() => setIsCreateAuthorOpen(false)} />
+				) : null}
 			</Content>
 		</Page>
 	);
@@ -876,7 +1049,7 @@ const MyTreasuresPage = () => {
 export default MyTreasuresPage;
 
 const formatChallengeDate = (date: string) =>
-	new Intl.DateTimeFormat("ru-RU", {
+	new Intl.DateTimeFormat("en-US", {
 		day: "numeric",
 		month: "short",
 	}).format(new Date(date));
@@ -894,49 +1067,37 @@ const Content = styled.div`
 	margin: 0 auto;
 `;
 
-const Hero = styled.section`
-	display: flex;
-	align-items: flex-end;
-	justify-content: space-between;
-	gap: 2rem;
-	margin-bottom: 1.35rem;
-
-	@media (max-width: 50rem) {
-		align-items: flex-start;
-		flex-direction: column;
-	}
-`;
-
 const HeroCopy = styled.div`
 	min-width: 0;
+	align-self: center;
 `;
 
 const Title = styled.h1`
 	margin: 0;
 	color: ${theme.colors.foreground};
 	font-family: ${theme.fonts.serif};
-	font-size: clamp(2.35rem, 5vw, 3.8rem);
-	line-height: 1;
+	font-size: clamp(1.95rem, 4vw, 2.8rem);
+	line-height: 1.05;
 `;
 
 const Lead = styled.p`
-	max-width: 44rem;
-	margin: 0.65rem 0 0;
+	max-width: 24rem;
+	margin: 0.45rem 0 0;
 	color: ${theme.colors.softForeground};
-	font-size: 0.98rem;
-	line-height: 1.5;
+	font-size: 0.92rem;
+	line-height: 1.4;
 `;
 
 const ReadingCard = styled.section`
 	display: grid;
-	align-items: center;
-	grid-template-columns: minmax(0, 1fr) minmax(18rem, 24rem);
-	gap: clamp(1.5rem, 5vw, 4rem);
+	align-items: stretch;
+	grid-template-columns: minmax(0, 1fr) auto auto;
+	gap: 0.65rem;
 	min-width: 0;
-	width: min(100%, 58rem);
+	width: 100%;
 	max-width: 100%;
-	margin: 0 auto 1rem;
-	padding: 0.2rem 0 0.35rem;
+	margin: 0 auto 0.8rem;
+	padding: 0;
 
 	@media (max-width: 50rem) {
 		grid-template-columns: 1fr;
@@ -967,16 +1128,21 @@ const CardText = styled.p`
 	line-height: 1.45;
 `;
 
-const ChallengeCard = styled(ReadingCard)`
+const ChallengeCard = styled.section`
+	position: relative;
+	z-index: 1;
 	display: flex;
 	flex-direction: column;
 	justify-content: center;
-	align-items: center;
+	align-items: stretch;
 	margin: 0;
-	justify-self: center;
-	padding: 0;
-	max-width: 24rem;
-	width: auto;
+	padding: 1rem 1.15rem 1.1rem;
+	justify-self: start;
+	max-width: 19.5rem;
+	width: 100%;
+	border: 0.0625rem solid rgb(211 202 196 / 0.72);
+	border-radius: 1rem;
+	background: rgb(242 239 237 / 0.74);
 
 	${CardText} {
 		margin-bottom: 0;
@@ -995,7 +1161,7 @@ const ChallengeCopy = styled.div`
 const ChallengeHeading = styled.div`
 	display: flex;
 	align-items: center;
-	justify-content: center;
+	justify-content: space-between;
 	gap: 0.55rem;
 	margin-bottom: 0.75rem;
 
@@ -1004,54 +1170,22 @@ const ChallengeHeading = styled.div`
 	}
 `;
 
-const ChallengeCount = styled.span`
-	display: inline-flex;
-	width: fit-content;
-	border: 0.0625rem solid rgb(212 100 28 / 0.26);
-	border-radius: 999px;
-	padding: 0.16rem 0.5rem;
-	color: ${theme.colors.orangeDark};
-	font-size: 0.72rem;
-	font-weight: 700;
-	line-height: 1.1;
+const ChallengeViewport = styled.div`
+	width: min(100%, 20rem);
+	margin: 0 auto;
+	overflow: hidden;
 `;
 
-const ChallengeCarouselRow = styled.div`
+const ChallengeTrack = styled.div`
 	display: flex;
 	align-items: center;
-	gap: 0.55rem;
-	justify-content: center;
 `;
 
-const ChallengeNavButton = styled.button`
-	display: inline-flex;
-	align-items: center;
+const ChallengeSlide = styled.div`
+	display: flex;
 	justify-content: center;
-	width: 1.875rem;
-	height: 1.875rem;
-	border: 0.0625rem solid ${theme.colors.orangeDark};
-	border-radius: 999px;
-	background: ${theme.colors.transparent};
-	color: ${theme.colors.orangeDark};
-	cursor: pointer;
-	font-family: ${theme.fonts.serif};
-	font-size: 2rem;
-	line-height: 1;
-	transition:
-		background 180ms ease,
-		border-color 180ms ease,
-		color 180ms ease,
-		opacity 180ms ease,
-		transform 180ms ease;
-
-	&:hover,
-	&:focus-visible {
-		background: ${theme.colors.orangePrimary};
-		border-color: ${theme.colors.orangePrimary};
-		color: ${theme.colors.invertedText};
-		outline: none;
-		transform: translateY(-0.0625rem);
-	}
+	flex: 0 0 100%;
+	min-width: 0;
 `;
 
 const ChallengeGraph = styled(Link)<{ $timePercent: number }>`
@@ -1143,18 +1277,10 @@ const ChallengeGraphMeta = styled.span`
 	line-height: 1.12;
 `;
 
-const ChallengeSlideLabel = styled.p`
-	margin: 0.45rem 0 0;
-	color: ${theme.colors.softForeground};
-	font-size: 0.72rem;
-	line-height: 1.2;
-	text-align: center;
-`;
-
 const ChallengeProgress = styled.div`
 	display: grid;
 	gap: 0.35rem;
-	justify-items: center;
+	justify-items: flex-start;
 	margin-top: 0.05rem;
 	min-width: 0;
 	width: 100%;
@@ -1175,8 +1301,16 @@ const ChallengeDetailsLink = styled(Link)`
 `;
 
 const ReadingShelf = styled.div`
-	justify-self: center;
+	position: relative;
+	z-index: 3;
+	border: 0.0625rem solid rgb(211 202 196 / 0.72);
+	border-radius: 1rem;
+	background: rgb(242 239 237 / 0.74);
+	padding: 1rem 1.5rem 0.6rem;
+	justify-self: end;
 	min-width: 0;
+	width: 100%;
+	max-width: 19.5rem;
 `;
 
 const ReadingHeader = styled.div`
@@ -1187,10 +1321,135 @@ const ReadingHeader = styled.div`
 	margin-bottom: 0.55rem;
 `;
 
-const ReadingCarouselWrap = styled.div<{ $bookCount: number }>`
+const ReadingSpotlight = styled.div`
+	position: relative;
+	isolation: isolate;
+	display: grid;
+	justify-items: center;
+`;
+
+const ReadingViewport = styled.div`
+	width: 100%;
+	margin: 0 auto;
+	overflow: hidden;
+	touch-action: pan-y;
+`;
+
+const ReadingTrack = styled.div`
+	display: flex;
+	align-items: center;
+`;
+
+const ReadingSlide = styled.div`
+	display: flex;
+	justify-content: center;
+	flex: 0 0 46%;
 	min-width: 0;
-	width: ${({ $bookCount }) =>
-		`min(100%, ${Math.min(Math.max($bookCount * 7.6, 7.6), 34)}rem)`};
+	padding: 0.2rem 0.1rem;
+
+	@media (max-width: 40rem) {
+		flex-basis: 58%;
+	}
+`;
+
+const ReadingCoverLink = styled(Link)`
+	position: relative;
+	text-decoration: none;
+`;
+
+const ReadingCoverImage = styled.img<{
+	$isActive: boolean;
+	$isSingle?: boolean;
+}>`
+	position: relative;
+	z-index: ${({ $isActive }) => ($isActive ? 2 : 1)};
+	display: block;
+	width: auto;
+	height: ${({ $isSingle }) => ($isSingle ? "14.2rem" : "12.5rem")};
+	border-radius: 0.55rem;
+	border: 0.0625rem solid rgb(211 202 196 / 0.72);
+	object-fit: cover;
+	background: linear-gradient(rgb(4 18 26 / 0.06), rgb(4 18 26 / 0.06));
+	box-shadow: ${({ $isActive }) =>
+		$isActive
+			? "0 0.5rem 1.2rem rgb(4 18 26 / 0.22)"
+			: "0 0.2rem 0.5rem rgb(4 18 26 / 0.12)"};
+	opacity: ${({ $isActive }) => ($isActive ? 1 : 0.58)};
+	transform: ${({ $isActive }) => ($isActive ? "scale(1)" : "scale(0.82)")};
+	transition:
+		transform 280ms ease,
+		opacity 240ms ease,
+		box-shadow 240ms ease;
+`;
+
+const ReadingBookTooltip = styled.span`
+	position: absolute;
+	right: 50%;
+	bottom: calc(100% + 0.45rem);
+	z-index: 1200;
+	width: max-content;
+	max-width: 14rem;
+	border: 0.0625rem solid rgb(35 61 77 / 0.16);
+	border-radius: 0.55rem;
+	background: rgb(248 246 244 / 0.98);
+	padding: 0.5rem 0.65rem;
+	box-shadow: 0 0.9rem 1.8rem rgb(4 18 26 / 0.22);
+	opacity: 0;
+	pointer-events: none;
+	transform: translate(50%, 0.25rem);
+	transition:
+		opacity 150ms ease,
+		transform 170ms ease;
+
+	${ReadingCoverLink}:hover &,
+	${ReadingCoverLink}:focus-visible & {
+		opacity: 1;
+		transform: translate(50%, 0);
+	}
+
+	&::after {
+		position: absolute;
+		right: calc(50% - 0.35rem);
+		bottom: -0.35rem;
+		width: 0.7rem;
+		height: 0.7rem;
+		background: inherit;
+		content: "";
+		transform: rotate(45deg);
+	}
+`;
+
+const TooltipTitle = styled.span`
+	display: block;
+	color: ${theme.colors.foreground};
+	font-family: ${theme.fonts.serif};
+	font-size: 0.9rem;
+	font-weight: 600;
+	line-height: 1.15;
+`;
+
+const TooltipAuthor = styled.span`
+	display: block;
+	margin-top: 0.18rem;
+	color: ${theme.colors.softForeground};
+	font-size: 0.78rem;
+	line-height: 1.25;
+`;
+
+const ReadingNav = styled.div`
+	position: relative;
+	z-index: 1;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+	gap: 0.8rem;
+	margin-top: 0.65rem;
+`;
+
+const ReadingIndex = styled.span`
+	color: ${theme.colors.softForeground};
+	font-size: 0.75rem;
 `;
 
 const MainGrid = styled.div`
@@ -1580,15 +1839,15 @@ const RailControlButton = styled.button`
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	width: 1.875rem;
-	height: 1.875rem;
+	width: 1.715rem;
+	height: 1.715rem;
 	border: 0.0625rem solid ${theme.colors.orangeDark};
 	border-radius: 999px;
 	background: ${theme.colors.transparent};
 	color: ${theme.colors.orangeDark};
 	cursor: pointer;
 	font-family: ${theme.fonts.serif};
-	font-size: 2rem;
+	font-size: 1.75rem;
 	line-height: 1;
 	transition:
 		background 180ms ease,

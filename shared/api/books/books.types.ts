@@ -54,6 +54,12 @@ export interface IBook {
 		currentPage?: number;
 		readCount?: number;
 	} | null;
+	hasPaperBook?: boolean;
+	myPaperBook?: {
+		id: string;
+		status: IPaperBookStatus;
+		note?: string | null;
+	} | null;
 	isTracked?: boolean;
 	myStatus?: IUserBookStatus | null;
 	myCollectionIds?: string[];
@@ -106,6 +112,7 @@ export type IBookSearchScope =
 
 export interface IBookCardsParams {
 	genre?: string;
+	genreIds?: string[];
 	limit?: number;
 	page?: number;
 	search?: string;
@@ -132,3 +139,5 @@ export interface IRateBookResponse {
 	ratingsCount: number;
 	ratingsByStars: number[];
 }
+
+export type IPaperBookStatus = "given_away" | "owned" | "wanted_to_buy";

@@ -19,7 +19,7 @@ interface IConfirmModalProps {
 }
 
 export const ConfirmModal = ({
-	cancelLabel = "Отмена",
+	cancelLabel = "Cancel",
 	children,
 	confirmLabel,
 	confirmLoadingLabel,
@@ -48,7 +48,9 @@ export const ConfirmModal = ({
 					disabled={isLoading}
 					onClick={onConfirm}
 				>
-					{isLoading && confirmLoadingLabel ? confirmLoadingLabel : confirmLabel}
+					{isLoading && confirmLoadingLabel
+						? confirmLoadingLabel
+						: confirmLabel}
 				</Button>
 			</Actions>
 		</Dialog>

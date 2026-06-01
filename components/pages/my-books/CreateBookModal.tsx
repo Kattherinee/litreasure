@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import AutoStoriesOutlinedIcon from "@mui/icons-material/AutoStoriesOutlined";
 import StarBorderIcon from "@mui/icons-material/StarBorder";
@@ -72,7 +72,7 @@ const loadImage = (src: string) =>
 	new Promise<HTMLImageElement>((resolve, reject) => {
 		const image = new Image();
 		image.onload = () => resolve(image);
-		image.onerror = () => reject(new Error("Не удалось прочитать изображение."));
+		image.onerror = () => reject(new Error("Failed to read image."));
 		image.src = src;
 	});
 
@@ -105,9 +105,7 @@ export const CreateBookModal = ({
 	const { data: genreSuggestionsSource = [] } = useGenresQuery();
 	const coverInputRef = useRef<HTMLInputElement | null>(null);
 	const coverCropperRef = useRef<CropperRef>(null);
-	const [form, setForm] = useState<ICreateBookFormState>(
-		createDefaultBookForm,
-	);
+	const [form, setForm] = useState<ICreateBookFormState>(createDefaultBookForm);
 	const [error, setError] = useState("");
 	const [coverPreviewUrl, setCoverPreviewUrl] = useState("");
 	const [coverCrop, setCoverCrop] = useState<ICoverCropState | null>(null);
@@ -195,12 +193,14 @@ export const CreateBookModal = ({
 			setError(
 				caughtError instanceof Error
 					? caughtError.message
-					: "Не удалось загрузить обложку.",
+					: "Failed to upload cover.",
 			);
 		}
 	};
 
-	const handleCoverFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
+	const handleCoverFileChange = async (
+		event: ChangeEvent<HTMLInputElement>,
+	) => {
 		const file = event.target.files?.[0];
 		event.target.value = "";
 		if (!file) return;
@@ -221,7 +221,7 @@ export const CreateBookModal = ({
 			setCoverCrop({ file, height, width });
 			updateForm("coverUrl", "");
 			setError(
-				"Размер изображения не подходит. Выберите новое или обрежьте это.",
+				"Image dimensions are not suitable. Choose a new image or crop this one.",
 			);
 		} catch (caughtError) {
 			URL.revokeObjectURL(nextPreviewUrl);
@@ -230,7 +230,7 @@ export const CreateBookModal = ({
 			setError(
 				caughtError instanceof Error
 					? caughtError.message
-					: "Не удалось прочитать обложку.",
+					: "Failed to read cover.",
 			);
 		}
 	};
@@ -245,12 +245,12 @@ export const CreateBookModal = ({
 				imageSmoothingQuality: "high",
 				width: bookCoverRules.idealWidth,
 			});
-			if (!canvas) throw new Error("Не удалось подготовить обрезку.");
+			if (!canvas) throw new Error("Failed to prepare crop.");
 
 			const blob = await new Promise<Blob | null>((resolve) =>
 				canvas.toBlob(resolve, "image/jpeg", 0.92),
 			);
-			if (!blob) throw new Error("Не удалось обрезать изображение.");
+			if (!blob) throw new Error("Failed to crop image.");
 
 			const croppedFile = new File([blob], coverCrop.file.name, {
 				type: "image/jpeg",
@@ -260,7 +260,7 @@ export const CreateBookModal = ({
 			setError(
 				caughtError instanceof Error
 					? caughtError.message
-					: "Не удалось обрезать обложку.",
+					: "Failed to crop cover.",
 			);
 		}
 	};
@@ -284,7 +284,7 @@ export const CreateBookModal = ({
 			: form.genres;
 
 		if (!title || !author) {
-			setError("Укажите название и автора.");
+			setError("Please provide title and author.");
 			return;
 		}
 
@@ -323,7 +323,7 @@ export const CreateBookModal = ({
 			setError(
 				caughtError instanceof Error
 					? caughtError.message
-					: "Не удалось создать книгу.",
+					: "Failed to create book.",
 			);
 		}
 	};
@@ -337,8 +337,8 @@ export const CreateBookModal = ({
 				onMouseDown={(event) => event.stopPropagation()}
 			>
 				<Header>
-					<Title id="create-book-title">Новая книга</Title>
-					<CloseButton aria-label="Закрыть" type="button" onClick={closeModal}>
+					<Title id="create-book-title">New book</Title>
+					<CloseButton aria-label="Close" type="button" onClick={closeModal}>
 						×
 					</CloseButton>
 				</Header>
@@ -354,9 +354,9 @@ export const CreateBookModal = ({
 									{coverPreviewUrl || form.coverUrl ? null : (
 										<CoverUploadPlaceholder>
 											<AutoStoriesOutlinedIcon aria-hidden="true" />
-											<span>Загрузить обложку</span>
+											<span>Upload cover</span>
 											<CoverUploadHint>
-												Лучше 2:3, допустимо от 500×750 px
+												Best ratio 2:3, minimum 500x750 px
 											</CoverUploadHint>
 										</CoverUploadPlaceholder>
 									)}
@@ -367,10 +367,12 @@ export const CreateBookModal = ({
 											type="button"
 											onClick={() => coverInputRef.current?.click()}
 										>
-											{uploadImageMutation.isPending ? "Загружаем..." : "Заменить"}
+											{uploadImageMutation.isPending
+												? "Uploading..."
+												: "Replace"}
 										</CoverSmallButton>
 										<CoverSmallButton type="button" onClick={clearCover}>
-											Убрать
+											Remove
 										</CoverSmallButton>
 									</CoverActions>
 								) : null}
@@ -383,29 +385,33 @@ export const CreateBookModal = ({
 							/>
 							<TopFields>
 								<FormField>
-									<FormLabel $required>Название</FormLabel>
+									<FormLabel $required>Title</FormLabel>
 									<FormInput
 										required
 										value={form.title}
-										onChange={(event) => updateForm("title", event.target.value)}
+										onChange={(event) =>
+											updateForm("title", event.target.value)
+										}
 									/>
 								</FormField>
 								<FormField>
-									<FormLabel $required>Автор</FormLabel>
+									<FormLabel $required>Author</FormLabel>
 									<FormInput
 										required
 										value={form.author}
-										onChange={(event) => updateForm("author", event.target.value)}
+										onChange={(event) =>
+											updateForm("author", event.target.value)
+										}
 									/>
 								</FormField>
 								<FormField>
-									<FormLabel>Жанры</FormLabel>
+									<FormLabel>Genres</FormLabel>
 									<TagInputRow>
 										{form.genres.map((genre) => (
 											<TagChip key={genre}>
 												<span>{genre}</span>
 												<TagRemoveButton
-													aria-label={`Убрать жанр ${genre}`}
+													aria-label={`Remove genre ${genre}`}
 													type="button"
 													onClick={() => removeGenre(genre)}
 												>
@@ -414,7 +420,7 @@ export const CreateBookModal = ({
 											</TagChip>
 										))}
 										<TagInput
-											placeholder="Например: фэнтези, роман, детектив"
+											placeholder="For example: fantasy, romance, detective"
 											value={form.genreInput}
 											onBlur={() => addGenre(form.genreInput)}
 											onChange={(event) =>
@@ -446,7 +452,7 @@ export const CreateBookModal = ({
 													onMouseDown={(event) => event.preventDefault()}
 													onClick={() => addGenre(form.genreInput)}
 												>
-													Добавить «{form.genreInput.trim()}»
+													Add "{form.genreInput.trim()}"
 												</TagSuggestionButton>
 											) : null}
 										</TagSuggestions>
@@ -455,16 +461,18 @@ export const CreateBookModal = ({
 							</TopFields>
 						</Top>
 						<FormField>
-							<FormLabel>Описание</FormLabel>
+							<FormLabel>Description</FormLabel>
 							<FormTextarea
 								rows={4}
 								value={form.description}
-								onChange={(event) => updateForm("description", event.target.value)}
+								onChange={(event) =>
+									updateForm("description", event.target.value)
+								}
 							/>
 						</FormField>
 						<FormGrid $columns={3}>
 							<FormField>
-								<FormLabel>Год публикации</FormLabel>
+								<FormLabel>Publication year</FormLabel>
 								<FormInput
 									inputMode="numeric"
 									pattern="[0-9]*"
@@ -479,7 +487,7 @@ export const CreateBookModal = ({
 								/>
 							</FormField>
 							<FormField>
-								<FormLabel>Бумажных страниц</FormLabel>
+								<FormLabel>Pages</FormLabel>
 								<FormInput
 									inputMode="numeric"
 									pattern="[0-9]*"
@@ -494,7 +502,7 @@ export const CreateBookModal = ({
 								/>
 							</FormField>
 							<FormField>
-								<FormLabel>Рейтинг</FormLabel>
+								<FormLabel>Rating</FormLabel>
 								<RatingStars>
 									{[1, 2, 3, 4, 5].map((star) => {
 										const isActive = form.rating >= star;
@@ -503,7 +511,7 @@ export const CreateBookModal = ({
 											<StarButton
 												key={star}
 												$isActive={isActive}
-												aria-label={`${star} из 5`}
+												aria-label={`${star} of 5`}
 												type="button"
 												onClick={() => updateForm("rating", star)}
 											>
@@ -520,7 +528,7 @@ export const CreateBookModal = ({
 											type="button"
 											onClick={() => updateForm("rating", 0)}
 										>
-											Сбросить
+											Clear
 										</ClearRatingButton>
 									) : null}
 								</RatingStars>
@@ -528,7 +536,7 @@ export const CreateBookModal = ({
 						</FormGrid>
 						<FormGrid>
 							<FormField>
-								<FormLabel>Издатель</FormLabel>
+								<FormLabel>Publisher</FormLabel>
 								<FormInput
 									value={form.publisher}
 									onChange={(event) =>
@@ -537,11 +545,13 @@ export const CreateBookModal = ({
 								/>
 							</FormField>
 							<FormField>
-								<FormLabel>Язык</FormLabel>
+								<FormLabel>Language</FormLabel>
 								<FormInput
-									placeholder="Например: русский"
+									placeholder="For example: English"
 									value={form.language}
-									onChange={(event) => updateForm("language", event.target.value)}
+									onChange={(event) =>
+										updateForm("language", event.target.value)
+									}
 								/>
 							</FormField>
 						</FormGrid>
@@ -553,14 +563,14 @@ export const CreateBookModal = ({
 								type="button"
 								onClick={closeModal}
 							>
-								Отмена
+								Cancel
 							</CancelButton>
 							<Button
 								buttonType="containedInverted"
 								disabled={createBookMutation.isPending}
 								type="submit"
 							>
-								{createBookMutation.isPending ? "Создаём..." : "Создать книгу"}
+								{createBookMutation.isPending ? "Creating..." : "Create book"}
 							</Button>
 						</Actions>
 					</Form>
@@ -572,14 +582,14 @@ export const CreateBookModal = ({
 					onMouseDown={(event) => event.stopPropagation()}
 				>
 					<CropModal
-						aria-label="Обрезать обложку"
+						aria-label="Crop cover"
 						aria-modal="true"
 						role="dialog"
 						onMouseDown={(event) => event.stopPropagation()}
 					>
 						<CropMessage>
-							Размер изображения не подходит. Выберите новое или обрежьте это
-							под пропорцию 2:3.
+							Image dimensions are not suitable. Choose a new one or crop it to
+							a 2:3 ratio.
 						</CropMessage>
 						<CropperShell>
 							<StyledCropper
@@ -589,18 +599,18 @@ export const CreateBookModal = ({
 							/>
 						</CropperShell>
 						<CropMeta>
-							Исходный размер: {coverCrop.width}×{coverCrop.height} px. После
-							обрезки обложка загрузится как 1000×1500 px.
+							Original size: {coverCrop.width}x{coverCrop.height} px. After
+							cropping, the cover will be uploaded as 1000x1500 px.
 						</CropMeta>
 						<CropActions>
 							<CoverSmallButton
 								type="button"
 								onClick={() => coverInputRef.current?.click()}
 							>
-								Выбрать новое
+								Choose another image
 							</CoverSmallButton>
 							<CoverSmallButton type="button" onClick={handleCropCover}>
-								Обрезать и загрузить
+								Crop and upload
 							</CoverSmallButton>
 						</CropActions>
 					</CropModal>
@@ -719,8 +729,7 @@ const CoverUpload = styled.button<{ $coverUrl?: string }>`
 	place-items: center;
 	overflow: hidden;
 	border: 0.0625rem dashed
-		${({ $coverUrl }) =>
-			$coverUrl ? "transparent" : "rgb(218 142 91 / 0.62)"};
+		${({ $coverUrl }) => ($coverUrl ? "transparent" : "rgb(218 142 91 / 0.62)")};
 	border-radius: 0.8rem;
 	background:
 		linear-gradient(

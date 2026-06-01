@@ -4,6 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 
 import {
 	getRecomendationsByBook,
+	getRecomendationsForYouBooks,
+	getRecomendationsHomeSections,
 	getRecomendationsByPrompt,
 	getRecomendationsWeekBooks,
 } from "./recomendations.api";
@@ -11,12 +13,16 @@ import type {
 	IByBookRecomendationsParams,
 	IByPromptRecomendationsParams,
 } from "./recomendations.types";
+import type { IBookCardsParams } from "../books";
 
 export const recomendationsQueryKeys = {
 	byPrompt: (params: IByPromptRecomendationsParams) =>
 		["recomendations", "prompt", params] as const,
 	byBook: (params: IByBookRecomendationsParams) =>
 		["recomendations", "book", params] as const,
+	forYouBooks: (params: IBookCardsParams = {}) =>
+		["recomendations", "for-you-books", params] as const,
+	homeSections: () => ["recomendations", "home-sections"] as const,
 	weekBooks: () => ["recomendations", "week-books"] as const,
 };
 
@@ -49,5 +55,26 @@ export const useRecomendationsByBookQuery = (
 		enabled: options?.enabled,
 		queryFn: () => getRecomendationsByBook({ params }),
 		queryKey: recomendationsQueryKeys.byBook(params),
+	});
+};
+
+export const useRecomendationsHomeSectionsQuery = (options?: {
+	enabled?: boolean;
+}) => {
+	return useQuery({
+		enabled: options?.enabled,
+		queryFn: getRecomendationsHomeSections,
+		queryKey: recomendationsQueryKeys.homeSections(),
+	});
+};
+
+export const useRecomendationsForYouBooksQuery = (
+	params: IBookCardsParams = {},
+	options?: { enabled?: boolean },
+) => {
+	return useQuery({
+		enabled: options?.enabled,
+		queryFn: () => getRecomendationsForYouBooks({ params }),
+		queryKey: recomendationsQueryKeys.forYouBooks(params),
 	});
 };

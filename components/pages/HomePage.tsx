@@ -2,43 +2,237 @@
 
 import styled from "styled-components";
 
+import { useRecomendationsHomeSectionsQuery } from "@/shared/api/recomendations/recomendations.hooks";
+import type { IHomeSection } from "@/shared/api/recomendations/recomendations.types";
+import { useAuthStore } from "@/shared/store/auth-store";
 import { theme } from "@/shared/theme";
 import { BookOfTheWeekSlider } from "@/shared/ui/BookOfTheWeekSlider";
 import { BookSliderSection } from "@/shared/ui/BookSliderSection";
 import { GenreCarousel } from "@/shared/ui/GenreCarousel";
+import HomeEntitySliderSection from "@/shared/ui/HomeEntitySliderSection/HomeEntitySliderSection";
+
+const normalize = (value?: string) => value?.toLowerCase().trim() ?? "";
+
+const isForYouSection = (section: IHomeSection) => {
+	const key = normalize(section.key);
+
+	return (
+		key.includes("for_you") ||
+		key.includes("for-you") ||
+		key.includes("foryou") ||
+		key.includes("personal")
+	);
+};
+
+const isPopularSection = (section: IHomeSection) => {
+	return section.query.sort === "popular";
+};
+
+const isPopularBooksByKey = (section: IHomeSection) =>
+	normalize(section.key) === "popular-books";
+
+const hasGenreFilter = (section: IHomeSection) =>
+	Boolean(section.query.genre) ||
+	Boolean(section.query.genres?.length) ||
+	Boolean(section.query.genreIds?.length);
 
 const HomePage = () => {
+	const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+	const { data: homeSections } = useRecomendationsHomeSectionsQuery();
+	const bookSections = (homeSections ?? []).filter(
+		(section: IHomeSection) =>
+			section.entity === "books" && section.endpoint === "/books/cards",
+	);
+	const authorSections = (homeSections ?? []).filter(
+		(section: IHomeSection) =>
+			section.entity === "authors" && section.endpoint === "/authors",
+	);
+	const collectionSections = (homeSections ?? []).filter(
+		(section: IHomeSection) =>
+			section.entity === "collections" && section.endpoint === "/collections",
+	);
+	const seriesSections = (homeSections ?? []).filter(
+		(section: IHomeSection) =>
+			section.entity === "series" && section.endpoint === "/series",
+	);
+
+	const explicitForYouSections = bookSections.filter(isForYouSection);
+	const forYouSection = explicitForYouSections[0] ?? null;
+	const afterForYouBookSections = bookSections.filter(
+		(section: IHomeSection) => section.key !== forYouSection?.key,
+	);
+	const popularBookSection =
+		afterForYouBookSections.find(isPopularBooksByKey) ??
+		afterForYouBookSections.find(isPopularSection) ??
+		null;
+	const afterPopularBookSections = afterForYouBookSections.filter(
+		(section: IHomeSection) => section.key !== popularBookSection?.key,
+	);
+	const genreBookSections = afterPopularBookSections.filter(hasGenreFilter);
+	const firstGenreBookSection = genreBookSections[0] ?? null;
+	const secondGenreBookSection = genreBookSections[1] ?? null;
+	const thirdGenreBookSection = genreBookSections[2] ?? null;
+	const fourthGenreBookSection = genreBookSections[3] ?? null;
+	const remainingGenreBookSections = genreBookSections.slice(4);
+	const remainingBookSections = afterPopularBookSections.filter(
+		(section: IHomeSection) =>
+			!genreBookSections.some(
+				(genreSection) => genreSection.key === section.key,
+			),
+	);
+
+	const hasDynamicSections =
+		bookSections.length > 0 ||
+		authorSections.length > 0 ||
+		collectionSections.length > 0 ||
+		seriesSections.length > 0;
+
 	return (
 		<Page>
 			<CatalogHero>
 				<CatalogHeroInner>
 					<HeroCopy>
 						<PageKicker>Litreasure</PageKicker>
-						<PageTitle>Книжная лента</PageTitle>
+						<PageTitle>Book Feed</PageTitle>
 					</HeroCopy>
 					<HeroText>
-						«Читатель проживает тысячу жизней до того, как умрет. Тот, кто
-						никогда не читает, — только одну» — Джордж Мартин.
+						A reader lives a thousand lives before they die. The person who
+						never reads lives only one. - George R.R. Martin.
 					</HeroText>
 				</CatalogHeroInner>
 			</CatalogHero>
 
-			<GenreCarousel />
-
-			<BookSliderSection title="Популярное" sort="popular" limit={20} />
-			<BookOfTheWeekSlider />
-			<BookSliderSection
-				title="Young Adult Fiction"
-				sort="newest"
-				genre="young_adult_fiction"
-				limit={20}
-			/>
-			<BookSliderSection
-				title="Fantasy"
-				sort="newest"
-				genre="fantasy"
-				limit={20}
-			/>
+			{hasDynamicSections ? (
+				<>
+					<GenreCarousel />
+					{forYouSection ? (
+						<BookSliderSection
+							key={forYouSection.key}
+							source="for-you"
+							title="You Might Like"
+							{...forYouSection.query}
+						/>
+					) : isAuthenticated ? (
+						<BookSliderSection source="for-you" title="You Might Like" limit={20} />
+					) : null}
+					<BookOfTheWeekSlider />
+					{popularBookSection ? (
+						<BookSliderSection
+							key={popularBookSection.key}
+							lazy
+							title="Popular"
+							{...popularBookSection.query}
+						/>
+					) : null}
+					{firstGenreBookSection ? (
+						<BookSliderSection
+							key={firstGenreBookSection.key}
+							lazy
+							title={firstGenreBookSection.title}
+							{...firstGenreBookSection.query}
+						/>
+					) : null}
+					{collectionSections.map((section: IHomeSection) => (
+						<HomeEntitySliderSection
+							key={section.key}
+							entity="collections"
+							lazy
+							query={section.query}
+							title={section.title}
+						/>
+					))}
+					{secondGenreBookSection ? (
+						<BookSliderSection
+							key={secondGenreBookSection.key}
+							lazy
+							title={secondGenreBookSection.title}
+							{...secondGenreBookSection.query}
+						/>
+					) : null}
+					{seriesSections.map((section: IHomeSection) => (
+						<HomeEntitySliderSection
+							key={section.key}
+							entity="series"
+							lazy
+							query={section.query}
+							title={section.title}
+						/>
+					))}
+					{thirdGenreBookSection ? (
+						<BookSliderSection
+							key={thirdGenreBookSection.key}
+							lazy
+							title={thirdGenreBookSection.title}
+							{...thirdGenreBookSection.query}
+						/>
+					) : null}
+					{fourthGenreBookSection ? (
+						<BookSliderSection
+							key={fourthGenreBookSection.key}
+							lazy
+							title={fourthGenreBookSection.title}
+							{...fourthGenreBookSection.query}
+						/>
+					) : null}
+					{authorSections.map((section: IHomeSection) => (
+						<HomeEntitySliderSection
+							key={section.key}
+							entity="authors"
+							lazy
+							query={section.query}
+							title={section.title}
+						/>
+					))}
+					{remainingGenreBookSections.map((section: IHomeSection) => (
+						<BookSliderSection
+							key={section.key}
+							lazy
+							title={section.title}
+							{...section.query}
+						/>
+					))}
+					{remainingBookSections.map((section: IHomeSection) => (
+						<BookSliderSection
+							key={section.key}
+							lazy
+							title={section.title}
+							{...section.query}
+						/>
+					))}
+				</>
+			) : (
+				<>
+					<GenreCarousel />
+					{isAuthenticated ? (
+						<BookSliderSection
+							source="for-you"
+							title="You Might Like"
+							sort="newest"
+							limit={20}
+						/>
+					) : (
+						<BookSliderSection title="Popular" sort="popular" limit={20} />
+					)}
+					<BookOfTheWeekSlider />
+					{isAuthenticated ? (
+						<BookSliderSection lazy title="Popular" sort="popular" limit={20} />
+					) : null}
+					<BookSliderSection
+						lazy
+						title="Young Adult Fiction"
+						sort="newest"
+						genre="young_adult_fiction"
+						limit={20}
+					/>
+					<BookSliderSection
+						lazy
+						title="Fantasy"
+						sort="newest"
+						genre="fantasy"
+						limit={20}
+					/>
+				</>
+			)}
 		</Page>
 	);
 };

@@ -2,7 +2,13 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Fragment, type FormEvent, useCallback, useEffect, useState } from "react";
+import {
+	Fragment,
+	type FormEvent,
+	useCallback,
+	useEffect,
+	useState,
+} from "react";
 import type { EmblaCarouselType } from "embla-carousel";
 import useEmblaCarousel from "embla-carousel-react";
 import styled from "styled-components";
@@ -23,9 +29,9 @@ import { Button } from "@/shared/ui/Button";
 import { DateField } from "@/shared/ui/DateField";
 
 const periodOptions: Array<{ label: string; value: IChallengePeriodType }> = [
-	{ label: "Неделя", value: "week" },
-	{ label: "Месяц", value: "month" },
-	{ label: "Год", value: "year" },
+	{ label: "Week", value: "week" },
+	{ label: "Month", value: "month" },
+	{ label: "Year", value: "year" },
 ];
 
 const typeOptions: Array<{
@@ -33,8 +39,8 @@ const typeOptions: Array<{
 	unit: string;
 	value: IChallengeType;
 }> = [
-	{ label: "Книги", unit: "книг", value: "books" },
-	{ label: "Страницы", unit: "страниц", value: "pages" },
+	{ label: "Books", unit: "books", value: "books" },
+	{ label: "Pages", unit: "pages", value: "pages" },
 ];
 
 interface IChallengeFormState {
@@ -176,10 +182,10 @@ const getNextPlanGranularity = (
 
 const getPlanGranularityLabel = (granularity: IPlanGranularity) =>
 	granularity === "month"
-		? "по месяцам"
+		? "by month"
 		: granularity === "week"
-			? "по неделям"
-			: "по дням";
+			? "by week"
+			: "by day";
 
 const formatPlanMonth = (date: Date) =>
 	new Intl.DateTimeFormat("ru-RU", {
@@ -482,23 +488,22 @@ const BookChallengesPage = () => {
 			<Content>
 				<Hero>
 					<HeroTop>
-						<BackLink href="/treasures">Мои сокровища</BackLink>
+						<BackLink href="/treasures">My treasures</BackLink>
 						<NewButton type="button" onClick={openCreateModal}>
-							Новый вызов
+							New challenge
 						</NewButton>
 					</HeroTop>
-					<Title>Книжные вызовы</Title>
+					<Title>Book challenges</Title>
 					<Lead>
-						Следи за целями по книгам и страницам: прогресс чтения и время идут
-						рядом, чтобы было видно не только сколько осталось, но и в каком
-						темпе ты движешься.
+						Track goals for books and pages: reading progress and time are shown
+						together so you can see not only what is left, but also your pace.
 					</Lead>
 				</Hero>
 
 				{isLoading ? (
-					<StateMessage>Загружаем вызовы...</StateMessage>
+					<StateMessage>Loading challenges...</StateMessage>
 				) : isError ? (
-					<StateMessage>Не удалось загрузить книжные вызовы.</StateMessage>
+					<StateMessage>Failed to load book challenges.</StateMessage>
 				) : challenges.length > 0 && selectedChallenge ? (
 					<>
 						<ChallengeWorkspace>
@@ -507,7 +512,7 @@ const BookChallengesPage = () => {
 									<ArrowButton
 										$side="prev"
 										type="button"
-										aria-label="Предыдущий вызов"
+										aria-label="Previous challenge"
 										onClick={goToPrev}
 									>
 										‹
@@ -535,7 +540,7 @@ const BookChallengesPage = () => {
 									<ArrowButton
 										$side="next"
 										type="button"
-										aria-label="Следующий вызов"
+										aria-label="Next challenge"
 										onClick={goToNext}
 									>
 										›
@@ -544,13 +549,13 @@ const BookChallengesPage = () => {
 							</CarouselStage>
 
 							{challenges.length > 1 ? (
-								<CarouselDots aria-label="Выбор вызова">
+								<CarouselDots aria-label="Challenge selection">
 									{challenges.map((challenge, index) => (
 										<DotButton
 											key={challenge.id}
 											type="button"
 											$isActive={index === activeIndex}
-											aria-label={`Показать вызов ${index + 1}`}
+											aria-label={`Show challenge ${index + 1}`}
 											onClick={() => selectChallenge(index)}
 										/>
 									))}
@@ -564,17 +569,17 @@ const BookChallengesPage = () => {
 					</>
 				) : (
 					<EmptyState>
-						<EmptyTitle>Пока нет книжных вызовов</EmptyTitle>
+						<EmptyTitle>No book challenges yet</EmptyTitle>
 						<EmptyText>
-							Создай первый вызов и выбери цель так же спокойно, как в
-							приветствии: период, тип цели и число, к которому хочется прийти.
+							Create your first challenge and choose a goal: period, goal type,
+							and the number you want to reach.
 						</EmptyText>
 						<Button
 							buttonType="containedInverted"
 							type="button"
 							onClick={openCreateModal}
 						>
-							Создать вызов
+							Create challenge
 						</Button>
 					</EmptyState>
 				)}
@@ -622,14 +627,14 @@ const ChallengeSpotlight = ({
 	return (
 		<SpotlightCard>
 			<EditSpotlightButton type="button" onClick={onEdit}>
-				Редактировать
+				Edit
 			</EditSpotlightButton>
 			<RingColumn>
 				<RingProgress
 					color="#da8e5b"
-					label="цель"
+					label="goal"
 					value={valuePercent}
-					footnote={`осталось ${remainingValue} ${typeOption.unit}`}
+					footnote={`${remainingValue} ${typeOption.unit} left`}
 				/>
 			</RingColumn>
 			<SpotlightCenter>
@@ -643,8 +648,10 @@ const ChallengeSpotlight = ({
 				<DateRange>
 					{formatDate(challenge.startDate)} — {formatDate(challenge.endDate)}
 				</DateRange>
-				<SpotlightProgressText>{elapsedDays} дней прошло</SpotlightProgressText>
-				{challenge.isActive ? <ActiveBadge>Активный</ActiveBadge> : null}
+				<SpotlightProgressText>
+					{elapsedDays} days elapsed
+				</SpotlightProgressText>
+				{challenge.isActive ? <ActiveBadge>Active</ActiveBadge> : null}
 				<SpotlightActions>
 					{challenge.isActive ? null : (
 						<ActionButton
@@ -652,7 +659,7 @@ const ChallengeSpotlight = ({
 							type="button"
 							onClick={onActivate}
 						>
-							Сделать активным
+							Set active
 						</ActionButton>
 					)}
 				</SpotlightActions>
@@ -660,9 +667,9 @@ const ChallengeSpotlight = ({
 			<RingColumn>
 				<RingProgress
 					color="#233d4d"
-					label="время"
+					label="time"
 					value={timePercent}
-					footnote={`осталось ${challenge.progress?.time.remainingDays ?? 0} дн.`}
+					footnote={`${challenge.progress?.time.remainingDays ?? 0} days left`}
 				/>
 			</RingColumn>
 		</SpotlightCard>
@@ -761,19 +768,19 @@ const ChallengeTimelineChart = ({
 	return (
 		<TimelinePanel>
 			<TimelineHeader>
-				<TimelineTitle>Темп по отрезкам</TimelineTitle>
+				<TimelineTitle>Pace by segments</TimelineTitle>
 				<TimelineLegend>
 					<TimelineLegendItem $color={theme.colors.orangeLight}>
-						план
+						plan
 					</TimelineLegendItem>
 					<TimelineLegendItem $color={theme.colors.bluePrimary}>
-						прочитано
+						read
 					</TimelineLegendItem>
 				</TimelineLegend>
 			</TimelineHeader>
 			<TimelineSvg
 				role="img"
-				aria-label={`Линия прогресса вызова по ${unit}`}
+				aria-label={`Challenge progress line in ${unit}`}
 				viewBox={`0 0 ${width} ${height}`}
 			>
 				<line
@@ -872,23 +879,25 @@ const ChallengePlanBreakdown = ({
 			<TimelineHeader>
 				<PlanTitleGroup>
 					<TimelineTitle>
-					{drilldownRange
-						? `План по вызову - ${drilldownRange.label}`
-						: "План по вызову"}
+						{drilldownRange
+							? `Challenge plan - ${drilldownRange.label}`
+							: "Challenge plan"}
 					</TimelineTitle>
 					{drilldownRange ? (
 						<PlanBackButton
 							type="button"
 							onClick={() => setDrilldownRange(null)}
 						>
-							Назад
+							Back
 						</PlanBackButton>
 					) : null}
 				</PlanTitleGroup>
 				<PlanHint>{getPlanGranularityLabel(activeGranularity)}</PlanHint>
 			</TimelineHeader>
 			{canDrillDown ? (
-				<PlanHelp>Нажми на точку, чтобы открыть раскладку выбранного периода.</PlanHelp>
+				<PlanHelp>
+					Click a point to open the selected period breakdown.
+				</PlanHelp>
 			) : null}
 			<PlanLine role="list">
 				{points.map((point, i) => (
@@ -897,7 +906,7 @@ const ChallengePlanBreakdown = ({
 							<PlanDot
 								$done={point.actual !== null}
 								$isClickable={canDrillDown}
-								aria-label={`Открыть раскладку: ${point.label}`}
+								aria-label={`Open breakdown: ${point.label}`}
 								disabled={!canDrillDown}
 								type="button"
 								onClick={() =>
@@ -936,7 +945,9 @@ const ChallengeDetails = ({ challenge }: { challenge: IBookChallenge }) => {
 
 	if (!progress) {
 		return (
-			<PanelText>Backend пока не вернул progress для этого вызова.</PanelText>
+			<PanelText>
+				Backend has not returned progress for this challenge yet.
+			</PanelText>
 		);
 	}
 
@@ -949,10 +960,12 @@ const ChallengeDetails = ({ challenge }: { challenge: IBookChallenge }) => {
 					aria-expanded={isTimelineOpen}
 					onClick={() => setIsTimelineOpen((current) => !current)}
 				>
-					<span>Темп по отрезкам</span>
-					<span>{isTimelineOpen ? "Скрыть" : "Показать"}</span>
+					<span>Pace by segments</span>
+					<span>{isTimelineOpen ? "Hide" : "Show"}</span>
 				</TimelineToggle>
-				{isTimelineOpen ? <ChallengeTimelineChart challenge={challenge} /> : null}
+				{isTimelineOpen ? (
+					<ChallengeTimelineChart challenge={challenge} />
+				) : null}
 			</TimelineDisclosure>
 		</>
 	);
@@ -992,13 +1005,11 @@ const ChallengeModal = ({
 		form.type === "pages" ? [600, 1200, 2400, 5000] : [12, 24, 36, 52];
 	const targetPlaceholder = form.type === "pages" ? "1200" : "24";
 	const targetLabel =
-		form.type === "pages"
-			? "Введи количество страниц"
-			: "Введи количество книг";
+		form.type === "pages" ? "Enter page count" : "Enter book count";
 	const targetHelp =
 		form.type === "pages"
-			? "Это число станет целью вызова по страницам. Можно ввести своё или выбрать вариант ниже."
-			: "Это число станет целью книжного вызова. Можно ввести своё или выбрать вариант ниже.";
+			? "This number will be your pages goal. You can type your own value or choose a preset below."
+			: "This number will be your books goal. You can type your own value or choose a preset below.";
 	const handleTargetChange = (value: string) => {
 		const digitsOnly = value.replace(/\D/g, "");
 
@@ -1018,18 +1029,18 @@ const ChallengeModal = ({
 			>
 				<ModalHeader>
 					<ModalTitle id="challenge-modal-title">
-						{mode === "edit" ? "Редактировать вызов" : "Новый книжный вызов"}
+						{mode === "edit" ? "Edit challenge" : "New book challenge"}
 					</ModalTitle>
-					<CloseButton type="button" aria-label="Закрыть" onClick={onClose}>
+					<CloseButton type="button" aria-label="Close" onClick={onClose}>
 						×
 					</CloseButton>
 				</ModalHeader>
 				<Form onSubmit={onSubmit}>
-					{/* Выбор "книги/страницы" временно скрыт: вызовы по страницам еще не подключены. */}
+					{/* Books/pages switch is temporarily hidden: page-based challenges are not connected yet. */}
 
 					<PeriodActivityRow>
 						<Fieldset>
-							<FieldsetLabel>Период</FieldsetLabel>
+							<FieldsetLabel>Period</FieldsetLabel>
 							<Segmented>
 								{periodOptions.map((option) => (
 									<SegmentButton
@@ -1058,7 +1069,7 @@ const ChallengeModal = ({
 								<ToggleThumb $isActive={form.isActive} />
 							</ToggleTrack>
 							<ToggleText>
-								<span>{form.isActive ? "Активный" : "Неактивный"}</span>
+								<span>{form.isActive ? "Active" : "Inactive"}</span>
 							</ToggleText>
 						</ActivityToggle>
 					</PeriodActivityRow>
@@ -1105,13 +1116,13 @@ const ChallengeModal = ({
 
 					<DateGrid>
 						<DateField
-							label="Дата начала"
+							label="Start date"
 							max={form.endDate}
 							value={form.startDate}
 							onChange={onStartDateChange}
 						/>
 						<DateField
-							label="Дата окончания"
+							label="End date"
 							min={form.startDate}
 							value={form.endDate}
 							onChange={(endDate) =>
@@ -1130,18 +1141,18 @@ const ChallengeModal = ({
 								type="button"
 								onClick={onDelete}
 							>
-								Удалить
+								Delete
 							</DangerButton>
 						) : null}
 						<SecondaryButton type="button" onClick={onClose}>
-							Отмена
+							Cancel
 						</SecondaryButton>
 						<Button
 							disabled={isMutating}
 							buttonType="containedInverted"
 							type="submit"
 						>
-							{mode === "edit" ? "Сохранить" : "Создать"}
+							{mode === "edit" ? "Save" : "Create"}
 						</Button>
 					</ModalActions>
 				</Form>
@@ -1342,7 +1353,7 @@ const PlanDotWrap = styled.div`
 	width: 0;
 	position: relative;
 	z-index: 2;
-	/* убери gap — управляй отступами вручную */
+	/* Keep spacing controlled manually instead of relying on gap. */
 `;
 
 const PlanDot = styled.button<{ $done: boolean; $isClickable: boolean }>`
@@ -1351,7 +1362,7 @@ const PlanDot = styled.button<{ $done: boolean; $isClickable: boolean }>`
 	border: 0;
 	border-radius: 50%;
 	flex-shrink: 0;
-	/* ключевое — margin: 0, никаких смещений */
+	/* Keep margin at zero to avoid layout shifts. */
 	margin: 0;
 	padding: 0;
 	position: relative;

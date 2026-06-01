@@ -19,7 +19,9 @@ interface IBookSeriesBlockProps {
 }
 
 const BookSeriesBlock = ({ book }: IBookSeriesBlockProps) => {
-	const [authModalMode, setAuthModalMode] = useState<IAuthModalMode | null>(null);
+	const [authModalMode, setAuthModalMode] = useState<IAuthModalMode | null>(
+		null,
+	);
 	const [seriesSavedOverride, setSeriesSavedOverride] = useState<
 		boolean | null
 	>(null);
@@ -88,13 +90,13 @@ const BookSeriesBlock = ({ book }: IBookSeriesBlockProps) => {
 			{sortedMainSeriesBooks.length > 0 ? (
 				<SeriesGroup>
 					<SeriesHeader>
-						<Title>{book.series.title ?? "Книги серии"}</Title>
+						<Title>{book.series.title ?? "Series books"}</Title>
 						{seriesId ? (
 							isSeriesSaved ? (
 								<SavedSeriesButton
-									aria-label="Убрать серию из сохраненных"
+									aria-label="Remove series from saved"
 									disabled={isSeriesSavePending}
-									title="Убрать из сохраненных"
+									title="Remove from saved"
 									type="button"
 									onClick={() => void handleToggleSeriesSave()}
 								>
@@ -106,7 +108,7 @@ const BookSeriesBlock = ({ book }: IBookSeriesBlockProps) => {
 									type="button"
 									onClick={() => void handleToggleSeriesSave()}
 								>
-									{isSeriesSavePending ? "Сохраняем..." : "Сохранить серию"}
+									{isSeriesSavePending ? "Saving..." : "Save series"}
 								</SaveSeriesButton>
 							)
 						) : null}
@@ -122,7 +124,7 @@ const BookSeriesBlock = ({ book }: IBookSeriesBlockProps) => {
 
 			{sortedAlternativeEditions.length > 0 ? (
 				<SeriesGroup>
-					<Subtitle>Альтернативные издания</Subtitle>
+					<Subtitle>Alternative editions</Subtitle>
 					<BookCarousel
 						activeBookId={book.id}
 						bleed={false}

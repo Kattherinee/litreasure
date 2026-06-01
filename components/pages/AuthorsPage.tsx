@@ -26,7 +26,7 @@ const AuthorsPage = () => {
 	const authorsParams = useMemo(
 		() => ({
 			genreMode: selectedGenres.length > 0 ? genreMode : undefined,
-			genres: selectedGenres.join(",") || undefined,
+			genres: selectedGenres.length > 0 ? selectedGenres : undefined,
 			limit: AUTHORS_LIMIT,
 			maxBooks: booksRange[1] < BOOKS_RANGE_MAX ? booksRange[1] : undefined,
 			minBooks: booksRange[0] > 0 ? booksRange[0] : undefined,
@@ -57,8 +57,8 @@ const AuthorsPage = () => {
 	return (
 		<Page>
 			<Content>
-				<Title>Авторы</Title>
-				<Lead>Публичные авторы и ваши личные авторские записи.</Lead>
+				<Title>Authors</Title>
+				<Lead>Public authors and your personal author records.</Lead>
 
 				<AuthorsFilters
 					booksRange={booksRange}
@@ -86,17 +86,15 @@ const AuthorsPage = () => {
 				/>
 
 				{isLoading ? (
-					<AuthorGrid aria-label="Загружаем авторов">
+					<AuthorGrid aria-label="Loading authors">
 						{Array.from({ length: 8 }, (_, index) => (
 							<AuthorSkeleton key={index} />
 						))}
 					</AuthorGrid>
 				) : isError ? (
-					<StateMessage>
-						Не удалось загрузить авторов: {error.message}
-					</StateMessage>
+					<StateMessage>Could not load authors: {error.message}</StateMessage>
 				) : authors.length === 0 ? (
-					<StateMessage>Авторов пока нет.</StateMessage>
+					<StateMessage>No authors yet.</StateMessage>
 				) : (
 					<>
 						<AuthorGrid>

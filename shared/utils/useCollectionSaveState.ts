@@ -45,10 +45,10 @@ export function useCollectionSaveState(initialSaved?: boolean) {
 			}));
 			if (wasSaved) {
 				await unsaveCollectionMutation.mutateAsync(collection.id);
-				setCollectionStatus("Подборка убрана из сохраненных");
+				setCollectionStatus("Collection removed from saved");
 			} else {
 				await saveCollectionMutation.mutateAsync(collection.id);
-				setCollectionStatus("Подборка сохранена");
+				setCollectionStatus("Collection saved");
 			}
 		} catch (error) {
 			setSavedCollectionOverrides((currentState) => ({
@@ -58,7 +58,7 @@ export function useCollectionSaveState(initialSaved?: boolean) {
 			setCollectionStatus(
 				error instanceof Error
 					? error.message
-					: "Не удалось изменить сохранение подборки",
+					: "Could not update collection save state",
 			);
 		} finally {
 			setSavingCollectionId("");

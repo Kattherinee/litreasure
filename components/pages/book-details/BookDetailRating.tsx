@@ -32,7 +32,7 @@ const BookDetailRating = ({ book }: IBookDetailRatingProps) => {
 				<ScoreBlock>
 					<Score>{formattedRating}</Score>
 					<ScoreMeta>
-						<Stars aria-label={`Рейтинг ${formattedRating} из 5`}>
+						<Stars aria-label={`Rating ${formattedRating} out of 5`}>
 							{Array.from({ length: 5 }, (_, index) =>
 								index < activeStars ? (
 									<StarIcon key={index} aria-hidden="true" />
@@ -41,7 +41,7 @@ const BookDetailRating = ({ book }: IBookDetailRatingProps) => {
 								),
 							)}
 						</Stars>
-						<Votes>{ratingsCount.toLocaleString("ru-RU")}</Votes>
+						<Votes>{ratingsCount.toLocaleString("en-US")}</Votes>
 					</ScoreMeta>
 				</ScoreBlock>
 

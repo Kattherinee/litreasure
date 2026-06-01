@@ -67,18 +67,18 @@ const AuthModal = ({
 			touched.email &&
 			form.email.length > 0 &&
 			!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)
-				? "Некорректный email"
+				? "Invalid email"
 				: "",
 		password:
 			touched.password && form.password.length > 0 && form.password.length < 6
-				? "Минимум 6 символов"
+				? "Minimum 6 characters"
 				: "",
 		confirmPassword:
 			isRegister &&
 			touched.confirmPassword &&
 			form.confirmPassword.length > 0 &&
 			form.password !== form.confirmPassword
-				? "Пароли не совпадают"
+				? "Passwords do not match"
 				: "",
 	};
 
@@ -509,7 +509,9 @@ const SubtitleSlot = styled.div<{ $isRegister: boolean }>`
 	grid-template-rows: ${({ $isRegister }) => ($isRegister ? "1fr" : "0fr")};
 	opacity: ${({ $isRegister }) => ($isRegister ? 1 : 0)};
 	overflow: hidden;
-	transform: translateY(${({ $isRegister }) => ($isRegister ? "0" : "-0.25rem")});
+	transform: translateY(
+		${({ $isRegister }) => ($isRegister ? "0" : "-0.25rem")}
+	);
 	transition:
 		grid-template-rows 220ms ease,
 		opacity 180ms ease,

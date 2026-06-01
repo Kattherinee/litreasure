@@ -94,14 +94,10 @@ export const getSeriesAuthorLine = (series: ISearchSeries) =>
 
 export const getBooksCountLabel = (count: number) => {
 	if (count === 1) {
-		return "1 книга";
+		return "1 book";
 	}
 
-	if (count > 1 && count < 5) {
-		return `${count} книги`;
-	}
-
-	return `${count} книг`;
+	return `${count} books`;
 };
 
 export const HighlightedText = ({
@@ -159,14 +155,14 @@ export const SearchMatchBadge = ({
 };
 
 const formatSearchMatchField = (field: string) => {
-	if (field === "author" || field === "authors") return "Автор";
-	if (field === "genre" || field === "genres") return "Жанр";
-	if (field === "series" || field === "seriesTitle") return "Серия";
-	if (field === "collection" || field === "collections") return "Подборка";
-	if (field === "publisher" || field === "publishers") return "Издатель";
-	if (field === "title" || field === "book") return "Книга";
+	if (field === "author" || field === "authors") return "Author";
+	if (field === "genre" || field === "genres") return "Genre";
+	if (field === "series" || field === "seriesTitle") return "Series";
+	if (field === "collection" || field === "collections") return "Collection";
+	if (field === "publisher" || field === "publishers") return "Publisher";
+	if (field === "title" || field === "book") return "Book";
 
-	return "Совпадение";
+	return "Match";
 };
 
 const ResultMatchLine = styled.span`

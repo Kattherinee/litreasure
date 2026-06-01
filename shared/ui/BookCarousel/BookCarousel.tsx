@@ -16,6 +16,8 @@ const WHEEL_SENSITIVITY = -0.91;
 const EMBLA_WHEEL_DURATION = 15;
 const EMBLA_WHEEL_FRICTION = 0.68;
 const SCROLL_EDGE_THRESHOLD = 0.002;
+const HORIZONTAL_GESTURE_RATIO = 1.15;
+const MIN_HORIZONTAL_DELTA = 4;
 
 interface IBookCarouselControls {
 	canScrollNext: boolean;
@@ -29,6 +31,7 @@ interface IBookCarouselProps {
 	bleed?: boolean;
 	books: IBookCardData[];
 	onControlsChange?: (controls: IBookCarouselControls) => void;
+	showStatusBadge?: boolean;
 	size?: IBookCardSize;
 }
 
@@ -37,6 +40,7 @@ const BookCarousel = ({
 	bleed = true,
 	books,
 	onControlsChange,
+	showStatusBadge = true,
 	size = "default",
 }: IBookCarouselProps) => {
 	const [emblaRef, emblaApi] = useEmblaCarousel({
@@ -93,13 +97,17 @@ const BookCarousel = ({
 				return;
 			}
 
-			const isHorizontalGesture =
-				Math.abs(event.deltaX) > Math.abs(event.deltaY);
+			const absDeltaX = Math.abs(event.deltaX);
+			const absDeltaY = Math.abs(event.deltaY);
+			const hasStrongHorizontalIntent =
+				absDeltaX > MIN_HORIZONTAL_DELTA &&
+				absDeltaX > absDeltaY * HORIZONTAL_GESTURE_RATIO;
+			const isHorizontalGesture = hasStrongHorizontalIntent || event.shiftKey;
 			const rawDelta = isHorizontalGesture
-				? event.deltaX
-				: event.shiftKey
-					? event.deltaY
-					: 0;
+				? absDeltaX > 0
+					? event.deltaX
+					: event.deltaY
+				: 0;
 			const deltaModeMultiplier = event.deltaMode === 1 ? 16 : 1;
 			const scrollDelta = rawDelta * deltaModeMultiplier;
 
@@ -191,7 +199,7 @@ const BookCarousel = ({
 	}
 
 	return (
-		<Carousel aria-label="Карусель книг">
+		<Carousel aria-label="Book carousel">
 			<Viewport $bleed={bleed} $hasOverflow={hasOverflow} ref={setViewportRef}>
 				<Container $bleed={bleed} ref={setContainerRef}>
 					{books.map((book, index) => (
@@ -199,6 +207,7 @@ const BookCarousel = ({
 							<BookCard
 								book={book}
 								isActive={book.id === activeBookId}
+								showStatusBadge={showStatusBadge}
 								size={size}
 							/>
 						</Slide>
@@ -210,7 +219,7 @@ const BookCarousel = ({
 			{onControlsChange || !hasOverflow ? null : (
 				<Controls>
 					<ControlButton
-						aria-label="Предыдущие книги"
+						aria-label="Previous books"
 						disabled={!canScrollPrev}
 						type="button"
 						onClick={scrollPrev}
@@ -218,7 +227,7 @@ const BookCarousel = ({
 						‹
 					</ControlButton>
 					<ControlButton
-						aria-label="Следующие книги"
+						aria-label="Next books"
 						disabled={!canScrollNext}
 						type="button"
 						onClick={scrollNext}

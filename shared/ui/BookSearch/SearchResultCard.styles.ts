@@ -204,19 +204,22 @@ export const SeriesStackCover = styled.img<{ $index: number }>`
 	object-fit: cover;
 `;
 
-export const ResultMain = styled.div`
+export const ResultMain = styled.div<{ $isRecommendation?: boolean }>`
 	display: grid;
-	align-items: center;
+	align-items: ${({ $isRecommendation }) =>
+		$isRecommendation ? "start" : "center"};
 	gap: 0.9rem;
 	grid-template-columns: 3.25rem minmax(0, 1fr);
 	min-width: 0;
 	padding: 0.6rem;
 `;
 
-export const ResultCoverLink = styled(Link)`
+export const ResultCoverLink = styled(Link)<{ $isRecommendation?: boolean }>`
 	display: inline-flex;
-	width: 3.25rem;
-	height: 4.7rem;
+	width: ${({ $isRecommendation }) =>
+		$isRecommendation ? "3.75rem" : "3.25rem"};
+	height: ${({ $isRecommendation }) =>
+		$isRecommendation ? "5.4rem" : "4.7rem"};
 	border-radius: 0.35rem;
 
 	&:focus-visible {
@@ -239,9 +242,11 @@ export const ResultLink = styled(Link)`
 	}
 `;
 
-export const ResultCover = styled.img`
-	width: 3.25rem;
-	height: 4.7rem;
+export const ResultCover = styled.img<{ $isRecommendation?: boolean }>`
+	width: ${({ $isRecommendation }) =>
+		$isRecommendation ? "3.75rem" : "3.25rem"};
+	height: ${({ $isRecommendation }) =>
+		$isRecommendation ? "5.4rem" : "4.7rem"};
 	border-radius: 0.35rem;
 	object-fit: cover;
 `;
@@ -268,6 +273,7 @@ export const ResultSeries = styled.span`
 	font-weight: 600;
 	line-height: 1;
 	overflow: hidden;
+	width: fit-content;
 	text-overflow: ellipsis;
 	white-space: nowrap;
 `;
@@ -299,6 +305,12 @@ export const ResultAuthor = styled.span`
 	white-space: nowrap;
 `;
 
+export const ResultRecommendationAuthor = styled(ResultAuthor)`
+	color: ${theme.colors.orangeDark};
+	font-weight: 700;
+	white-space: normal;
+`;
+
 export const ResultDescription = styled.span`
 	display: -webkit-box;
 	overflow: hidden;
@@ -308,6 +320,16 @@ export const ResultDescription = styled.span`
 	font-family: ${theme.fonts.sans};
 	font-size: 0.82rem;
 	line-height: 1.3;
+`;
+
+export const ResultRecommendationDescription = styled(ResultDescription)`
+	border-left: 0.2rem solid ${theme.colors.orangeLight};
+	border-radius: 0.4rem;
+	background: rgb(218 142 91 / 0.08);
+	padding: 0.55rem 0.7rem;
+	color: ${theme.colors.foreground};
+	font-size: 0.84rem;
+	font-style: italic;
 `;
 
 export const WantButton = styled(Button)<{ $isSaved?: boolean }>`

@@ -94,9 +94,7 @@ export const AvatarStep = ({ avatarUrl, onAvatarChange }: IAvatarStepProps) => {
 			setUploadError("");
 		} catch (error) {
 			setUploadError(
-				error instanceof Error
-					? error.message
-					: "Не удалось подготовить изображение",
+				error instanceof Error ? error.message : "Could not prepare the image",
 			);
 		}
 	};
@@ -116,26 +114,23 @@ export const AvatarStep = ({ avatarUrl, onAvatarChange }: IAvatarStepProps) => {
 			setUploadedPreviewUrl("");
 		} catch (error) {
 			setUploadError(
-				error instanceof Error
-					? error.message
-					: "Не удалось загрузить изображение",
+				error instanceof Error ? error.message : "Could not upload the image",
 			);
 		}
 	};
 
 	return (
 		<StepBody>
-			<StepTitle>Выбери аватар</StepTitle>
+			<StepTitle>Choose an avatar</StepTitle>
 			<StepDescription>
-				Вы можете загрузить свое фото. Нажмите на круг и поправьте
-				кадрирование.
+				You can upload your own photo. Click the circle and adjust the crop.
 			</StepDescription>
 
 			<AvatarLayout>
 				<AvatarUpload
 					role="button"
 					tabIndex={0}
-					aria-label="Выбрать фото профиля"
+					aria-label="Choose profile photo"
 					src={previewUrl}
 					onClick={openFileDialog}
 					onKeyDown={(event) => {
@@ -145,7 +140,7 @@ export const AvatarStep = ({ avatarUrl, onAvatarChange }: IAvatarStepProps) => {
 						}
 					}}
 				>
-					{previewUrl ? null : <AvatarPlaceholder>Фото</AvatarPlaceholder>}
+					{previewUrl ? null : <AvatarPlaceholder>Photo</AvatarPlaceholder>}
 				</AvatarUpload>
 				<HiddenFileInput
 					ref={fileInputRef}
@@ -156,11 +151,11 @@ export const AvatarStep = ({ avatarUrl, onAvatarChange }: IAvatarStepProps) => {
 
 				<Tools>
 					<ToolButton type="button" onClick={openFileDialog}>
-						{previewUrl ? "Изменить" : "Выбрать фото"}
+						{previewUrl ? "Change" : "Choose photo"}
 					</ToolButton>
 					{previewUrl ? (
 						<ToolButton type="button" onClick={clearAvatar}>
-							Удалить
+							Remove
 						</ToolButton>
 					) : null}
 					{uploadedPreviewUrl ? (
@@ -169,14 +164,14 @@ export const AvatarStep = ({ avatarUrl, onAvatarChange }: IAvatarStepProps) => {
 							type="button"
 							onClick={applyUploadedAvatar}
 						>
-							{uploadImageMutation.isPending ? "Загружаем..." : "Готово"}
+							{uploadImageMutation.isPending ? "Uploading..." : "Done"}
 						</PrimaryToolButton>
 					) : null}
 				</Tools>
 				{uploadError ? <UploadError>{uploadError}</UploadError> : null}
 
 				<AvatarChoiceTitle>
-					Или выберите аватар своего персонажа тут
+					Or choose your character avatar here
 				</AvatarChoiceTitle>
 				<AvatarScrollStrip>
 					{avatars.map((avatar) => {
@@ -185,7 +180,7 @@ export const AvatarStep = ({ avatarUrl, onAvatarChange }: IAvatarStepProps) => {
 						return (
 							<AvatarOption
 								key={avatar.id}
-								aria-label={`Выбрать аватар ${avatar.id}`}
+								aria-label={`Choose avatar ${avatar.id}`}
 								aria-pressed={isSelected}
 								type="button"
 								$isSelected={isSelected}
@@ -204,10 +199,10 @@ export const AvatarStep = ({ avatarUrl, onAvatarChange }: IAvatarStepProps) => {
 							<CropModal
 								aria-modal="true"
 								role="dialog"
-								aria-label="Обрезать фото"
+								aria-label="Crop photo"
 								onMouseDown={(event) => event.stopPropagation()}
 							>
-								<CropModalTitle>Обрезать фото</CropModalTitle>
+								<CropModalTitle>Crop photo</CropModalTitle>
 								<CropperShell>
 									<StyledCropper
 										ref={cropperRef}
@@ -217,10 +212,10 @@ export const AvatarStep = ({ avatarUrl, onAvatarChange }: IAvatarStepProps) => {
 								</CropperShell>
 								<CropModalActions>
 									<ToolButton type="button" onClick={cancelCrop}>
-										Отмена
+										Cancel
 									</ToolButton>
 									<PrimaryToolButton type="button" onClick={applyCrop}>
-										Применить
+										Apply
 									</PrimaryToolButton>
 								</CropModalActions>
 							</CropModal>
@@ -238,13 +233,13 @@ const getCroppedAvatarBlob = async (cropper: CropperRef | null) => {
 		imageSmoothingQuality: "high",
 		width: AVATAR_SIZE,
 	});
-	if (!canvas) throw new Error("Не удалось подготовить изображение");
+	if (!canvas) throw new Error("Could not prepare the image");
 
 	return new Promise<Blob>((resolve, reject) => {
 		canvas.toBlob(
 			(blob) => {
 				if (blob) resolve(blob);
-				else reject(new Error("Не удалось подготовить изображение"));
+				else reject(new Error("Could not prepare the image"));
 			},
 			"image/webp",
 			0.92,

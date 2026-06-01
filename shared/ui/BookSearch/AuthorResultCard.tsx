@@ -35,7 +35,7 @@ export const AuthorResultCard = ({
 	saveRecentSearch,
 }: IAuthorResultCardProps) => {
 	const saveAuthorMutation = useSaveAuthorMutation();
-	const [isSaved, setIsSaved] = useState(false);
+	const [isSaved, setIsSaved] = useState(Boolean(author.isSaved));
 
 	const handleOpenResult = () => {
 		saveRecentSearch();
@@ -54,7 +54,10 @@ export const AuthorResultCard = ({
 
 	return (
 		<ResultActionCard>
-			<ResultContentLink href={`/authors/${author.id}`} onClick={handleOpenResult}>
+			<ResultContentLink
+				href={`/authors/${author.id}`}
+				onClick={handleOpenResult}
+			>
 				<AuthorAvatar
 					fontSize="1rem"
 					name={author.name}
@@ -65,7 +68,9 @@ export const AuthorResultCard = ({
 					<ResultTitle>
 						<HighlightedText query={query} text={author.name} />
 					</ResultTitle>
-					<ResultSeries>{getBooksCountLabel(author.bookCount ?? 0)}</ResultSeries>
+					<ResultSeries>
+						{getBooksCountLabel(author.bookCount ?? 0)}
+					</ResultSeries>
 					<SearchMatchBadge
 						match={getEntitySupplementalMatch(author.searchMatches, query, [
 							"author",
@@ -78,12 +83,16 @@ export const AuthorResultCard = ({
 			</ResultContentLink>
 			<MiniSaveButton
 				$isSaved={isSaved}
-				aria-label={isSaved ? "Автор сохранен" : "Сохранить автора"}
+				aria-label={isSaved ? "Author saved" : "Save author"}
 				disabled={isSaved || saveAuthorMutation.isPending}
 				type="button"
 				onClick={() => void handleSaveAuthor()}
 			>
-				{isSaved ? <CheckIcon aria-hidden="true" /> : <AddIcon aria-hidden="true" />}
+				{isSaved ? (
+					<CheckIcon aria-hidden="true" />
+				) : (
+					<AddIcon aria-hidden="true" />
+				)}
 			</MiniSaveButton>
 		</ResultActionCard>
 	);

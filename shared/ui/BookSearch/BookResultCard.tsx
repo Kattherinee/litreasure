@@ -18,6 +18,7 @@ import {
 	ResultMain,
 	ResultMeta,
 	ResultDescription,
+	ResultRecommendationAuthor,
 	ResultSeries,
 	ResultTitle,
 } from "./SearchResultCard.styles";
@@ -31,6 +32,7 @@ import {
 interface IBookResultCardProps {
 	book: ISearchBook;
 	closeSearch: () => void;
+	isRecommendation?: boolean;
 	query: string;
 	saveRecentSearch: () => void;
 }
@@ -38,11 +40,14 @@ interface IBookResultCardProps {
 export const BookResultCard = ({
 	book,
 	closeSearch,
+	isRecommendation = false,
 	query,
 	saveRecentSearch,
 }: IBookResultCardProps) => {
 	const updateTrackingMutation = useUpdateBookTrackingMutation();
-	const [isSaved, setIsSaved] = useState<IUserBookStatus | null>(null);
+	const [currentStatus, setCurrentStatus] = useState<IUserBookStatus | null>(
+		book.myStatus ?? null,
+	);
 	const seriesLine = book.seriesTitle
 		? `${book.orderInSeries}/${book.bookCountInSeries} of  ${book.seriesTitle}`
 		: null;
@@ -85,17 +90,22 @@ export const BookResultCard = ({
 					status,
 				},
 			});
-			setIsSaved(status);
+			setCurrentStatus(status);
 		} catch {
-			setIsSaved(null);
+			setCurrentStatus(null);
 		}
 	};
 
 	return (
 		<ResultItem>
-			<ResultMain>
-				<ResultCoverLink href={`/books/${book.id}`} onClick={handleOpenResult}>
+			<ResultMain $isRecommendation={isRecommendation}>
+				<ResultCoverLink
+					$isRecommendation={isRecommendation}
+					href={`/books/${book.id}`}
+					onClick={handleOpenResult}
+				>
 					<ResultCover
+						$isRecommendation={isRecommendation}
 						alt=""
 						src={book.coverUrl ?? "/images/book-placeholder.svg"}
 					/>
@@ -111,24 +121,44 @@ export const BookResultCard = ({
 							<HighlightedText query={query} text={book.title} />
 						</ResultTitle>
 					</ResultLink>
-					{book.description ? (
-						<ResultDescription>
-							<HighlightedText query={query} text={book.description} />
-						</ResultDescription>
-					) : null}
-					<ResultAuthor>
-						<StyledResultLink
-							href={`/authors/${book.authorId}`}
-							onClick={handleOpenResult}
-						>
-							<HighlightedText query={query} text={book.author} />
-						</StyledResultLink>
-					</ResultAuthor>
+					{isRecommendation ? (
+						<>
+							<ResultRecommendationAuthor>
+								<StyledResultLink
+									href={`/authors/${book.authorId}`}
+									onClick={handleOpenResult}
+								>
+									<HighlightedText query={query} text={book.author} />
+								</StyledResultLink>
+							</ResultRecommendationAuthor>
+							{book.description ? (
+								<ResultDescription>
+									<HighlightedText query={query} text={book.description} />
+								</ResultDescription>
+							) : null}
+						</>
+					) : (
+						<>
+							{book.description ? (
+								<ResultDescription>
+									<HighlightedText query={query} text={book.description} />
+								</ResultDescription>
+							) : null}
+							<ResultAuthor>
+								<StyledResultLink
+									href={`/authors/${book.authorId}`}
+									onClick={handleOpenResult}
+								>
+									<HighlightedText query={query} text={book.author} />
+								</StyledResultLink>
+							</ResultAuthor>
+						</>
+					)}
 					<SearchMatchBadge match={supplementalMatch} query={query} />
 				</ResultMeta>
 			</ResultMain>
 			<BookLibraryAction
-				currentStatus={isSaved}
+				currentStatus={currentStatus}
 				disabled={updateTrackingMutation.isPending}
 				size="small"
 				onSaveStatus={handleSaveBook}

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import type { ChangeEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -118,7 +118,7 @@ export const ProfileAvatarModal = ({
 			setError(
 				caughtError instanceof Error
 					? caughtError.message
-					: "Не удалось подготовить изображение",
+					: "Failed to prepare image",
 			);
 		}
 	};
@@ -148,7 +148,7 @@ export const ProfileAvatarModal = ({
 			setError(
 				caughtError instanceof Error
 					? caughtError.message
-					: "Не удалось обновить аватар",
+					: "Failed to update avatar",
 			);
 		}
 	};
@@ -161,18 +161,18 @@ export const ProfileAvatarModal = ({
 				aria-labelledby="profile-avatar-title"
 				onMouseDown={(event) => event.stopPropagation()}
 			>
-				<CloseButton type="button" aria-label="Закрыть" onClick={onClose}>
+				<CloseButton type="button" aria-label="Close" onClick={onClose}>
 					<span />
 					<span />
 				</CloseButton>
-				<Title id="profile-avatar-title">Аватар профиля</Title>
-				<Lead $withMargin={true}>Загрузите свое фото профиля</Lead>
+				<Title id="profile-avatar-title">Profile avatar</Title>
+				<Lead $withMargin={true}>Upload your profile photo</Lead>
 
 				<AvatarArea>
 					<AvatarUpload
 						role="button"
 						tabIndex={0}
-						aria-label="Выбрать фото профиля"
+						aria-label="Choose profile photo"
 						src={currentImageUrl}
 						onClick={openFileDialog}
 						onKeyDown={(event) => {
@@ -183,7 +183,7 @@ export const ProfileAvatarModal = ({
 						}}
 					>
 						{currentImageUrl ? null : (
-							<AvatarPlaceholder>{initials || "Фото"}</AvatarPlaceholder>
+							<AvatarPlaceholder>{initials || "Photo"}</AvatarPlaceholder>
 						)}
 					</AvatarUpload>
 					<HiddenFileInput
@@ -195,17 +195,17 @@ export const ProfileAvatarModal = ({
 
 					<Tools>
 						<ToolButton type="button" onClick={openFileDialog}>
-							{currentImageUrl ? "Изменить" : "Выбрать фото"}
+							{currentImageUrl ? "Change" : "Choose photo"}
 						</ToolButton>
 						{currentImageUrl ? (
 							<ToolButton type="button" onClick={clearAvatar}>
-								Удалить
+								Remove
 							</ToolButton>
 						) : null}
 					</Tools>
 
 					<Lead $withMargin={false}>
-						Или выберите себе одного из дракончиков ниже
+						Or choose one of the dragon avatars below
 					</Lead>
 					<AvatarOptions>
 						{isAvatarsLoading
@@ -219,7 +219,7 @@ export const ProfileAvatarModal = ({
 									return (
 										<AvatarOption
 											key={avatar.id}
-											aria-label={`Выбрать аватар ${avatar.id}`}
+											aria-label={`Choose avatar ${avatar.id}`}
 											aria-pressed={isSelected}
 											$isSelected={isSelected}
 											onClick={() => selectPresetAvatar(avatar.url)}
@@ -234,16 +234,18 @@ export const ProfileAvatarModal = ({
 					</AvatarOptions>
 				</AvatarArea>
 
-				{typeof document !== "undefined" && uploadedPreviewUrl && isCropModalOpen
+				{typeof document !== "undefined" &&
+				uploadedPreviewUrl &&
+				isCropModalOpen
 					? createPortal(
 							<CropModalOverlay role="presentation" onMouseDown={cancelCrop}>
 								<CropModal
 									aria-modal="true"
 									role="dialog"
-									aria-label="Обрезать фото"
+									aria-label="Crop photo"
 									onMouseDown={(event) => event.stopPropagation()}
 								>
-									<CropModalTitle>Обрезать фото</CropModalTitle>
+									<CropModalTitle>Crop photo</CropModalTitle>
 									<CropperShell>
 										<StyledCropper
 											ref={cropperRef}
@@ -253,10 +255,10 @@ export const ProfileAvatarModal = ({
 									</CropperShell>
 									<CropModalActions>
 										<SecondaryButton type="button" onClick={cancelCrop}>
-											Отмена
+											Cancel
 										</SecondaryButton>
 										<PrimaryButton type="button" onClick={applyCrop}>
-											Применить
+											Apply
 										</PrimaryButton>
 									</CropModalActions>
 								</CropModal>
@@ -268,14 +270,14 @@ export const ProfileAvatarModal = ({
 				{error ? <ErrorText role="alert">{error}</ErrorText> : null}
 				<Actions>
 					<SecondaryButton type="button" onClick={onClose}>
-						Отмена
+						Cancel
 					</SecondaryButton>
 					<PrimaryButton
 						disabled={!canSave || isSaving}
 						type="button"
 						onClick={handleSave}
 					>
-						{isSaving ? "Сохраняем..." : "Сохранить"}
+						{isSaving ? "Saving..." : "Save"}
 					</PrimaryButton>
 				</Actions>
 			</Dialog>
@@ -289,13 +291,13 @@ const getCroppedAvatarBlob = async (cropper: CropperRef | null) => {
 		imageSmoothingQuality: "high",
 		width: AVATAR_SIZE,
 	});
-	if (!canvas) throw new Error("Не удалось подготовить изображение");
+	if (!canvas) throw new Error("Failed to prepare image");
 
 	return new Promise<Blob>((resolve, reject) => {
 		canvas.toBlob(
 			(blob) => {
 				if (blob) resolve(blob);
-				else reject(new Error("Не удалось подготовить изображение"));
+				else reject(new Error("Failed to prepare image"));
 			},
 			"image/webp",
 			0.92,

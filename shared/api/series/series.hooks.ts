@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { authorsQueryKeys } from "../authors";
 import { booksQueryKeys } from "../books";
 import {
+	getPublicSeries,
 	getMySeries,
 	getSeriesDetails,
 	saveSeries,
@@ -16,7 +17,19 @@ export const seriesQueryKeys = {
 	all: ["series"] as const,
 	byId: (id: string) => ["series", id] as const,
 	mine: (params: ISeriesListParams = {}) => ["series", "mine", params] as const,
+	public: (params: ISeriesListParams = {}) =>
+		["series", "public", params] as const,
 };
+
+export const usePublicSeriesQuery = (
+	params: ISeriesListParams = {},
+	options?: { enabled?: boolean },
+) =>
+	useQuery({
+		enabled: options?.enabled ?? true,
+		queryFn: () => getPublicSeries(params),
+		queryKey: seriesQueryKeys.public(params),
+	});
 
 export const useMySeriesQuery = (
 	params: ISeriesListParams = {},

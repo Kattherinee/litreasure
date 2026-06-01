@@ -4,8 +4,10 @@ export interface IGenre {
 	slug: string;
 	bookCount?: number;
 	category?: string;
+	subcategory?: string;
 	group?: string;
 	isSaved?: boolean;
+	isPublic?: boolean;
 }
 
 export interface IGenreGroup {
@@ -20,3 +22,12 @@ export interface IGenresByCategoryResponse {
 	groups: IGenreGroup[];
 	recommendations: IGenre[];
 }
+
+export interface ICreateGenrePayload {
+	name: string;
+	category?: string;
+	subcategory?: string;
+	isPublic?: boolean;
+}
+
+export type IUpdateGenrePayload = Partial<ICreateGenrePayload>;

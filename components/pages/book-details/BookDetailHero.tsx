@@ -4,12 +4,19 @@ import AutoStoriesOutlinedIcon from "@mui/icons-material/AutoStoriesOutlined";
 import CheckIcon from "@mui/icons-material/Check";
 import CheckCircleOutlinedIcon from "@mui/icons-material/CheckCircleOutlined";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
+import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
 import MoreHorizIcon from "@mui/icons-material/MoreHoriz";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import styled from "styled-components";
 
 import type { IBook } from "@/shared/api/books";
+import {
+	useCreatePaperBookStateMutation,
+	type IPaperBookStatus,
+	useDeletePaperBookStateMutation,
+	useUpdatePaperBookStateMutation,
+} from "@/shared/api/paper-books";
 import {
 	type IUserBookStatus,
 	useDeleteBookTrackingMutation,
@@ -18,6 +25,7 @@ import {
 import { useAuthStore } from "@/shared/store/auth-store";
 import { theme } from "@/shared/theme";
 import { AuthorAvatar } from "@/shared/ui/AuthorAvatar";
+import { PaperNotePanel } from "@/shared/ui/PaperNotePanel";
 
 import { BookCollectionModal } from "./BookCollectionModal";
 
@@ -44,27 +52,63 @@ const bookStatuses: Array<{ id: IUserBookStatus; label: string }> = [
 	{ id: "dropped", label: statusLabels.dropped },
 ];
 
+const paperBookStatusLabels: Record<IPaperBookStatus, string> = {
+	given_away: "Given away",
+	owned: "Owned",
+	wanted_to_buy: "Wanted to buy",
+};
+
+const paperBookStatuses: Array<{ id: IPaperBookStatus; label: string }> = [
+	{ id: "owned", label: paperBookStatusLabels.owned },
+	{ id: "wanted_to_buy", label: paperBookStatusLabels.wanted_to_buy },
+	{ id: "given_away", label: paperBookStatusLabels.given_away },
+];
+
 const BookDetailHero = ({ book, onAuthRequired }: IBookDetailHeroProps) => {
 	const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 	const updateTrackingMutation = useUpdateBookTrackingMutation();
 	const deleteTrackingMutation = useDeleteBookTrackingMutation();
+	const createPaperBookMutation = useCreatePaperBookStateMutation();
+	const updatePaperBookMutation = useUpdatePaperBookStateMutation();
+	const deletePaperBookMutation = useDeletePaperBookStateMutation();
 	const [trackingOverride, setTrackingOverride] = useState<
 		IBook["myTracking"] | undefined
+	>();
+	const [paperBookOverride, setPaperBookOverride] = useState<
+		IBook["myPaperBook"] | undefined
 	>();
 	const [collectionIdsOverride, setCollectionIdsOverride] = useState<
 		Set<string> | undefined
 	>();
 	const [trackingStatus, setTrackingStatus] = useState("");
 	const [isStatusMenuOpen, setIsStatusMenuOpen] = useState(false);
+	const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
+	const [isPaperMenuOpen, setIsPaperMenuOpen] = useState(false);
+	const [isNoteEditorOpen, setIsNoteEditorOpen] = useState(false);
+	const [noteDraft, setNoteDraft] = useState("");
+	const [isNoteExpanded, setIsNoteExpanded] = useState(false);
+	const [hasClampedNoteOverflow, setHasClampedNoteOverflow] = useState(false);
 	const [isCollectionModalOpen, setIsCollectionModalOpen] = useState(false);
+	const closeMoreMenuTimer = useRef<number | null>(null);
+	const noteTextRef = useRef<HTMLParagraphElement | null>(null);
 	const seriesTag = getSeriesTag(book);
 	const primaryAuthor = book.authors?.[0];
 	const authorName = primaryAuthor?.name ?? book.author;
 	const authorPhotoUrl = primaryAuthor?.photoUrl;
 	const trackingState =
-		trackingOverride === undefined ? (book.myTracking ?? null) : trackingOverride;
+		trackingOverride === undefined
+			? (book.myTracking ?? null)
+			: trackingOverride;
 	const collectionIds =
 		collectionIdsOverride ?? new Set(book.myCollectionIds ?? []);
+	const paperBookState =
+		paperBookOverride === undefined
+			? (book.myPaperBook ?? null)
+			: paperBookOverride;
+	const paperBookStatus = paperBookState?.status;
+	const paperBookNote = paperBookState?.note?.trim() ?? "";
+	const hasPaperBook = Boolean(paperBookState);
+	const hasPaperBookNote = paperBookNote.length > 0;
 	const currentStatus = trackingState?.status;
 	const isBookTracked = Boolean(currentStatus);
 	const currentStatusLabel = currentStatus
@@ -72,6 +116,57 @@ const BookDetailHero = ({ book, onAuthRequired }: IBookDetailHeroProps) => {
 		: "Add to library";
 	const isTrackingPending =
 		updateTrackingMutation.isPending || deleteTrackingMutation.isPending;
+	const isPaperBookPending =
+		createPaperBookMutation.isPending ||
+		updatePaperBookMutation.isPending ||
+		deletePaperBookMutation.isPending;
+	const isActionPending = isTrackingPending || isPaperBookPending;
+	const isAnyMenuOpen = isStatusMenuOpen || isMoreMenuOpen || isPaperMenuOpen;
+
+	useEffect(() => {
+		return () => {
+			if (closeMoreMenuTimer.current) {
+				window.clearTimeout(closeMoreMenuTimer.current);
+			}
+		};
+	}, []);
+
+	useEffect(() => {
+		if (!hasPaperBookNote) {
+			return;
+		}
+
+		const measureOverflow = () => {
+			const node = noteTextRef.current;
+			if (!node) return;
+			setHasClampedNoteOverflow(node.scrollHeight - node.clientHeight > 1);
+		};
+
+		measureOverflow();
+		window.addEventListener("resize", measureOverflow);
+
+		return () => {
+			window.removeEventListener("resize", measureOverflow);
+		};
+	}, [hasPaperBookNote, paperBookNote]);
+
+	const cancelCloseMoreMenu = () => {
+		if (!closeMoreMenuTimer.current) {
+			return;
+		}
+
+		window.clearTimeout(closeMoreMenuTimer.current);
+		closeMoreMenuTimer.current = null;
+	};
+
+	const scheduleCloseMoreMenu = () => {
+		cancelCloseMoreMenu();
+		closeMoreMenuTimer.current = window.setTimeout(() => {
+			setIsMoreMenuOpen(false);
+			setIsPaperMenuOpen(false);
+			setIsNoteEditorOpen(false);
+		}, 160);
+	};
 
 	const saveStatus = async (status: IUserBookStatus) => {
 		setTrackingStatus("");
@@ -102,6 +197,10 @@ const BookDetailHero = ({ book, onAuthRequired }: IBookDetailHeroProps) => {
 	};
 
 	const handlePrimaryLibraryClick = () => {
+		setIsMoreMenuOpen(false);
+		setIsPaperMenuOpen(false);
+		setIsNoteEditorOpen(false);
+
 		if (isBookTracked) {
 			setIsStatusMenuOpen((current) => !current);
 			return;
@@ -125,6 +224,144 @@ const BookDetailHero = ({ book, onAuthRequired }: IBookDetailHeroProps) => {
 		} catch (error) {
 			setTrackingStatus(
 				error instanceof Error ? error.message : "Could not remove the book.",
+			);
+		}
+	};
+
+	const upsertPaperBook = async (payload: {
+		status?: IPaperBookStatus;
+		note?: string | null;
+	}) => {
+		setTrackingStatus("");
+
+		if (!isAuthenticated) {
+			onAuthRequired?.();
+			return null;
+		}
+
+		const nextPaperBook = hasPaperBook
+			? await updatePaperBookMutation.mutateAsync({
+					bookId: book.id,
+					payload,
+				})
+			: await createPaperBookMutation.mutateAsync({
+					bookId: book.id,
+					payload,
+				});
+		setPaperBookOverride(nextPaperBook);
+		return nextPaperBook;
+	};
+
+	const handlePaperStatusSelect = async (status: IPaperBookStatus) => {
+		try {
+			await upsertPaperBook({
+				note: paperBookState?.note ?? null,
+				status,
+			});
+			setTrackingStatus(`Paper book: ${paperBookStatusLabels[status]}`);
+			setIsMoreMenuOpen(false);
+			setIsPaperMenuOpen(false);
+			setIsNoteEditorOpen(false);
+		} catch (error) {
+			setTrackingStatus(
+				error instanceof Error
+					? error.message
+					: "Could not update paper state.",
+			);
+		}
+	};
+
+	const handleSavePaperNote = async () => {
+		if (!paperBookState?.status) {
+			setTrackingStatus("Choose paper status first");
+			return;
+		}
+
+		try {
+			const nextPaperBook = await upsertPaperBook({
+				note: noteDraft.trim(),
+				status: paperBookState?.status,
+			});
+
+			if (!nextPaperBook) {
+				return;
+			}
+
+			setTrackingStatus(
+				noteDraft.trim() ? "Paper note saved" : "Paper note cleared",
+			);
+			setIsNoteEditorOpen(false);
+		} catch (error) {
+			setTrackingStatus(
+				error instanceof Error ? error.message : "Could not save paper note.",
+			);
+		}
+	};
+
+	const handleRemovePaperBook = async () => {
+		setTrackingStatus("");
+
+		if (!isAuthenticated) {
+			onAuthRequired?.();
+			return;
+		}
+
+		try {
+			await deletePaperBookMutation.mutateAsync(book.id);
+			setPaperBookOverride(null);
+			setNoteDraft("");
+			setIsMoreMenuOpen(false);
+			setIsPaperMenuOpen(false);
+			setIsNoteEditorOpen(false);
+			setTrackingStatus("Removed from paper books");
+		} catch (error) {
+			setTrackingStatus(
+				error instanceof Error
+					? error.message
+					: "Could not remove paper state.",
+			);
+		}
+	};
+
+	const openPaperNoteEditor = () => {
+		if (!paperBookState?.status) {
+			setTrackingStatus("Choose paper status first");
+			return;
+		}
+
+		setNoteDraft(paperBookState?.note ?? "");
+		setIsNoteEditorOpen(true);
+		setIsMoreMenuOpen(false);
+		setIsPaperMenuOpen(false);
+	};
+
+	const handlePaperQuickEdit = () => {
+		if (!paperBookState?.status) {
+			setIsMoreMenuOpen(true);
+			setIsPaperMenuOpen(true);
+			setIsNoteEditorOpen(false);
+			return;
+		}
+
+		openPaperNoteEditor();
+	};
+
+	const handleClearPaperNote = async () => {
+		if (!paperBookState?.status) {
+			setTrackingStatus("Choose paper status first");
+			return;
+		}
+
+		setNoteDraft("");
+		try {
+			await upsertPaperBook({
+				note: "",
+				status: paperBookState.status,
+			});
+			setTrackingStatus("Paper note cleared");
+		} catch (error) {
+			setTrackingStatus(
+				error instanceof Error ? error.message : "Could not clear paper note.",
 			);
 		}
 	};
@@ -168,6 +405,34 @@ const BookDetailHero = ({ book, onAuthRequired }: IBookDetailHeroProps) => {
 				</Author>
 			)}
 
+			{isBookTracked ? (
+				<PaperNotePanel
+					canExpand={hasClampedNoteOverflow}
+					emptyText={
+						paperBookState?.status
+							? "Add a short note about your paper copy."
+							: "Have a paper copy or plan to get one? Set the status."
+					}
+					hasNote={hasPaperBookNote}
+					isActionPending={isActionPending}
+					isExpanded={isNoteExpanded}
+					isInlineEditing={isNoteEditorOpen && Boolean(paperBookState?.status)}
+					noteText={paperBookNote}
+					noteTextRef={noteTextRef}
+					showClearAction={hasPaperBookNote && Boolean(paperBookState?.status)}
+					value={noteDraft}
+					onCancelInlineEdit={() => {
+						setNoteDraft(paperBookState?.note ?? "");
+						setIsNoteEditorOpen(false);
+					}}
+					onClear={() => void handleClearPaperNote()}
+					onDraftChange={setNoteDraft}
+					onEdit={handlePaperQuickEdit}
+					onSaveInlineEdit={() => void handleSavePaperNote()}
+					onToggleExpand={() => setIsNoteExpanded((current) => !current)}
+				/>
+			) : null}
+
 			<ActionRow>
 				<LibraryAction
 					onBlur={(event) => {
@@ -185,7 +450,9 @@ const BookDetailHero = ({ book, onAuthRequired }: IBookDetailHeroProps) => {
 						onClick={handlePrimaryLibraryClick}
 					>
 						<span>{currentStatusLabel}</span>
-						{isBookTracked ? <KeyboardArrowDownIcon aria-hidden="true" /> : null}
+						{isBookTracked ? (
+							<KeyboardArrowDownIcon aria-hidden="true" />
+						) : null}
 					</LibraryMainButton>
 					{isBookTracked ? null : (
 						<LibraryMenuButton
@@ -238,9 +505,87 @@ const BookDetailHero = ({ book, onAuthRequired }: IBookDetailHeroProps) => {
 				>
 					<AutoStoriesOutlinedIcon aria-hidden="true" />
 				</RoundAction>
-				<RoundAction type="button" aria-label="More actions">
-					<MoreHorizIcon aria-hidden="true" />
-				</RoundAction>
+				<MoreActionWrap
+					onMouseEnter={cancelCloseMoreMenu}
+					onMouseLeave={scheduleCloseMoreMenu}
+					onBlur={(event) => {
+						if (!event.currentTarget.contains(event.relatedTarget)) {
+							setIsMoreMenuOpen(false);
+							setIsPaperMenuOpen(false);
+							setIsNoteEditorOpen(false);
+						}
+					}}
+				>
+					<RoundAction
+						aria-expanded={isAnyMenuOpen}
+						aria-haspopup="menu"
+						type="button"
+						aria-label="More actions"
+						onMouseEnter={() => {
+							setIsStatusMenuOpen(false);
+							cancelCloseMoreMenu();
+							setIsMoreMenuOpen(true);
+							setIsNoteEditorOpen(false);
+						}}
+						onClick={() => {
+							setIsStatusMenuOpen(false);
+							setIsMoreMenuOpen((current) => !current);
+							setIsPaperMenuOpen(false);
+							setIsNoteEditorOpen(false);
+						}}
+					>
+						<MoreHorizIcon aria-hidden="true" />
+					</RoundAction>
+					{isMoreMenuOpen ? (
+						<MoreMenu role="menu" onMouseEnter={cancelCloseMoreMenu}>
+							<MoreMenuItem
+								aria-expanded={isPaperMenuOpen}
+								role="menuitem"
+								type="button"
+								onMouseEnter={() => setIsPaperMenuOpen(true)}
+								onMouseOverCapture={() => setIsNoteEditorOpen(false)}
+								onClick={() => setIsPaperMenuOpen((current) => !current)}
+							>
+								<span>Paper book</span>
+								<KeyboardArrowRightIcon aria-hidden="true" />
+							</MoreMenuItem>
+							{isPaperMenuOpen ? (
+								<PaperSubmenu
+									role="menu"
+									onMouseLeave={() => setIsPaperMenuOpen(false)}
+								>
+									{paperBookStatuses.map((status) => (
+										<StatusMenuItem
+											key={status.id}
+											$isActive={paperBookStatus === status.id}
+											role="menuitem"
+											disabled={isActionPending}
+											type="button"
+											onClick={() => void handlePaperStatusSelect(status.id)}
+										>
+											<span>{status.label}</span>
+											{paperBookStatus === status.id ? (
+												<CheckIcon aria-hidden="true" />
+											) : null}
+										</StatusMenuItem>
+									))}
+									<StatusMenuDivider />
+									{hasPaperBook ? (
+										<StatusMenuItem
+											$isActive={false}
+											role="menuitem"
+											disabled={isActionPending}
+											type="button"
+											onClick={() => void handleRemovePaperBook()}
+										>
+											<span>Remove from paper books</span>
+										</StatusMenuItem>
+									) : null}
+								</PaperSubmenu>
+							) : null}
+						</MoreMenu>
+					) : null}
+				</MoreActionWrap>
 			</ActionRow>
 			{trackingStatus ? (
 				<VisuallyHidden role="status">{trackingStatus}</VisuallyHidden>
@@ -296,6 +641,7 @@ const getSeriesTag = (book: IBook) => {
 };
 
 const HeaderBlock = styled.section`
+	position: relative;
 	display: flex;
 	height: var(--detail-backdrop-height);
 	min-width: 0;
@@ -535,9 +881,7 @@ const LibraryMainButton = styled(LibraryButtonBase)`
 	min-width: ${({ $isTracked }) => ($isTracked ? "7.8rem" : "10.5rem")};
 	gap: 0.35rem;
 	border-radius: ${({ $isTracked }) =>
-		$isTracked
-			? "62.4375rem"
-			: "62.4375rem 0 0 62.4375rem"};
+		$isTracked ? "62.4375rem" : "62.4375rem 0 0 62.4375rem"};
 	padding: ${({ $isTracked }) =>
 		$isTracked ? "0.58rem 1.25rem" : "0.58rem 0.9rem 0.58rem 1.2rem"};
 
@@ -643,6 +987,70 @@ const VisuallyHidden = styled.span`
 	clip: rect(0 0 0 0);
 	white-space: nowrap;
 `;
+
+const MoreActionWrap = styled.div`
+	position: relative;
+`;
+
+const MoreMenu = styled.div`
+	position: absolute;
+	top: 0;
+	left: calc(100% + 0.45rem);
+	z-index: 25;
+	display: grid;
+	width: 13.5rem;
+	overflow: visible;
+	border: 0.0625rem solid ${theme.colors.orangeLight};
+	border-radius: 0.9rem;
+	background: #f2efed;
+	box-shadow: 0 1rem 2rem rgb(4 18 26 / 0.16);
+	padding: 0.35rem;
+	text-align: left;
+`;
+
+const MoreMenuItem = styled.button`
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.75rem;
+	border: 0;
+	border-radius: 0.65rem;
+	background: transparent;
+	padding: 0.65rem 0.75rem;
+	color: ${theme.colors.foreground};
+	cursor: pointer;
+	font: inherit;
+	font-size: 0.95rem;
+	font-weight: 500;
+
+	& svg {
+		width: 1.1rem;
+		height: 1.1rem;
+		color: ${theme.colors.orangeDark};
+	}
+
+	&:hover,
+	&:focus-visible {
+		background: rgb(238 179 141 / 0.16);
+		color: ${theme.colors.orangeDark};
+		outline: none;
+	}
+`;
+
+const PaperSubmenu = styled.div`
+	position: absolute;
+	top: 0;
+	left: calc(100% + 0.35rem);
+	z-index: 30;
+	display: grid;
+	width: 14.5rem;
+	border: 0.0625rem solid ${theme.colors.orangeLight};
+	border-radius: 0.9rem;
+	background: #f2efed;
+	box-shadow: 0 1rem 2rem rgb(4 18 26 / 0.16);
+	padding: 0.35rem;
+`;
+
 
 const RoundAction = styled.button`
 	display: inline-flex;

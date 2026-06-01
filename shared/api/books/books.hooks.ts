@@ -66,8 +66,13 @@ export const useCreateBookMutation = () => {
 export const useUpdateBookMutation = () => {
 	const queryClient = useQueryClient();
 	return useMutation({
-		mutationFn: ({ id, payload }: { id: string; payload: IUpdateBookPayload }) =>
-			updateBook(id, payload),
+		mutationFn: ({
+			id,
+			payload,
+		}: {
+			id: string;
+			payload: IUpdateBookPayload;
+		}) => updateBook(id, payload),
 		onSuccess: (_data, { id }) => {
 			queryClient.invalidateQueries({ queryKey: booksQueryKeys.byId(id) });
 			queryClient.invalidateQueries({ queryKey: booksQueryKeys.all });

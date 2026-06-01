@@ -30,12 +30,12 @@ const GenrePage = ({ slug, sort }: IGenrePageProps) => {
 	return (
 		<Page>
 			<Content>
-				<BackLink href="/">На главную</BackLink>
+				<BackLink href="/">Back to home</BackLink>
 				<Title>{slug}</Title>
-				<Lead>Подборка книг в жанре {slug}.</Lead>
+				<Lead>A collection of books in the {slug} genre.</Lead>
 
 				{isLoading ? (
-					<BookGrid aria-label="Загружаем книги">
+					<BookGrid aria-label="Loading books">
 						{Array.from({ length: 12 }, (_, index) => (
 							<BookItem key={index}>
 								<BookCardSkeleton />
@@ -43,11 +43,9 @@ const GenrePage = ({ slug, sort }: IGenrePageProps) => {
 						))}
 					</BookGrid>
 				) : isError ? (
-					<StateMessage>
-						Не удалось загрузить книги: {error.message}
-					</StateMessage>
+					<StateMessage>Could not load books: {error.message}</StateMessage>
 				) : books.length === 0 ? (
-					<StateMessage>В этом жанре пока нет книг.</StateMessage>
+					<StateMessage>No books in this genre yet.</StateMessage>
 				) : (
 					<>
 						<BookGrid>

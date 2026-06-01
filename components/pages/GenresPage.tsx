@@ -51,12 +51,12 @@ const GenresPage = () => {
 				genres: group.genres
 					.filter((genre) => Boolean(genre.bookCount))
 					.sort((firstGenre, secondGenre) =>
-						firstGenre.name.localeCompare(secondGenre.name, "ru"),
+						firstGenre.name.localeCompare(secondGenre.name, "en"),
 					),
 			}))
 			.filter((group) => group.genres.length > 0)
 			.sort((firstGroup, secondGroup) =>
-				firstGroup.name.localeCompare(secondGroup.name, "ru"),
+				firstGroup.name.localeCompare(secondGroup.name, "en"),
 			);
 
 		if (!normalizedSearch) return groupsWithBooks;
@@ -80,12 +80,11 @@ const GenresPage = () => {
 			recommendations
 				.filter((genre) => Boolean(genre.bookCount))
 				.sort((firstGenre, secondGenre) =>
-					firstGenre.name.localeCompare(secondGenre.name, "ru"),
+					firstGenre.name.localeCompare(secondGenre.name, "en"),
 				),
 		[recommendations],
 	);
-	const canReset =
-		search.length > 0 || selectedGroupKeys.length > 0;
+	const canReset = search.length > 0 || selectedGroupKeys.length > 0;
 
 	const visibleGroupKeys =
 		selectedGroupKeys.length > 0 ? selectedGroupKeys : [];
@@ -99,7 +98,7 @@ const GenresPage = () => {
 				.map((genre) => [genre.slug, genre]),
 		).values(),
 	).sort((firstGenre, secondGenre) =>
-		firstGenre.name.localeCompare(secondGenre.name, "ru"),
+		firstGenre.name.localeCompare(secondGenre.name, "en"),
 	);
 	const hasVisibleGroups = visibleGroups.length > 0;
 	const areAllGroupsSelected =
@@ -161,8 +160,8 @@ const GenresPage = () => {
 					type="button"
 					aria-label={
 						isSaved
-							? `Жанр ${genre.name} уже сохранён`
-							: `Добавить жанр ${genre.name} в мои жанры`
+							? `Genre ${genre.name} is already saved`
+							: `Add genre ${genre.name} to my genres`
 					}
 					disabled={isSaved || isSaving}
 					$isSaved={isSaved}
@@ -178,10 +177,10 @@ const GenresPage = () => {
 		<Page>
 			<Hero>
 				<HeroTop>
-					<PageTitle>Жанры</PageTitle>
+					<PageTitle>Genres</PageTitle>
 					<HeroControls>
 						<SearchInput
-							placeholder="Найти жанр или группу"
+							placeholder="Find a genre or group"
 							value={search}
 							onChange={(event) => setSearch(event.target.value)}
 						/>
@@ -193,12 +192,12 @@ const GenresPage = () => {
 									setSelectedGroupKeys([]);
 								}}
 							>
-								Сбросить
+								Reset
 							</ClearButton>
 						) : null}
 						{filteredGroups.length > 0 && !areAllGroupsSelected ? (
 							<SelectAllButton type="button" onClick={selectAllGroups}>
-								Выбрать все
+								Select all
 							</SelectAllButton>
 						) : null}
 					</HeroControls>
@@ -207,7 +206,7 @@ const GenresPage = () => {
 
 			<Content>
 				{isLoading ? (
-					<SkeletonGrid aria-label="Загружаем жанры">
+					<SkeletonGrid aria-label="Loading genres">
 						{Array.from({ length: 32 }, (_, index) => (
 							<GenrePillSkeleton key={index} />
 						))}
@@ -216,7 +215,7 @@ const GenresPage = () => {
 					<>
 						<StickyFilters>
 							<GroupSection>
-								<GroupRow aria-label="Группы жанров">
+								<GroupRow aria-label="Genre groups">
 									{filteredGroups.map((group) => {
 										const isActive = visibleGroupKeys.includes(group.key);
 
@@ -240,8 +239,8 @@ const GenresPage = () => {
 								<SectionHeader>
 									<SectionTitle>
 										{visibleGroups.length > 1
-											? "Жанры в выбранных группах"
-											: visibleGroups[0]?.name || "Жанры"}
+											? "Genres in selected groups"
+											: visibleGroups[0]?.name || "Genres"}
 									</SectionTitle>
 								</SectionHeader>
 								<GenreGrid>{visibleGenres.map(renderGenreChip)}</GenreGrid>
@@ -249,10 +248,10 @@ const GenresPage = () => {
 						) : (
 							<GenreListSection>
 								<SectionHeader>
-									<SectionTitle>Жанры в выбранных группах</SectionTitle>
+									<SectionTitle>Genres in selected groups</SectionTitle>
 								</SectionHeader>
 								<GenreEmptyHint>
-									Выберите одну или несколько групп выше: жанры появятся здесь.
+									Choose one or more groups above: genres will appear here.
 								</GenreEmptyHint>
 							</GenreListSection>
 						)}
@@ -260,7 +259,7 @@ const GenresPage = () => {
 						{filteredRecommendations.length > 0 ? (
 							<RecommendationSection>
 								<SectionHeader>
-									<SectionTitle>Может понравиться</SectionTitle>
+									<SectionTitle>You may like</SectionTitle>
 									<SectionMeta>{filteredRecommendations.length}</SectionMeta>
 								</SectionHeader>
 								<GenreGrid>

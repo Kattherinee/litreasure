@@ -14,16 +14,16 @@ import { theme } from "@/shared/theme";
 export const BOOKS_RANGE_MAX = 100;
 
 const sortOptions: Array<{ label: string; value: IAuthorsSort }> = [
-	{ label: "Популярные", value: "popular" },
-	{ label: "Больше книг", value: "books_desc" },
-	{ label: "Меньше книг", value: "books_asc" },
-	{ label: "А-Z", value: "name_asc" },
-	{ label: "Z-А", value: "name_desc" },
+	{ label: "Popular", value: "popular" },
+	{ label: "More books", value: "books_desc" },
+	{ label: "Fewer books", value: "books_asc" },
+	{ label: "A-Z", value: "name_asc" },
+	{ label: "Z-A", value: "name_desc" },
 ];
 
 const genreModeOptions: Array<{ label: string; value: IAuthorsGenreMode }> = [
-	{ label: "Любой", value: "any" },
-	{ label: "Все", value: "all" },
+	{ label: "Any", value: "any" },
+	{ label: "All", value: "all" },
 ];
 
 interface IAuthorsFiltersProps {
@@ -118,7 +118,7 @@ export const AuthorsFilters = ({
 
 		return [...availableGenres]
 			.sort((firstGenre, secondGenre) =>
-				firstGenre.name.localeCompare(secondGenre.name, "ru"),
+				firstGenre.name.localeCompare(secondGenre.name, "en"),
 			)
 			.filter((genre) => {
 				if (shouldSearchGenres || !normalizedSearch) return true;
@@ -140,7 +140,7 @@ export const AuthorsFilters = ({
 			}}
 		>
 			<DropdownField>
-				<FilterLabel>Сортировка</FilterLabel>
+				<FilterLabel>Sort</FilterLabel>
 				<DropdownButton
 					aria-expanded={isSortOpen}
 					type="button"
@@ -167,20 +167,20 @@ export const AuthorsFilters = ({
 			</DropdownField>
 
 			<DropdownField>
-				<FilterLabel>Жанры</FilterLabel>
+				<FilterLabel>Genres</FilterLabel>
 				<DropdownButton
 					aria-expanded={isGenresOpen}
 					type="button"
 					onClick={() => setIsGenresOpen((current) => !current)}
 				>
 					<DropdownValue>
-						{selectedGenres.length > 0 ? selectedGenreLabels : "Выбрать жанры"}
+						{selectedGenres.length > 0 ? selectedGenreLabels : "Select genres"}
 					</DropdownValue>
 					<ChevronIcon $isOpen={isGenresOpen} aria-hidden="true" />
 				</DropdownButton>
 				<GenreMenu $isOpen={isGenresOpen}>
 					<GenreSearchInput
-						placeholder="Найти жанр"
+						placeholder="Find genre"
 						suppressHydrationWarning
 						value={genreSearch}
 						onChange={(event) => handleGenreSearchChange(event.target.value)}
@@ -191,10 +191,10 @@ export const AuthorsFilters = ({
 							type="button"
 							onClick={onClearGenres}
 						>
-							Все
+							All
 						</GenreChip>
 						{isGenresLoading || isSearchedGenresLoading ? (
-							<GenreEmpty>Загружаем...</GenreEmpty>
+							<GenreEmpty>Loading...</GenreEmpty>
 						) : filteredGenres.length > 0 ? (
 							filteredGenres.map((genre) => (
 								<GenreChip
@@ -207,12 +207,12 @@ export const AuthorsFilters = ({
 								</GenreChip>
 							))
 						) : (
-							<GenreEmpty>Ничего не найдено</GenreEmpty>
+							<GenreEmpty>Nothing found</GenreEmpty>
 						)}
 					</GenreChips>
 					{selectedGenres.length > 0 ? (
 						<ClearGenresButton type="button" onClick={onClearGenres}>
-							Очистить
+							Clear
 						</ClearGenresButton>
 					) : null}
 					{canLoadMoreGenres ? (
@@ -223,7 +223,7 @@ export const AuthorsFilters = ({
 								setGenreSearchPage((currentPage) => currentPage + 1)
 							}
 						>
-							{isSearchedGenresLoading ? "Загружаем..." : "Показать больше"}
+							{isSearchedGenresLoading ? "Loading..." : "Show more"}
 						</LoadMoreGenresButton>
 					) : null}
 				</GenreMenu>
@@ -231,7 +231,7 @@ export const AuthorsFilters = ({
 
 			<RangeField>
 				<FilterLabel id="authors-books-range">
-					Книг: {booksRange[0]} -{" "}
+					Books: {booksRange[0]} -{" "}
 					{booksRange[1] === BOOKS_RANGE_MAX
 						? `${BOOKS_RANGE_MAX}+`
 						: booksRange[1]}
@@ -251,7 +251,7 @@ export const AuthorsFilters = ({
 			</RangeField>
 
 			<ModeField>
-				<FilterLabel>Режим жанров</FilterLabel>
+				<FilterLabel>Genre mode</FilterLabel>
 				<ModeSwitch>
 					{genreModeOptions.map((option) => (
 						<ModeButton
@@ -266,9 +266,9 @@ export const AuthorsFilters = ({
 				</ModeSwitch>
 			</ModeField>
 
-			<ResultsBadge aria-label={`Найдено авторов: ${total}`}>
+			<ResultsBadge aria-label={`Authors found: ${total}`}>
 				<ResultsNumber>{total}</ResultsNumber>
-				<ResultsText>авторов</ResultsText>
+				<ResultsText>authors</ResultsText>
 			</ResultsBadge>
 			{selectedGenreItems.length > 0 ? (
 				<SelectedGenresRow>
@@ -276,7 +276,7 @@ export const AuthorsFilters = ({
 						<SelectedGenreChip key={genre.value}>
 							<span>{genre.label}</span>
 							<RemoveGenreButton
-								aria-label={`Убрать жанр ${genre.label}`}
+								aria-label={`Remove genre ${genre.label}`}
 								type="button"
 								onClick={() => onToggleGenre(genre.value)}
 							>
@@ -285,7 +285,7 @@ export const AuthorsFilters = ({
 						</SelectedGenreChip>
 					))}
 					<ClearSelectedGenresButton type="button" onClick={onClearGenres}>
-						Очистить все
+						Clear all
 					</ClearSelectedGenresButton>
 				</SelectedGenresRow>
 			) : null}

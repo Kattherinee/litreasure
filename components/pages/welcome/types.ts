@@ -8,10 +8,10 @@ export interface IStepConfig {
 }
 
 export const STEPS: IStepConfig[] = [
-	{ id: "profile", label: "Профиль" },
-	{ id: "avatar", label: "Аватар" },
-	{ id: "genres", label: "Жанры", skippable: true },
-	{ id: "goal", label: "Цель", skippable: true },
+	{ id: "profile", label: "Profile" },
+	{ id: "avatar", label: "Avatar" },
+	{ id: "genres", label: "Genres", skippable: true },
+	{ id: "goal", label: "Goal", skippable: true },
 ];
 
 export const MIN_SELECTED_GENRES = 5;
@@ -26,9 +26,9 @@ export const STEP_IMAGES: Record<IWelcomeStep, string> = {
 };
 
 export const STEP_SUBTITLES: Record<IWelcomeStep, string> = {
-	profile: "Каждая история начинается с имени",
+	profile: "Every story starts with a name",
 	avatar: "",
 	genres:
-		"Выбери минимум 5 жанров, которые тебе нравятся. Сначала открой одну или несколько групп, затем отметь жанры внутри.",
-	goal: "Читай больше. Живи глубже.",
+		"Choose at least 5 genres you like. First open one or more groups, then pick genres inside them.",
+	goal: "Read more. Live deeper.",
 };

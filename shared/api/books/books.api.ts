@@ -14,6 +14,8 @@ const getBookCardsQuery = (params: IBookCardsParams) => {
 	const searchParams = new URLSearchParams();
 
 	if (params.genre) searchParams.set("genre", params.genre);
+	if (params.genreIds?.length)
+		searchParams.set("genreIds", params.genreIds.join(","));
 	if (params.limit) searchParams.set("limit", String(params.limit));
 	if (params.page) searchParams.set("page", String(params.page));
 	if (params.search) searchParams.set("search", params.search);

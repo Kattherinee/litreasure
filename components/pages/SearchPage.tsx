@@ -1,11 +1,12 @@
 ﻿"use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import styled from "styled-components";
 import { useQuery } from "@tanstack/react-query";
 
 import { AppPagination } from "@/shared/ui/AppPagination";
+import type { IBookRecomendation } from "@/shared/api/recomendations/recomendations.types";
 
 import {
 	useSearchAllQuery,
@@ -18,6 +19,7 @@ import {
 import { getRecomendationsByPrompt } from "@/shared/api/recomendations/recomendations.api";
 import { theme } from "@/shared/theme";
 import { InputField } from "@/shared/ui/InputField";
+import { useDebouncedValue } from "@/shared/utils/useDebouncedValue";
 import { AuthorResultCard } from "@/shared/ui/BookSearch/AuthorResultCard";
 import { BookResultCard } from "@/shared/ui/BookSearch/BookResultCard";
 import { CollectionResultCard } from "@/shared/ui/BookSearch/CollectionResultCard";
@@ -46,6 +48,19 @@ const getPageParam = (params: URLSearchParams) => {
 	return Number.isFinite(page) && page > 0 ? page : 1;
 };
 
+const getGenreIdsParam = (params: URLSearchParams): string[] | undefined => {
+	const rawGenreIds = params.get("genreIds")?.trim();
+
+	if (!rawGenreIds) return undefined;
+
+	const genreIds = rawGenreIds
+		.split(",")
+		.map((genreId) => genreId.trim())
+		.filter(Boolean);
+
+	return genreIds.length > 0 ? genreIds : undefined;
+};
+
 // Returns 0 if all shown, -1 if more exist but count unknown, N>0 if exact remainder known
 const getSectionRemaining = (shown: number, total?: number): number => {
 	if (total != null) return Math.max(0, total - shown);
@@ -54,7 +69,7 @@ const getSectionRemaining = (shown: number, total?: number): number => {
 
 const getShowAllLabel = (shown: number, total?: number): string => {
 	const remaining = getSectionRemaining(shown, total);
-	return remaining > 0 ? `Смотреть все · ещё ${remaining}` : "Смотреть все →";
+	return remaining > 0 ? `View all · ${remaining}` : "View all ->";
 };
 
 const getSavedRecentSearches = (storageKey: string): string[] => {
@@ -78,15 +93,19 @@ const SearchPage = () => {
 
 	const initialQuery = searchParams.get("q") ?? "";
 	const initialTabParam = searchParams.get("tab") ?? "all";
+	const initialModeParam = searchParams.get("mode");
+	const isInitialRecommendationMode = initialModeParam === "recommendation";
 	const initialTab: ISearchTabActiveId = isSearchTab(initialTabParam)
 		? initialTabParam
 		: "all";
 
 	const [searchValue, setSearchValue] = useState(initialQuery);
 	const [activeTab, setActiveTab] = useState<ISearchTabActiveId>(initialTab);
-	const [isRecommendationMode, setIsRecommendationMode] = useState(false);
+	const [isRecommendationMode, setIsRecommendationMode] = useState(
+		isInitialRecommendationMode,
+	);
 	const [submittedRecommendationPrompt, setSubmittedRecommendationPrompt] =
-		useState("");
+		useState(isInitialRecommendationMode ? initialQuery : "");
 	const [recentSearches, setRecentSearches] = useState<string[]>(() =>
 		getSavedRecentSearches(RECENT_SEARCHES_KEY),
 	);
@@ -96,47 +115,59 @@ const SearchPage = () => {
 		);
 
 	const normalizedSearchValue = searchValue.trim();
+	const debouncedSearchValue = useDebouncedValue(normalizedSearchValue, 1000);
 	const highlightQuery = searchParams.get("q") ?? "";
-	const shouldSearch = normalizedSearchValue.length >= MIN_SEARCH_LENGTH;
+	const shouldSearch = debouncedSearchValue.length >= MIN_SEARCH_LENGTH;
 	const page = getPageParam(searchParams);
+	const genreIds = useMemo(
+		() => getGenreIdsParam(searchParams),
+		[searchParams],
+	);
 	const recommendationPrompt = submittedRecommendationPrompt.trim();
 
 	const { data: allData, isFetching: isFetchingAll } = useSearchAllQuery(
-		normalizedSearchValue,
+		debouncedSearchValue,
 		ALL_PREVIEW_LIMIT,
 		{ enabled: shouldSearch && !isRecommendationMode && activeTab === "all" },
 	);
 
 	const { data: booksData, isFetching: isFetchingBooks } = useSearchBooksQuery(
-		normalizedSearchValue,
+		debouncedSearchValue,
 		page,
 		TAB_SEARCH_LIMIT,
 		{ enabled: shouldSearch && !isRecommendationMode && activeTab === "book" },
 	);
 
 	const { data: authorsData, isFetching: isFetchingAuthors } =
-		useSearchAuthorsQuery(normalizedSearchValue, page, TAB_SEARCH_LIMIT, {
+		useSearchAuthorsQuery(debouncedSearchValue, page, TAB_SEARCH_LIMIT, {
 			enabled: shouldSearch && !isRecommendationMode && activeTab === "author",
 		});
 
 	const { data: seriesData, isFetching: isFetchingSeries } =
-		useSearchSeriesQuery(normalizedSearchValue, page, TAB_SEARCH_LIMIT, {
-			enabled: shouldSearch && !isRecommendationMode && activeTab === "series",
-		});
+		useSearchSeriesQuery(
+			debouncedSearchValue,
+			page,
+			TAB_SEARCH_LIMIT,
+			genreIds,
+			{
+				enabled:
+					shouldSearch && !isRecommendationMode && activeTab === "series",
+			},
+		);
 
 	const { data: genresData, isFetching: isFetchingGenres } =
-		useSearchGenresQuery(normalizedSearchValue, page, TAB_SEARCH_LIMIT, {
+		useSearchGenresQuery(debouncedSearchValue, page, TAB_SEARCH_LIMIT, {
 			enabled: shouldSearch && !isRecommendationMode && activeTab === "genre",
 		});
 
 	const { data: collectionsData, isFetching: isFetchingCollections } =
-		useSearchCollectionsQuery(normalizedSearchValue, page, TAB_SEARCH_LIMIT, {
+		useSearchCollectionsQuery(debouncedSearchValue, page, TAB_SEARCH_LIMIT, {
 			enabled:
 				shouldSearch && !isRecommendationMode && activeTab === "collection",
 		});
 
 	const { data: recommendationBooks, isFetching: isFetchingRecommendations } =
-		useQuery({
+		useQuery<IBookRecomendation[]>({
 			enabled:
 				isRecommendationMode &&
 				recommendationPrompt.length >= MIN_SEARCH_LENGTH,
@@ -160,10 +191,12 @@ const SearchPage = () => {
 		if (isRecommendationMode) {
 			setIsRecommendationMode(false);
 			setSubmittedRecommendationPrompt("");
+			setSearchValue("");
 			return;
 		}
 
 		setIsRecommendationMode(true);
+		setSearchValue("");
 	};
 
 	const tabPages = useMemo(() => {
@@ -190,10 +223,14 @@ const SearchPage = () => {
 				author: book.author ?? book.authors?.[0]?.name ?? "",
 				authorId: book.authors?.[0]?.id,
 				coverUrl: book.coverUrl,
-				description: book.description,
+				description: (book as { description?: string }).description,
 				id: book.id,
+				isTracked: book.isTracked,
 				orderInSeries: book.orderInSeries ?? undefined,
-				searchMatches: book.searchMatches,
+				searchMatches: (
+					book as { searchMatches?: Array<{ field: string; value: string }> }
+				).searchMatches,
+				myStatus: book.myStatus ?? undefined,
 				seriesTitle: book.seriesTitle ?? undefined,
 				title: book.title,
 			})),
@@ -227,9 +264,32 @@ const SearchPage = () => {
 		setRecommendationRecentSearches(nextList);
 	};
 
-	const replaceSearchParams = (nextParams: URLSearchParams) => {
-		router.replace(`/search?${nextParams.toString()}`, { scroll: false });
-	};
+	const replaceSearchParams = useCallback(
+		(nextParams: URLSearchParams) => {
+			router.replace(`/search?${nextParams.toString()}`, { scroll: false });
+		},
+		[router],
+	);
+
+	useEffect(() => {
+		if (isRecommendationMode) return;
+
+		const nextParams = new URLSearchParams(searchParams.toString());
+		if (debouncedSearchValue) {
+			nextParams.set("q", debouncedSearchValue);
+		} else {
+			nextParams.delete("q");
+		}
+		nextParams.delete("page");
+
+		if (nextParams.toString() === searchParams.toString()) return;
+		replaceSearchParams(nextParams);
+	}, [
+		debouncedSearchValue,
+		isRecommendationMode,
+		searchParams,
+		replaceSearchParams,
+	]);
 
 	const handleTabChange = (tab: ISearchTabActiveId) => {
 		setActiveTab(tab);
@@ -255,14 +315,6 @@ const SearchPage = () => {
 
 	const handleSearchChange = (value: string) => {
 		setSearchValue(value);
-		const params = new URLSearchParams(searchParams.toString());
-		if (value.trim()) {
-			params.set("q", value.trim());
-		} else {
-			params.delete("q");
-		}
-		params.delete("page");
-		replaceSearchParams(params);
 	};
 	const handleSuggestionSearch = (suggestion: string) => {
 		setSearchValue(suggestion);
@@ -311,20 +363,20 @@ const SearchPage = () => {
 	return (
 		<PageWrap>
 			<SearchHeader>
-				<SearchTitle>Поиск</SearchTitle>
+				<SearchTitle>Search</SearchTitle>
 				{isRecommendationMode ? (
-					<RecommendationBanner>Режим рекомендаций</RecommendationBanner>
+					<RecommendationBanner>Recommendation mode</RecommendationBanner>
 				) : null}
 				<SearchInputWrap>
 					<SearchIcon aria-hidden="true" />
 					<StyledInput
 						$isRecommendationMode={isRecommendationMode}
-						aria-label="Поиск"
+						aria-label="Search"
 						autoFocus
 						placeholder={
 							isRecommendationMode
-								? "Напишите ваши пожелания, и мы подберем вам подходящую книгу"
-								: "Название, автор, серия, жанр"
+								? "Describe your preferences, and we will suggest a suitable book"
+								: "Title, author, series, genre"
 						}
 						type="search"
 						value={searchValue}
@@ -341,7 +393,7 @@ const SearchPage = () => {
 					/>
 					{searchValue ? (
 						<ClearButton
-							aria-label="Очистить поиск"
+							aria-label="Clear search"
 							type="button"
 							onClick={() => handleSearchChange("")}
 						>
@@ -359,19 +411,19 @@ const SearchPage = () => {
 									saveRecommendationSearch();
 								}}
 							>
-								Подобрать книгу
+								Find a book
 							</RecommendationButton>
 							<RecommendationButton
 								$variant="ghost"
 								type="button"
 								onClick={handleRecommendationModeToggle}
 							>
-								Вернуться к обычному поиску
+								Back to normal search
 							</RecommendationButton>
 						</RecommendationActions>
 					) : (
 						<>
-							<Tabs role="tablist" aria-label="Фильтры поиска">
+							<Tabs role="tablist" aria-label="Search filters">
 								<SearchTabBar
 									activeTab={activeTab}
 									counts={{
@@ -393,11 +445,11 @@ const SearchPage = () => {
 									type="button"
 									onClick={handleRecommendationModeToggle}
 								>
-									Режим рекомендаций
+									Recommendation mode
 								</RecommendationButton>
 								{shouldSearch && !isFetching && tabTotal > 0 ? (
 									<ResultsBadge
-										aria-label={`Найдено ${tabTotal} ${tabTotalLabel}`}
+										aria-label={`Found ${tabTotal} ${tabTotalLabel}`}
 									>
 										<ResultsNumber>{tabTotal}</ResultsNumber>
 										<ResultsText>{tabTotalLabel}</ResultsText>
@@ -414,7 +466,7 @@ const SearchPage = () => {
 					recommendationPrompt.length < MIN_SEARCH_LENGTH ? (
 						recommendationRecentSearches.length > 0 ? (
 							<RecentBlock>
-								<RecentHeading>Недавние запросы рекомендаций</RecentHeading>
+								<RecentHeading>Recent recommendation queries</RecentHeading>
 								<RecentList>
 									{recommendationRecentSearches.map((search) => (
 										<RecentButton
@@ -432,17 +484,18 @@ const SearchPage = () => {
 							</RecentBlock>
 						) : (
 							<EmptyState>
-								Напишите пожелания и нажмите «Подобрать книгу».
+								Describe your preferences and click &quot;Find a book&quot;.
 							</EmptyState>
 						)
 					) : isFetchingRecommendations ? (
-						<EmptyState>Подбираем книги...</EmptyState>
+						<EmptyState>Selecting books...</EmptyState>
 					) : recommendationCards.length > 0 ? (
 						<ResultSection>
 							{recommendationCards.map((book) => (
 								<BookResultCard
 									key={book.id}
 									book={book}
+									isRecommendation
 									closeSearch={noop}
 									query={recommendationPrompt}
 									saveRecentSearch={saveRecommendationSearch}
@@ -451,13 +504,13 @@ const SearchPage = () => {
 						</ResultSection>
 					) : (
 						<EmptyState>
-							Пока ничего не нашли. Попробуйте уточнить пожелания.
+							Nothing found yet. Try refining your preferences.
 						</EmptyState>
 					)
 				) : !shouldSearch ? (
 					recentSearches.length > 0 ? (
 						<RecentBlock>
-							<RecentHeading>Недавние запросы</RecentHeading>
+							<RecentHeading>Recent queries</RecentHeading>
 							<RecentList>
 								{recentSearches.map((search) => (
 									<RecentButton
@@ -471,12 +524,12 @@ const SearchPage = () => {
 							</RecentList>
 						</RecentBlock>
 					) : (
-						<EmptyState>Введите запрос для поиска</EmptyState>
+						<EmptyState>Enter a search query</EmptyState>
 					)
 				) : null}
 
 				{shouldSearch && !isRecommendationMode && isFetching ? (
-					<EmptyState>Ищем...</EmptyState>
+					<EmptyState>Searching...</EmptyState>
 				) : null}
 
 				{shouldSearch &&
@@ -487,7 +540,7 @@ const SearchPage = () => {
 						<>
 							{allData && allData.books.length > 0 ? (
 								<AllSection>
-									<AllSectionTitle>Книги</AllSectionTitle>
+									<AllSectionTitle>Books</AllSectionTitle>
 									<ResultSection>
 										{allData.books.slice(0, ALL_PREVIEW_LIMIT).map((book) => (
 											<BookResultCard
@@ -520,7 +573,7 @@ const SearchPage = () => {
 
 							{allData && allData.authors.length > 0 ? (
 								<AllSection>
-									<AllSectionTitle>Авторы</AllSectionTitle>
+									<AllSectionTitle>Authors</AllSectionTitle>
 									<ResultSection>
 										{allData.authors
 											.slice(0, ALL_PREVIEW_LIMIT)
@@ -555,7 +608,7 @@ const SearchPage = () => {
 
 							{allData && allData.series.length > 0 ? (
 								<AllSection>
-									<AllSectionTitle>Серии</AllSectionTitle>
+									<AllSectionTitle>Series</AllSectionTitle>
 									<ResultSection>
 										{allData.series
 											.slice(0, ALL_PREVIEW_LIMIT)
@@ -590,7 +643,7 @@ const SearchPage = () => {
 
 							{allData && allData.genres.length > 0 ? (
 								<AllSection>
-									<AllSectionTitle>Жанры</AllSectionTitle>
+									<AllSectionTitle>Genres</AllSectionTitle>
 									<ResultSection>
 										{allData.genres.slice(0, ALL_PREVIEW_LIMIT).map((genre) => (
 											<GenreResultCard
@@ -623,7 +676,7 @@ const SearchPage = () => {
 
 							{allData && allData.collections.length > 0 ? (
 								<AllSection>
-									<AllSectionTitle>Подборки</AllSectionTitle>
+									<AllSectionTitle>Collections</AllSectionTitle>
 									<ResultSection>
 										{allData.collections
 											.slice(0, ALL_PREVIEW_LIMIT)
@@ -657,7 +710,7 @@ const SearchPage = () => {
 							) : null}
 						</>
 					) : (
-						<EmptyState>Ничего не найдено.</EmptyState>
+						<EmptyState>Nothing found.</EmptyState>
 					)
 				) : null}
 
@@ -685,7 +738,7 @@ const SearchPage = () => {
 							/>
 						</>
 					) : (
-						<EmptyState>Книги не найдены.</EmptyState>
+						<EmptyState>Books not found.</EmptyState>
 					)
 				) : null}
 
@@ -713,7 +766,7 @@ const SearchPage = () => {
 							/>
 						</>
 					) : (
-						<EmptyState>Авторы не найдены.</EmptyState>
+						<EmptyState>Authors not found.</EmptyState>
 					)
 				) : null}
 
@@ -741,7 +794,7 @@ const SearchPage = () => {
 							/>
 						</>
 					) : (
-						<EmptyState>Серии не найдены.</EmptyState>
+						<EmptyState>Series not found.</EmptyState>
 					)
 				) : null}
 
@@ -770,13 +823,13 @@ const SearchPage = () => {
 						</>
 					) : (
 						<EmptyState>
-							Жанры не найдены.
+							Genres not found.
 							{genresData?.suggestion ? (
 								<SuggestionButton
 									type="button"
 									onClick={() => handleSuggestionSearch(genresData.suggestion!)}
 								>
-									Искать «{genresData.suggestion}»
+									Search for &quot;{genresData.suggestion}&quot;
 								</SuggestionButton>
 							) : null}
 						</EmptyState>
@@ -807,7 +860,7 @@ const SearchPage = () => {
 							/>
 						</>
 					) : (
-						<EmptyState>Подборки не найдены.</EmptyState>
+						<EmptyState>Collections not found.</EmptyState>
 					)
 				) : null}
 			</ResultsArea>

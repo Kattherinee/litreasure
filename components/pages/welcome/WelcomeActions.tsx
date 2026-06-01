@@ -30,7 +30,7 @@ export const WelcomeActions = ({
 	<Actions $hasBackButton={canGoBack}>
 		{canGoBack ? (
 			<SecondaryButton type="button" buttonType="outlined" onClick={onBack}>
-				Назад
+				Back
 			</SecondaryButton>
 		) : null}
 		<RightActions>
@@ -41,7 +41,7 @@ export const WelcomeActions = ({
 					buttonType="containedInverted"
 					onClick={onFinish}
 				>
-					Завершить
+					Finish
 				</PrimaryButton>
 			) : (
 				<PrimaryButton
@@ -51,10 +51,10 @@ export const WelcomeActions = ({
 					onClick={onNext}
 				>
 					{isCheckingUsername
-						? "Проверяем..."
+						? "Checking..."
 						: isSavingProfile
-							? "Сохраняем..."
-							: "Дальше"}
+							? "Saving..."
+							: "Next"}
 				</PrimaryButton>
 			)}
 		</RightActions>

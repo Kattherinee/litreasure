@@ -23,7 +23,7 @@ export const StepTabs = ({
 	onSkip,
 }: IProps) => (
 	<Header>
-		<Tabs aria-label="Этапы регистрации">
+		<Tabs aria-label="Registration steps">
 			{STEPS.map((step, index) => {
 				const isActive = step.id === activeStep;
 				const isComplete = index < activeStepIndex;
@@ -44,7 +44,7 @@ export const StepTabs = ({
 		</Tabs>
 		{canSkip && onSkip ? (
 			<SkipButton type="button" onClick={onSkip}>
-				Пропустить
+				Skip
 			</SkipButton>
 		) : null}
 	</Header>

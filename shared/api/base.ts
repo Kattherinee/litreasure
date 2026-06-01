@@ -41,10 +41,7 @@ const handleResponse = async <T>(response: Response): Promise<T> => {
 	return response.json() as Promise<T>;
 };
 
-const buildHeaders = (
-	options: RequestInit,
-	authHeader?: string,
-): Headers => {
+const buildHeaders = (options: RequestInit, authHeader?: string): Headers => {
 	const headers = new Headers(options.headers);
 	const hasBody = typeof options.body !== "undefined";
 	const isFormData =
@@ -95,7 +92,7 @@ export const requestAuth = async <T>(
 	options: RequestInit = {},
 ): Promise<T> => {
 	const token = getStoredAccessToken();
-	if (!token) throw new Error("Требуется авторизация");
+	if (!token) throw new Error("Authorization is required");
 	const response = await fetch(`${API_BASE_URL}${path}`, {
 		...options,
 		headers: buildHeaders(options, `Bearer ${token}`),

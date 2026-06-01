@@ -67,7 +67,7 @@ export interface IBookCollectionPreview {
 
 export interface ICollectionsListParams {
 	genreMode?: ICollectionFilterMode;
-	genres?: string;
+	genres?: string[];
 	sort?: ICollectionSort;
 	tagMode?: ICollectionFilterMode;
 	tags?: string;

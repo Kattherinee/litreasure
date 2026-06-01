@@ -43,7 +43,7 @@ export interface IAuthorDetails extends IAuthorPreview {
 
 export interface IAuthorsListParams {
 	genreMode?: IAuthorsGenreMode;
-	genres?: string;
+	genres?: string[];
 	limit?: number;
 	maxBooks?: number;
 	minBooks?: number;

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import styled from "styled-components";
@@ -22,7 +22,7 @@ const SeriesPage = ({ id }: ISeriesPageProps) => {
 		return (
 			<Page>
 				<Content>
-					<StateMessage>Загружаем серию...</StateMessage>
+					<StateMessage>Loading series...</StateMessage>
 				</Content>
 			</Page>
 		);
@@ -32,9 +32,7 @@ const SeriesPage = ({ id }: ISeriesPageProps) => {
 		return (
 			<Page>
 				<Content>
-					<StateMessage>
-						Не удалось загрузить серию: {error.message}
-					</StateMessage>
+					<StateMessage>Failed to load series: {error.message}</StateMessage>
 				</Content>
 			</Page>
 		);
@@ -44,7 +42,7 @@ const SeriesPage = ({ id }: ISeriesPageProps) => {
 		return (
 			<Page>
 				<Content>
-					<StateMessage>Серия не найдена.</StateMessage>
+					<StateMessage>Series not found.</StateMessage>
 				</Content>
 			</Page>
 		);
@@ -53,11 +51,11 @@ const SeriesPage = ({ id }: ISeriesPageProps) => {
 	return (
 		<Page>
 			<Content>
-				<BackLink href="/treasures">Мои сокровища</BackLink>
+				<BackLink href="/treasures">My treasures</BackLink>
 				<Hero>
 					<SeriesCover $coverUrl={series.coverUrl} aria-hidden="true" />
 					<HeroCopy>
-						<Eyebrow>Серия</Eyebrow>
+						<Eyebrow>Series</Eyebrow>
 						<Title>{series.title}</Title>
 						{series.authorName ? (
 							<AuthorLine>
@@ -79,7 +77,7 @@ const SeriesPage = ({ id }: ISeriesPageProps) => {
 						<MetaRow>
 							<MetaItem>
 								<MetaValue>{series.bookCount ?? series.books.length}</MetaValue>
-								<MetaLabel>книг в серии</MetaLabel>
+								<MetaLabel>books in series</MetaLabel>
 							</MetaItem>
 						</MetaRow>
 						{series.description ? (
@@ -90,7 +88,7 @@ const SeriesPage = ({ id }: ISeriesPageProps) => {
 
 				{series.genres.length > 0 ? (
 					<Section>
-						<SectionTitle>Жанры серии</SectionTitle>
+						<SectionTitle>Series genres</SectionTitle>
 						<GenreList>
 							{series.genres.map((genre) => (
 								<GenrePill
@@ -109,7 +107,7 @@ const SeriesPage = ({ id }: ISeriesPageProps) => {
 				) : null}
 
 				<Section>
-					<SectionTitle>Книги серии</SectionTitle>
+					<SectionTitle>Series books</SectionTitle>
 					{series.books.length > 0 ? (
 						<BookList>
 							{series.books.map((book) => (
@@ -123,7 +121,7 @@ const SeriesPage = ({ id }: ISeriesPageProps) => {
 							))}
 						</BookList>
 					) : (
-						<StateMessage>В серии пока нет книг.</StateMessage>
+						<StateMessage>No books in this series yet.</StateMessage>
 					)}
 				</Section>
 			</Content>

@@ -13,17 +13,17 @@ export type ISearchTabId =
 export type ISearchTabActiveId = ISearchTabId | "all";
 
 export const SEARCH_TABS: Array<{ id: ISearchTabId; label: string }> = [
-	{ id: "book", label: "Книги" },
-	{ id: "author", label: "Авторы" },
-	{ id: "series", label: "Серии" },
-	{ id: "genre", label: "Жанры" },
-	{ id: "collection", label: "Подборки" },
+	{ id: "book", label: "Books" },
+	{ id: "author", label: "Authors" },
+	{ id: "series", label: "Series" },
+	{ id: "genre", label: "Genres" },
+	{ id: "collection", label: "Collections" },
 ];
 
 export const ALL_SEARCH_TAB_OPTIONS: Array<{
 	id: ISearchTabActiveId;
 	label: string;
-}> = [{ id: "all", label: "Все" }, ...SEARCH_TABS];
+}> = [{ id: "all", label: "All" }, ...SEARCH_TABS];
 
 interface ISearchTabBarProps {
 	activeTab: ISearchTabActiveId;

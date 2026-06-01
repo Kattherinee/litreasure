@@ -1,3 +1,5 @@
+import type { IUserBookStatus } from "../user-books";
+
 export interface ISearchMatch {
 	field: string;
 	value: string;
@@ -10,6 +12,8 @@ export interface ISearchBook {
 	bookCountInSeries?: number;
 	coverUrl?: string;
 	description?: string;
+	isTracked?: boolean;
+	myStatus?: IUserBookStatus | null;
 	orderInSeries?: number;
 	searchMatches?: ISearchMatch[];
 	seriesTitle?: string;
@@ -21,6 +25,7 @@ export interface ISearchAuthor {
 	bookCount?: number;
 	name: string;
 	photoUrl?: string;
+	isSaved?: boolean;
 	searchMatches?: ISearchMatch[];
 }
 
@@ -30,6 +35,7 @@ export interface ISearchSeries {
 	authorPhotoUrl?: string;
 	bookCount?: number;
 	coverUrl?: string;
+	isSaved?: boolean;
 	openLibrarySeriesKey?: string;
 	searchMatches?: ISearchMatch[];
 	authorId?: string;
@@ -39,6 +45,7 @@ export interface ISearchSeries {
 export interface ISearchGenre {
 	id: string;
 	name: string;
+	isSaved?: boolean;
 	searchMatches?: ISearchMatch[];
 	slug: string;
 }
@@ -47,6 +54,7 @@ export interface ISearchCollection {
 	id: string;
 	bookCount?: number;
 	description?: string;
+	isSaved?: boolean;
 	ownerAvatarUrl?: string;
 	ownerName?: string;
 	searchMatches?: ISearchMatch[];

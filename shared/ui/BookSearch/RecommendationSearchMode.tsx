@@ -82,29 +82,29 @@ export const RecommendationSearchMode = ({
 	return (
 		<RecommendationShell>
 			<RecommendationIntro>
-				<RecommendationBadge>Режим рекомендаций</RecommendationBadge>
+				<RecommendationBadge>Recommendation mode</RecommendationBadge>
 				<RecommendationTitle>
-					Напишите ваши пожелания, и мы подберем вам подходящую книгу.
+					Describe your preferences and we will recommend a fitting book.
 				</RecommendationTitle>
 				<RecommendationText>
-					Здесь можно искать не по названию, а по настроению, жанру и ощущениям.
+					Here you can search by mood, genre, and feeling, not only by title.
 				</RecommendationText>
 			</RecommendationIntro>
 
 			<PromptRow>
 				<PromptField
-					aria-label="Пожелания для подбора книги"
-					placeholder="Например: уютный детектив с магией и хорошим юмором"
+					aria-label="Preferences for book recommendations"
+					placeholder="For example: a cozy detective story with magic and good humor"
 					rows={4}
 					value={prompt}
 					onChange={(event) => setPrompt(event.target.value)}
 				/>
 				<PromptActions>
 					<PromptButton type="button" onClick={handleSubmit}>
-						Подобрать книгу
+						Find a book
 					</PromptButton>
 					<BackButton type="button" onClick={onExitMode}>
-						Вернуться к обычному поиску
+						Back to normal search
 					</BackButton>
 				</PromptActions>
 			</PromptRow>
@@ -112,12 +112,12 @@ export const RecommendationSearchMode = ({
 			{submittedPrompt ? (
 				<ResultsSection>
 					<ResultsMeta>
-						<span>Запрос</span>
+						<span>Query</span>
 						<strong>{submittedPrompt}</strong>
 					</ResultsMeta>
 
 					{isFetching ? (
-						<EmptyState>Подбираем книги...</EmptyState>
+						<EmptyState>Finding books...</EmptyState>
 					) : cards.length > 0 ? (
 						<CardsList>
 							{cards.map((book) => (
@@ -132,14 +132,14 @@ export const RecommendationSearchMode = ({
 						</CardsList>
 					) : (
 						<EmptyState>
-							Пока ничего не нашли. Попробуйте уточнить пожелания.
+							Nothing found yet. Try refining your request.
 						</EmptyState>
 					)}
 				</ResultsSection>
 			) : (
 				<PlaceholderBox>
 					<PlaceholderText>
-						Напишите ваши пожелания, и мы подберем вам подходящую книгу.
+						Describe your preferences and we will recommend a fitting book.
 					</PlaceholderText>
 				</PlaceholderBox>
 			)}

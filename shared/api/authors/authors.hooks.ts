@@ -28,8 +28,12 @@ export const authorsQueryKeys = {
 	mine: (params: IAuthorsListParams) => ["authors", "mine", params] as const,
 };
 
-export const useAuthorsQuery = (params: IAuthorsListParams = {}) =>
+export const useAuthorsQuery = (
+	params: IAuthorsListParams = {},
+	options?: { enabled?: boolean },
+) =>
 	useQuery({
+		enabled: options?.enabled ?? true,
 		queryFn: () => getAuthors(params),
 		queryKey: authorsQueryKeys.list(params),
 	});

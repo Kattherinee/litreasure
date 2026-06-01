@@ -32,7 +32,7 @@ export const uploadImage = async ({
 	purpose: IImageUploadPurpose;
 }): Promise<IImageUploadResponse> => {
 	const token = getStoredAccessToken();
-	if (!token) throw new Error("Требуется авторизация");
+	if (!token) throw new Error("Authorization is required");
 
 	const formData = new FormData();
 	formData.append("file", file, `${purpose}.webp`);

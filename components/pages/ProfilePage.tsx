@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useMemo, useState } from "react";
@@ -55,10 +55,8 @@ const ProfilePage = () => {
 		return (
 			<Page>
 				<Content>
-					<Title>Профиль</Title>
-					<EmptyState>
-						Войдите в аккаунт, чтобы редактировать профиль.
-					</EmptyState>
+					<Title>Profile</Title>
+					<EmptyState>Sign in to edit your profile.</EmptyState>
 				</Content>
 			</Page>
 		);
@@ -75,12 +73,12 @@ const ProfilePage = () => {
 		const nextEmail = email.trim();
 
 		if (nextUsername.length < 3) {
-			setProfileMessage("Username должен быть не короче 3 символов.");
+			setProfileMessage("Username must be at least 3 characters long.");
 			return;
 		}
 
 		if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(nextEmail)) {
-			setProfileMessage("Введите корректный email.");
+			setProfileMessage("Enter a valid email address.");
 			return;
 		}
 
@@ -88,7 +86,7 @@ const ProfilePage = () => {
 			if (nextUsername !== user.username) {
 				const available = await checkUsernameAvailability(nextUsername);
 				if (!available) {
-					setProfileMessage("Этот username уже занят.");
+					setProfileMessage("This username is already taken.");
 					return;
 				}
 			}
@@ -106,12 +104,10 @@ const ProfilePage = () => {
 				name: nextName || undefined,
 				username: nextUsername,
 			});
-			setProfileMessage("Профиль сохранен.");
+			setProfileMessage("Profile saved.");
 		} catch (error) {
 			setProfileMessage(
-				error instanceof Error
-					? error.message
-					: "Не удалось сохранить профиль.",
+				error instanceof Error ? error.message : "Failed to save profile.",
 			);
 		}
 	};
@@ -121,12 +117,12 @@ const ProfilePage = () => {
 		setPasswordMessage("");
 
 		if (newPassword.length < 6) {
-			setPasswordMessage("Новый пароль должен быть не короче 6 символов.");
+			setPasswordMessage("New password must be at least 6 characters long.");
 			return;
 		}
 
 		if (newPassword !== confirmPassword) {
-			setPasswordMessage("Пароли не совпадают.");
+			setPasswordMessage("Passwords do not match.");
 			return;
 		}
 
@@ -137,10 +133,10 @@ const ProfilePage = () => {
 			});
 			setNewPassword("");
 			setConfirmPassword("");
-			setPasswordMessage("Пароль обновлен.");
+			setPasswordMessage("Password updated.");
 		} catch (error) {
 			setPasswordMessage(
-				error instanceof Error ? error.message : "Не удалось обновить пароль.",
+				error instanceof Error ? error.message : "Failed to update password.",
 			);
 		}
 	};
@@ -154,7 +150,7 @@ const ProfilePage = () => {
 			router.push("/");
 		} catch (error) {
 			setDeleteMessage(
-				error instanceof Error ? error.message : "Не удалось удалить аккаунт.",
+				error instanceof Error ? error.message : "Failed to delete account.",
 			);
 		}
 	};
@@ -170,21 +166,21 @@ const ProfilePage = () => {
 						<Avatar $avatarUrl={avatarUrl}>
 							{avatarUrl ? null : initials}
 						</Avatar>
-						<AvatarHint>Изменить аватар</AvatarHint>
+						<AvatarHint>Change avatar</AvatarHint>
 					</AvatarButton>
 					<HeroText>
-						<Title>Профиль</Title>
+						<Title>Profile</Title>
 						<Lead>
-							Управляйте именем, username, почтой и безопасностью аккаунта.
+							Manage your name, username, email, and account security.
 						</Lead>
 					</HeroText>
 				</Hero>
 
 				<Grid>
 					<Card as="form" onSubmit={saveProfile}>
-						<CardTitle>Основная информация</CardTitle>
+						<CardTitle>Basic info</CardTitle>
 						<Field>
-							<Label>Имя</Label>
+							<Label>Name</Label>
 							<Input
 								id="profile-name"
 								autoComplete="name"
@@ -218,15 +214,15 @@ const ProfilePage = () => {
 								disabled={updateProfileMutation.isPending}
 								type="submit"
 							>
-								{updateProfileMutation.isPending ? "Сохраняем..." : "Сохранить"}
+								{updateProfileMutation.isPending ? "Saving..." : "Save"}
 							</Button>
 						</FormFooter>
 					</Card>
 
 					<Card as="form" onSubmit={savePassword}>
-						<CardTitle>Пароль</CardTitle>
+						<CardTitle>Password</CardTitle>
 						<Field>
-							<Label>Новый пароль</Label>
+							<Label>New password</Label>
 							<Input
 								id="profile-new-password"
 								autoComplete="new-password"
@@ -236,7 +232,7 @@ const ProfilePage = () => {
 							/>
 						</Field>
 						<Field>
-							<Label>Повторите пароль</Label>
+							<Label>Confirm password</Label>
 							<Input
 								id="profile-confirm-password"
 								autoComplete="new-password"
@@ -257,8 +253,8 @@ const ProfilePage = () => {
 								type="submit"
 							>
 								{updatePasswordMutation.isPending
-									? "Обновляем..."
-									: "Сменить пароль"}
+									? "Updating..."
+									: "Change password"}
 							</Button>
 						</FormFooter>
 					</Card>
@@ -266,9 +262,9 @@ const ProfilePage = () => {
 
 				<DangerCard>
 					<div>
-						<CardTitle>Удалить аккаунт</CardTitle>
+						<CardTitle>Delete account</CardTitle>
 						<DangerText>
-							Это действие нельзя отменить. Данные профиля будут удалены.
+							This action cannot be undone. Your profile data will be deleted.
 						</DangerText>
 						{deleteMessage ? <Message>{deleteMessage}</Message> : null}
 					</div>
@@ -277,7 +273,7 @@ const ProfilePage = () => {
 						buttonType="outlined"
 						onClick={() => setIsDeleteConfirmOpen(true)}
 					>
-						Удалить аккаунт
+						Delete account
 					</DangerButton>
 				</DangerCard>
 			</Content>
@@ -291,14 +287,14 @@ const ProfilePage = () => {
 
 			{isDeleteConfirmOpen ? (
 				<ConfirmModal
-					confirmLabel="Удалить"
-					confirmLoadingLabel="Удаляем..."
+					confirmLabel="Delete"
+					confirmLoadingLabel="Deleting..."
 					isLoading={deleteAccountMutation.isPending}
-					title="Удалить аккаунт?"
+					title="Delete account?"
 					onCancel={() => setIsDeleteConfirmOpen(false)}
 					onConfirm={deleteAccount}
 				>
-					Профиль будет удален окончательно. Продолжить?
+					Your profile will be deleted permanently. Continue?
 				</ConfirmModal>
 			) : null}
 		</Page>

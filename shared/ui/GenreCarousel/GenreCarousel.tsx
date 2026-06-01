@@ -38,7 +38,7 @@ const GenreCarousel = () => {
 	}
 
 	return (
-		<Carousel aria-label="Жанры">
+		<Carousel aria-label="Genres">
 			<Viewport ref={emblaRef}>
 				<Container>
 					{isLoading
@@ -48,10 +48,12 @@ const GenreCarousel = () => {
 								</Slide>
 							))
 						: genres.map((genre) => (
-							<Slide key={genre.id}>
-								<GenrePill href={`/genres/${genre.slug}`}>{genre.name}</GenrePill>
-							</Slide>
-						))}
+								<Slide key={genre.id}>
+									<GenrePill href={`/genres/${genre.slug}`}>
+										{genre.name}
+									</GenrePill>
+								</Slide>
+							))}
 				</Container>
 			</Viewport>
 		</Carousel>

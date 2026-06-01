@@ -13,7 +13,9 @@ import type {
 	ISearchGenre,
 	ISearchSeries,
 } from "@/shared/api/search";
+import type { IBookRecomendation } from "@/shared/api/recomendations/recomendations.types";
 import { getRecomendationsByPrompt } from "@/shared/api/recomendations/recomendations.api";
+import { useDebouncedValue } from "@/shared/utils/useDebouncedValue";
 import {
 	useSearchAllQuery,
 	useSearchAuthorsQuery,
@@ -107,35 +109,42 @@ const BookSearch = () => {
 		useState("");
 	const [isOpen, setIsOpen] = useState(false);
 	const normalizedSearchValue = searchValue.trim();
-	const shouldSearch = normalizedSearchValue.length >= MIN_SEARCH_LENGTH;
+	const debouncedSearchValue = useDebouncedValue(normalizedSearchValue, 1000);
+	const shouldSearch = debouncedSearchValue.length >= MIN_SEARCH_LENGTH;
 	const recommendationPrompt = submittedRecommendationPrompt.trim();
 	const { data: searchResponse, isFetching: isFetchingAll } = useSearchAllQuery(
-		normalizedSearchValue,
+		debouncedSearchValue,
 		MODAL_SEARCH_LIMIT,
 		{ enabled: shouldSearch && !isRecommendationMode },
 	);
 	const { data: booksResponse, isFetching: isFetchingBooks } =
-		useSearchBooksQuery(normalizedSearchValue, 1, MODAL_SEARCH_LIMIT, {
+		useSearchBooksQuery(debouncedSearchValue, 1, MODAL_SEARCH_LIMIT, {
 			enabled: shouldSearch && !isRecommendationMode,
 		});
 	const { data: authorsResponse, isFetching: isFetchingAuthors } =
-		useSearchAuthorsQuery(normalizedSearchValue, 1, MODAL_SEARCH_LIMIT, {
+		useSearchAuthorsQuery(debouncedSearchValue, 1, MODAL_SEARCH_LIMIT, {
 			enabled: shouldSearch && !isRecommendationMode,
 		});
 	const { data: seriesResponse, isFetching: isFetchingSeries } =
-		useSearchSeriesQuery(normalizedSearchValue, 1, MODAL_SEARCH_LIMIT, {
-			enabled: shouldSearch && !isRecommendationMode,
-		});
+		useSearchSeriesQuery(
+			debouncedSearchValue,
+			1,
+			MODAL_SEARCH_LIMIT,
+			undefined,
+			{
+				enabled: shouldSearch && !isRecommendationMode,
+			},
+		);
 	const { data: genresResponse, isFetching: isFetchingGenres } =
-		useSearchGenresQuery(normalizedSearchValue, 1, MODAL_SEARCH_LIMIT, {
+		useSearchGenresQuery(debouncedSearchValue, 1, MODAL_SEARCH_LIMIT, {
 			enabled: shouldSearch && !isRecommendationMode,
 		});
 	const { data: collectionsResponse, isFetching: isFetchingCollections } =
-		useSearchCollectionsQuery(normalizedSearchValue, 1, MODAL_SEARCH_LIMIT, {
+		useSearchCollectionsQuery(debouncedSearchValue, 1, MODAL_SEARCH_LIMIT, {
 			enabled: shouldSearch && !isRecommendationMode,
 		});
 	const { data: recommendationBooks, isFetching: isFetchingRecommendations } =
-		useQuery({
+		useQuery<IBookRecomendation[]>({
 			enabled:
 				isRecommendationMode &&
 				recommendationPrompt.length >= MIN_SEARCH_LENGTH,
@@ -206,10 +215,12 @@ const BookSearch = () => {
 		if (isRecommendationMode) {
 			setIsRecommendationMode(false);
 			setSubmittedRecommendationPrompt("");
+			setSearchValue("");
 			return;
 		}
 
 		setIsRecommendationMode(true);
+		setSearchValue("");
 	};
 	const visibleTabs =
 		activeTab === "all"
@@ -222,15 +233,29 @@ const BookSearch = () => {
 				author: book.author ?? book.authors?.[0]?.name ?? "",
 				authorId: book.authors?.[0]?.id,
 				coverUrl: book.coverUrl,
-				description: book.description,
+				description: (book as { description?: string }).description,
 				id: book.id,
+				isTracked: book.isTracked,
 				orderInSeries: book.orderInSeries ?? undefined,
-				searchMatches: book.searchMatches,
+				searchMatches: (
+					book as { searchMatches?: Array<{ field: string; value: string }> }
+				).searchMatches,
+				myStatus: book.myStatus ?? undefined,
 				seriesTitle: book.seriesTitle ?? undefined,
 				title: book.title,
 			})),
 		[recommendationBooks],
 	);
+	const recommendationTotal = recommendationCards.length;
+	const footerTotal = isRecommendationMode
+		? recommendationTotal
+		: activeTabTotal;
+	const shouldShowFooter = isRecommendationMode
+		? recommendationPrompt.length >= MIN_SEARCH_LENGTH &&
+			!isFetchingRecommendations
+		: shouldSearch && !isFetching;
+	const footerCountLabel = isRecommendationMode ? "recommendations" : "results";
+	const footerButtonLabel = isRecommendationMode ? "View more" : "View all";
 	const hasVisibleResults = visibleTabs.some(
 		(tab) => searchResults[tab].length > 0,
 	);
@@ -322,8 +347,8 @@ const BookSearch = () => {
 		<SearchWrap>
 			<SearchIcon aria-hidden="true" />
 			<SearchInput
-				aria-label="Поиск книг"
-				placeholder="Название, автор, жанр"
+				aria-label="Search books"
+				placeholder="Title, author, genre"
 				type="search"
 				value={searchValue}
 				onChange={(event) => setSearchValue(event.target.value)}
@@ -333,21 +358,21 @@ const BookSearch = () => {
 			{isOpen ? (
 				<ModalLayer>
 					<ModalBackdrop aria-hidden="true" onMouseDown={closeSearchAndReset} />
-					<SearchPanel role="dialog" aria-label="Расширенный поиск">
+					<SearchPanel role="dialog" aria-label="Advanced search">
 						<SearchPanelHeader>
 							{isRecommendationMode ? (
-								<RecommendationBanner>Режим рекомендаций</RecommendationBanner>
+								<RecommendationBanner>Recommendation mode</RecommendationBanner>
 							) : null}
 							<PanelSearchInputWrap>
 								<PanelSearchIcon aria-hidden="true" />
 								<PanelSearchInput
 									$isRecommendationMode={isRecommendationMode}
 									autoFocus
-									aria-label="Расширенный поиск"
+									aria-label="Advanced search"
 									placeholder={
 										isRecommendationMode
-											? "Напишите ваши пожелания, и мы подберем вам подходящую книгу"
-											: "Название, автор, серия, жанр"
+											? "Describe your preferences and we will recommend a fitting book"
+											: "Title, author, series, genre"
 									}
 									type="search"
 									value={searchValue}
@@ -364,7 +389,7 @@ const BookSearch = () => {
 								/>
 								{searchValue ? (
 									<ClearButton
-										aria-label="Очистить поиск"
+										aria-label="Clear search"
 										type="button"
 										onClick={clearSearch}
 									>
@@ -384,19 +409,19 @@ const BookSearch = () => {
 											saveRecommendationSearch();
 										}}
 									>
-										Подобрать книгу
+										Find a book
 									</RecommendationButton>
 									<RecommendationButton
 										$variant="ghost"
 										type="button"
 										onClick={handleRecommendationModeToggle}
 									>
-										Вернуться к обычному поиску
+										Back to normal search
 									</RecommendationButton>
 								</RecommendationActions>
 							) : (
 								<>
-									<Tabs role="tablist" aria-label="Фильтры поиска">
+									<Tabs role="tablist" aria-label="Search filters">
 										<SearchTabBar
 											activeTab={activeTab}
 											counts={resultCountsByTab}
@@ -412,18 +437,8 @@ const BookSearch = () => {
 											type="button"
 											onClick={handleRecommendationModeToggle}
 										>
-											В режим рекомендаций
+											Switch to recommendation mode
 										</RecommendationButton>
-										{shouldSearch && !isFetching && activeTabTotal > 0 ? (
-											<ResultsBadge
-												aria-label={`Найдено ${activeTabTotal} ${getResultCountLabel(activeTabTotal)}`}
-											>
-												<ResultsNumber>{activeTabTotal}</ResultsNumber>
-												<ResultsText>
-													{getResultCountLabel(activeTabTotal)}
-												</ResultsText>
-											</ResultsBadge>
-										) : null}
 									</TabsMetaActions>
 								</>
 							)}
@@ -435,7 +450,7 @@ const BookSearch = () => {
 									recommendationRecentSearches.length > 0 ? (
 										<RecentSearchesBlock>
 											<RecentHeading>
-												Недавние запросы рекомендаций
+												Recent recommendation queries
 											</RecentHeading>
 											<RecentList>
 												{recommendationRecentSearches.map((recentSearch) => (
@@ -454,17 +469,18 @@ const BookSearch = () => {
 										</RecentSearchesBlock>
 									) : (
 										<EmptyState>
-											Напишите пожелания и нажмите «Подобрать книгу».
+											Describe what you want and click Find a book.
 										</EmptyState>
 									)
 								) : isFetchingRecommendations ? (
-									<EmptyState>Подбираем книги...</EmptyState>
+									<EmptyState>Finding books...</EmptyState>
 								) : recommendationCards.length > 0 ? (
 									<>
 										{recommendationCards.map((book) => (
 											<BookResultCard
 												key={book.id}
 												book={book}
+												isRecommendation
 												closeSearch={closeSearchAndReset}
 												query={recommendationPrompt}
 												saveRecentSearch={saveRecommendationSearch}
@@ -473,12 +489,12 @@ const BookSearch = () => {
 									</>
 								) : (
 									<EmptyState>
-										Пока ничего не нашли. Попробуйте уточнить пожелания.
+										Nothing found yet. Try refining your request.
 									</EmptyState>
 								)
 							) : normalizedSearchValue.length < MIN_SEARCH_LENGTH ? (
 								<RecentSearchesBlock>
-									<RecentHeading>Недавние запросы</RecentHeading>
+									<RecentHeading>Recent queries</RecentHeading>
 									{recentSearches.length > 0 ? (
 										<RecentList>
 											{recentSearches.map((recentSearch) => (
@@ -492,13 +508,13 @@ const BookSearch = () => {
 											))}
 										</RecentList>
 									) : (
-										<EmptyState>Недавних запросов пока нет.</EmptyState>
+										<EmptyState>No recent queries yet.</EmptyState>
 									)}
 								</RecentSearchesBlock>
 							) : null}
 
 							{shouldSearch && !isRecommendationMode && isFetching ? (
-								<EmptyState>Ищем книги...</EmptyState>
+								<EmptyState>Searching books...</EmptyState>
 							) : null}
 
 							{shouldSearch &&
@@ -585,7 +601,7 @@ const BookSearch = () => {
 							!isFetching &&
 							!hasVisibleResults ? (
 								<EmptyState>
-									Ничего не найдено.
+									Nothing found.
 									{activeTab === "genre" && genresResponse?.suggestion ? (
 										<SuggestionButton
 											type="button"
@@ -593,31 +609,49 @@ const BookSearch = () => {
 												selectSuggestion(genresResponse.suggestion!)
 											}
 										>
-											Искать «{genresResponse.suggestion}»
+											Search for {genresResponse.suggestion}
 										</SuggestionButton>
 									) : null}
 								</EmptyState>
 							) : null}
 						</ResultsArea>
 
-						{!isRecommendationMode ? (
+						{shouldShowFooter ? (
 							<SearchFooter>
-								<ResultCount>{getResultCountLabel(activeTabTotal)}</ResultCount>
+								<ResultsBadge
+									aria-label={`Found ${footerTotal} ${footerCountLabel}`}
+								>
+									<ResultsNumber>{footerTotal}</ResultsNumber>
+									<ResultsText>{footerCountLabel}</ResultsText>
+								</ResultsBadge>
 								<ViewAllButton
 									buttonType="containedInverted"
 									onClick={() => {
-										saveRecentSearch();
+										const nextSearchValue = isRecommendationMode
+											? recommendationPrompt || normalizedSearchValue
+											: normalizedSearchValue;
+
+										if (isRecommendationMode) {
+											saveRecommendationSearch(nextSearchValue);
+										} else {
+											saveRecentSearch(nextSearchValue);
+										}
+
 										const params = new URLSearchParams();
-										if (normalizedSearchValue)
-											params.set("q", normalizedSearchValue);
-										if (activeTab !== "all") {
+										if (nextSearchValue) {
+											params.set("q", nextSearchValue);
+										}
+										if (!isRecommendationMode && activeTab !== "all") {
 											params.set("tab", activeTab);
+										}
+										if (isRecommendationMode) {
+											params.set("mode", "recommendation");
 										}
 										closeSearchAndReset();
 										router.push(`/search?${params.toString()}`);
 									}}
 								>
-									Посмотреть все
+									{footerButtonLabel}
 								</ViewAllButton>
 							</SearchFooter>
 						) : null}
@@ -643,18 +677,6 @@ const getSearchResults = (response?: ISearchAllResponse): ISearchResults =>
 
 const getResultCountsTotal = (counts: Record<ISearchTabId, number>) =>
 	SEARCH_TABS.reduce((total, tab) => total + counts[tab.id], 0);
-
-const getResultCountLabel = (count: number) => {
-	if (count === 1) {
-		return "1 результат";
-	}
-
-	if (count > 1 && count < 5) {
-		return `${count} результата`;
-	}
-
-	return `${count} результатов`;
-};
 
 const SearchWrap = styled.div`
 	position: relative;
@@ -1042,13 +1064,6 @@ const SearchFooter = styled.div`
 		),
 		${theme.colors.background};
 	padding: 1.1rem 1.25rem 1rem;
-`;
-
-const ResultCount = styled.span`
-	color: ${theme.colors.softForeground};
-	font-family: ${theme.fonts.sans};
-	font-size: 0.9rem;
-	line-height: 1.2;
 `;
 
 const ViewAllButton = styled(Button)`

@@ -32,8 +32,15 @@ export const searchQueryKeys = {
 		["search", "collections", query, page, limit] as const,
 	genres: (query: string, page: number, limit: number) =>
 		["search", "genres", query, page, limit] as const,
-	series: (query: string, page: number, limit: number) =>
-		["search", "series", query, page, limit] as const,
+	series: (query: string, page: number, limit: number, genreIds?: string[]) =>
+		[
+			"search",
+			"series",
+			query,
+			page,
+			limit,
+			genreIds?.join(",") ?? "",
+		] as const,
 };
 
 export const useSearchAllQuery = (
@@ -75,13 +82,22 @@ export const useSearchSeriesQuery = (
 	query: string,
 	page: number,
 	limit: number,
+	genreIdsOrOptions?: string[] | { enabled?: boolean },
 	options?: { enabled?: boolean },
-) =>
-	useQuery<ISearchTabResponse<ISearchSeries>>({
-		enabled: options?.enabled,
-		queryFn: () => searchSeries(query, page, limit),
-		queryKey: searchQueryKeys.series(query, page, limit),
+) => {
+	const genreIds = Array.isArray(genreIdsOrOptions)
+		? genreIdsOrOptions
+		: undefined;
+	const resolvedOptions = Array.isArray(genreIdsOrOptions)
+		? options
+		: (genreIdsOrOptions ?? options);
+
+	return useQuery<ISearchTabResponse<ISearchSeries>>({
+		enabled: resolvedOptions?.enabled,
+		queryFn: () => searchSeries(query, page, limit, genreIds),
+		queryKey: searchQueryKeys.series(query, page, limit, genreIds),
 	});
+};
 
 export const useSearchGenresQuery = (
 	query: string,

@@ -90,12 +90,14 @@ export type IBookCardSize = "default" | "compact" | "tiny";
 interface IBookCardProps {
 	book: IBookCardData;
 	isActive?: boolean;
+	showStatusBadge?: boolean;
 	size?: IBookCardSize;
 }
 
 const BookCard = ({
 	book,
 	isActive = false,
+	showStatusBadge = true,
 	size = "compact",
 }: IBookCardProps) => {
 	const {
@@ -154,7 +156,6 @@ const BookCard = ({
 
 	useEffect(() => {
 		if (!isStatusMenuOpen) {
-			setMenuPosition(null);
 			return;
 		}
 
@@ -248,7 +249,7 @@ const BookCard = ({
 			setAddStatus(`Status: ${statusLabels[nextTracking.status]}`);
 		} catch (error) {
 			setAddStatus(
-				error instanceof Error ? error.message : "Не удалось добавить книгу",
+				error instanceof Error ? error.message : "Could not add the book",
 			);
 		}
 	};
@@ -296,7 +297,6 @@ const BookCard = ({
 
 	return (
 		<BookCardWrapper
-			$coverWidth={coverWidth}
 			$isActive={isActive}
 			$size={size}
 			aria-label={`${title}, ${authorName}`}
@@ -308,7 +308,7 @@ const BookCard = ({
 		>
 			<BookCover $size={size}>
 				{isCoverLoaded ? null : <CoverPlaceholder aria-hidden="true" />}
-				{isBookTracked ? (
+				{isBookTracked && showStatusBadge ? (
 					<StatusBadge
 						$color={
 							localStatus
@@ -327,14 +327,13 @@ const BookCard = ({
 				<BookCoverImage
 					$isLoaded={isCoverLoaded}
 					src={coverSrc}
-					alt={`Обложка «${title}»`}
+					alt={`Cover of ${title}`}
+					decoding="async"
+					loading="lazy"
 					onLoad={handleCoverLoad}
 				/>
 
-				<CardLibraryAction
-					ref={actionRef}
-					$isTracked={isBookTracked}
-				>
+				<CardLibraryAction ref={actionRef} $isTracked={isBookTracked}>
 					<BookAddButton
 						$isTracked={isBookTracked}
 						type="button"
@@ -457,7 +456,6 @@ const getSeriesBadgeLabel = ({
 };
 
 const BookCardWrapper = styled.article<{
-	$coverWidth: number | null;
 	$isActive: boolean;
 	$size: IBookCardSize;
 }>`
@@ -489,7 +487,11 @@ const BookCover = styled.div<{ $size: IBookCardSize }>`
 	overflow: visible;
 	width: fit-content;
 	height: ${({ $size }) =>
-		$size === "tiny" ? "9.25rem" : $size === "compact" ? "12.5rem" : "15.25rem"};
+		$size === "tiny"
+			? "9.25rem"
+			: $size === "compact"
+				? "12.5rem"
+				: "15.25rem"};
 
 	border-radius: 0.7rem;
 	transition:
@@ -540,13 +542,17 @@ const StatusBadge = styled.span<{ $color: string }>`
 	}
 `;
 
-const BookMeta = styled.div<{ $coverWidth: number | null }>`
+const BookMeta = styled.div.attrs<{ $coverWidth: number | null }>(
+	({ $coverWidth }) => ({
+		style: $coverWidth
+			? { width: `${$coverWidth}px` }
+			: { minWidth: "100%", width: 0 },
+	}),
+)<{ $coverWidth: number | null }>`
 	position: relative;
 	z-index: 1;
 	display: flex;
 	flex-direction: column;
-	${({ $coverWidth }) =>
-		$coverWidth ? `width: ${$coverWidth}px;` : `width: 0; min-width: 100%;`}
 	overflow: hidden;
 `;
 
@@ -559,7 +565,11 @@ const BookTitle = styled.h2<{ $size: IBookCardSize }>`
 	color: ${theme.colors.foreground};
 	font-family: ${theme.fonts.serif};
 	font-size: ${({ $size }) =>
-		$size === "tiny" ? "0.78rem" : $size === "compact" ? "0.95rem" : "1.045rem"};
+		$size === "tiny"
+			? "0.78rem"
+			: $size === "compact"
+				? "0.95rem"
+				: "1.045rem"};
 	font-weight: 500;
 	line-height: ${({ $size }) =>
 		$size === "tiny" ? "1.02rem" : $size === "compact" ? "1.18rem" : "1.55rem"};
@@ -573,21 +583,35 @@ const BookTitle = styled.h2<{ $size: IBookCardSize }>`
 `;
 
 const BookAuthor = styled.p<{ $size: IBookCardSize }>`
+	display: block;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 	margin-block: 0;
 	color: ${theme.colors.lightText};
 	font-size: ${({ $size }) =>
-		$size === "tiny" ? "0.66rem" : $size === "compact" ? "0.76rem" : "0.875rem"};
+		$size === "tiny"
+			? "0.66rem"
+			: $size === "compact"
+				? "0.76rem"
+				: "0.875rem"};
 	line-height: 1.3334;
-	overflow-wrap: anywhere;
 `;
 
 const BookAuthorLink = styled(Link)<{ $size: IBookCardSize }>`
+	display: block;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 	margin-block: 0;
 	color: ${theme.colors.lightText};
 	font-size: ${({ $size }) =>
-		$size === "tiny" ? "0.66rem" : $size === "compact" ? "0.76rem" : "0.875rem"};
+		$size === "tiny"
+			? "0.66rem"
+			: $size === "compact"
+				? "0.76rem"
+				: "0.875rem"};
 	line-height: 1.3334;
-	overflow-wrap: anywhere;
 	text-decoration: none;
 
 	&:hover,

@@ -26,12 +26,12 @@ export const ProfileStep = ({
 	onUsernameChange,
 }: IProfileStepProps) => (
 	<StepBody>
-		<StepTitle>Как к тебе обращаться?</StepTitle>
+		<StepTitle>How should we call you?</StepTitle>
 		<StepDescription>
-			Твой username — уникальное имя в Litreasure.
+			Your username is your unique name in Litreasure.
 		</StepDescription>
 		<FieldGroup>
-			<FieldLabel htmlFor="welcome-name">Имя</FieldLabel>
+			<FieldLabel htmlFor="welcome-name">Name</FieldLabel>
 			<ProfileInput
 				id="welcome-name"
 				autoComplete="name"

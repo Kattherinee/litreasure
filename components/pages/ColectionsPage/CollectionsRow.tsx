@@ -47,9 +47,9 @@ export const CollectionRow = ({
 	const subscriberCount =
 		subscriberCountOverride ?? collection.subscriberCount ?? 0;
 	const collectionRelationLabel = isMyCollection
-		? "Моя подборка"
+		? "My collection"
 		: isSaved
-			? "Подписка"
+			? "Subscribed"
 			: null;
 
 	useEffect(() => {
@@ -87,10 +87,10 @@ export const CollectionRow = ({
 			await saveCollectionMutation.mutateAsync(collection.id);
 			setSavedOverride(true);
 			setSubscriberCountOverride((collection.subscriberCount ?? 0) + 1);
-			setSaveStatus("Подписка оформлена");
+			setSaveStatus("Subscription enabled");
 		} catch (error) {
 			setSaveStatus(
-				error instanceof Error ? error.message : "Не удалось подписаться",
+				error instanceof Error ? error.message : "Could not subscribe",
 			);
 		}
 	};
@@ -102,7 +102,7 @@ export const CollectionRow = ({
 
 	return (
 		<Row
-			aria-label={`Открыть подборку ${collection.title}`}
+			aria-label={`Open collection ${collection.title}`}
 			role="link"
 			tabIndex={0}
 			onClick={openCollection}
@@ -116,14 +116,15 @@ export const CollectionRow = ({
 						<OwnerAvatar src={getCollectionOwnerAvatar(collection)} alt="" />
 						<span>{ownerLabel}</span>
 					</OwnerLink>
-					<BookCount>{collection.bookCount} книг</BookCount>
-					<SubscriberCount>{subscriberCount} подписчиков</SubscriberCount>
+					<BookCount>{collection.bookCount} books</BookCount>
+					<BookCount>{collection.bookCount} books</BookCount>
+					<SubscriberCount>{subscriberCount} subscribers</SubscriberCount>
 					{collectionRelationLabel ? (
 						<RelationChip
 							aria-label={
 								isMyCollection
-									? "Подборка создана вами"
-									: "Вы подписаны на подборку"
+									? "Collection created by you"
+									: "You are subscribed to this collection"
 							}
 						>
 							<BookmarkIcon aria-hidden="true" />
@@ -136,20 +137,20 @@ export const CollectionRow = ({
 					<SaveButton
 						buttonType="containedInverted"
 						disabled={saveCollectionMutation.isPending}
-						title="Подписаться на подборку"
+						title="Subscribe to collection"
 						onClick={handleSaveClick}
 					>
 						<PlusIcon />
 						<span>
 							{saveCollectionMutation.isPending
-								? "Подписываемся..."
-								: "Подписаться"}
+								? "Subscribing..."
+								: "Subscribe"}
 						</span>
 					</SaveButton>
 				) : null}
 			</RowCopy>
 
-			<PreviewRail aria-label={`Книги из подборки ${collection.title}`}>
+			<PreviewRail aria-label={`Books from collection ${collection.title}`}>
 				{collection.previewBooks.length > 0 ? (
 					collection.previewBooks.map((book) => (
 						<PreviewBook
@@ -161,7 +162,7 @@ export const CollectionRow = ({
 						>
 							<PreviewCover
 								src={book.coverUrl || "/images/book-placeholder.svg"}
-								alt={`Обложка «${book.title}»`}
+								alt={`Cover of ${book.title}`}
 							/>
 							<BookTooltip>
 								<TooltipTitle>{book.title}</TooltipTitle>
@@ -170,7 +171,7 @@ export const CollectionRow = ({
 						</PreviewBook>
 					))
 				) : (
-					<EmptyPreview>В подборке пока нет книг.</EmptyPreview>
+					<EmptyPreview>No books in this collection yet.</EmptyPreview>
 				)}
 				{hiddenBooksCount > 0 ? (
 					<MoreBooksBadge>+{hiddenBooksCount}</MoreBooksBadge>

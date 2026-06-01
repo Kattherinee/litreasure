@@ -38,8 +38,10 @@ export const collectionsQueryKeys = {
 
 export const usePublicCollectionsQuery = (
 	params: ICollectionsListParams = {},
+	options?: { enabled?: boolean },
 ) =>
 	useQuery({
+		enabled: options?.enabled ?? true,
 		queryFn: () => getPublicCollections(params),
 		queryKey: collectionsQueryKeys.public(params),
 	});

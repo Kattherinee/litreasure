@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 import Rating from "@mui/material/Rating";
+import AutoStoriesOutlinedIcon from "@mui/icons-material/AutoStoriesOutlined";
+import BookmarkBorderOutlinedIcon from "@mui/icons-material/BookmarkBorderOutlined";
+import CheckCircleOutlineOutlinedIcon from "@mui/icons-material/CheckCircleOutlineOutlined";
 import styled from "styled-components";
 
 import AuthModal, { type IAuthModalMode } from "@/components/pages/AuthModal";
@@ -21,6 +24,48 @@ interface IBookDetailContentProps {
 	book: IBook;
 }
 
+const getPaperCopyLabel = (status?: IBook["myPaperBook"] extends infer T
+	? T extends { status?: infer S }
+		? S
+		: never
+	: never) => {
+	if (status === "owned") return "Owned copy";
+	if (status === "wanted_to_buy") return "Want to buy";
+	if (status === "given_away") return "Given away";
+	return null;
+};
+
+const getPaperBadgeTone = (status?: IBook["myPaperBook"] extends infer T
+	? T extends { status?: infer S }
+		? S
+		: never
+	: never) => {
+	if (status === "owned") {
+		return {
+			background: "rgb(162 198 172 / 0.35)",
+			border: "rgb(140 182 154 / 0.78)",
+			color: "#274534",
+			icon: CheckCircleOutlineOutlinedIcon,
+		};
+	}
+
+	if (status === "wanted_to_buy") {
+		return {
+			background: "rgb(245 204 170 / 0.36)",
+			border: "rgb(230 182 143 / 0.86)",
+			color: "#5a3a1c",
+			icon: BookmarkBorderOutlinedIcon,
+		};
+	}
+
+	return {
+		background: "rgb(188 202 220 / 0.34)",
+		border: "rgb(165 184 208 / 0.84)",
+		color: "#243a55",
+		icon: AutoStoriesOutlinedIcon,
+	};
+};
+
 // const formatGenreLabel = (genre: string) =>
 // 	genre
 // 		.split("-")
@@ -32,18 +77,18 @@ const getBookFacts = (book: IBook) => {
 	const meta: { label: string; value: string }[] = [];
 
 	if (book.publishedYear) {
-		meta.push({ label: "Год", value: String(book.publishedYear) });
+		meta.push({ label: "Year", value: String(book.publishedYear) });
 	}
 
 	if (book.pagesCount) {
 		meta.push({
-			label: "Страниц",
-			value: book.pagesCount.toLocaleString("ru-RU"),
+			label: "Pages",
+			value: book.pagesCount.toLocaleString("en-US"),
 		});
 	}
 
 	if (book.publisher) {
-		meta.push({ label: "Издатель", value: book.publisher });
+		meta.push({ label: "Publisher", value: book.publisher });
 	}
 
 	return meta;
@@ -72,6 +117,9 @@ const BookDetailContent = ({ book }: IBookDetailContentProps) => {
 	const [quickRating, setQuickRating] = useState(0);
 	const [quickRatingMessage, setQuickRatingMessage] = useState("");
 	const [activeTab, setActiveTab] = useState<ITabId>("description");
+	const paperCopyLabel = getPaperCopyLabel(book.myPaperBook?.status);
+	const paperBadgeTone = getPaperBadgeTone(book.myPaperBook?.status);
+	const PaperBadgeIcon = paperBadgeTone.icon;
 
 	const handleQuickRatingChange = async (value: number | null) => {
 		const nextRating = value ?? 0;
@@ -90,11 +138,11 @@ const BookDetailContent = ({ book }: IBookDetailContentProps) => {
 				id: book.id,
 				rating: nextRating,
 			});
-			setQuickRatingMessage("Оценка сохранена");
+			setQuickRatingMessage("Rating saved");
 		} catch (error) {
 			setQuickRating(0);
 			setQuickRatingMessage(
-				error instanceof Error ? error.message : "Не удалось сохранить оценку",
+				error instanceof Error ? error.message : "Could not save rating",
 			);
 		}
 	};
@@ -110,10 +158,20 @@ const BookDetailContent = ({ book }: IBookDetailContentProps) => {
 						<CoverImage
 							$isLoaded={isCoverLoaded}
 							src={coverSrc}
-							alt={`Обложка «${book.title}»`}
+							alt={`Cover of ${book.title}`}
 							onLoad={() => setLoadedCoverSrc(coverSrc)}
 						/>
 					</CoverWrap>
+					{paperCopyLabel ? (
+						<PaperStatusBadge
+							$background={paperBadgeTone.background}
+							$border={paperBadgeTone.border}
+							$color={paperBadgeTone.color}
+						>
+							<PaperBadgeIcon aria-hidden="true" />
+							<span>{paperCopyLabel}</span>
+						</PaperStatusBadge>
+					) : null}
 
 					<AsideRating>
 						<RatingTop>
@@ -154,7 +212,7 @@ const BookDetailContent = ({ book }: IBookDetailContentProps) => {
 						) : null}
 
 						<QuickRatingBlock>
-							<QuickRatingTitle>Твоя оценка</QuickRatingTitle>
+							<QuickRatingTitle>Your rating</QuickRatingTitle>
 							<QuickMuiRating
 								name="quick-book-rating"
 								disabled={rateBookMutation.isPending}
@@ -168,7 +226,7 @@ const BookDetailContent = ({ book }: IBookDetailContentProps) => {
 								type="button"
 								onClick={() => setActiveTab("reviews")}
 							>
-								Написать отзыв
+								Write a review
 							</QuickReviewLink>
 						</QuickRatingBlock>
 					</AsideRating>
@@ -187,8 +245,8 @@ const BookDetailContent = ({ book }: IBookDetailContentProps) => {
 					{bookMeta.length > 0 || book.genres.length > 0 ? (
 						<BookFactsGrid>
 							{bookMeta.length > 0 ? (
-								<BookFactsSection aria-label="Информация о книге">
-									<BookFactsTitle>Информация о книге</BookFactsTitle>
+								<BookFactsSection aria-label="Book information">
+									<BookFactsTitle>Book information</BookFactsTitle>
 									<BookInfoBlock>
 										{bookMeta.map((item) => (
 											<InfoChip key={item.label}>
@@ -200,8 +258,8 @@ const BookDetailContent = ({ book }: IBookDetailContentProps) => {
 								</BookFactsSection>
 							) : null}
 							{book.genres.length > 0 ? (
-								<BookFactsSection aria-label="Жанры книги">
-									<BookFactsTitle>Жанры</BookFactsTitle>
+								<BookFactsSection aria-label="Book genres">
+									<BookFactsTitle>Genres</BookFactsTitle>
 									<GenresBlock>
 										{book.genres.map((genre) => (
 											<HighlightedGenrePill
@@ -331,10 +389,39 @@ const ContentGrid = styled.div`
 
 const LeftColumn = styled.aside`
 	width: fit-content;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.5rem;
 	padding-top: var(--detail-cover-offset);
 
 	@media (max-width: 47.9375rem) {
 		margin: 0 auto;
+		align-items: center;
+	}
+`;
+
+const PaperStatusBadge = styled.span<{
+	$background: string;
+	$border: string;
+	$color: string;
+}>`
+	display: inline-flex;
+	align-items: center;
+	gap: 0.36rem;
+	border: 0.0625rem solid ${({ $border }) => $border};
+	border-radius: 62.4375rem;
+	background: ${({ $background }) => $background};
+	padding: 0.35rem 0.9rem;
+	color: ${({ $color }) => $color};
+	font-family: ${theme.fonts.sans};
+	font-size: 0.86rem;
+	font-weight: 700;
+	line-height: 1.3;
+
+	& svg {
+		width: 1.08rem;
+		height: 1.08rem;
 	}
 `;
 

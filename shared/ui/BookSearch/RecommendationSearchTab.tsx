@@ -19,7 +19,7 @@ export const RecommendationSearchTab = ({
 		type="button"
 		onClick={onClick}
 	>
-		{isActive ? "Вернуться к обычному поиску" : "Режим рекомендаций"}
+		{isActive ? "Back to normal search" : "Recommendation mode"}
 	</RecommendationTabButton>
 );
 

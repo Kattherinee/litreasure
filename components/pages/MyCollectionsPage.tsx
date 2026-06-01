@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -64,9 +64,10 @@ const MyCollectionsPage = () => {
 			<Hero>
 				<HeroInner>
 					<HeroCopy>
-						<PageTitle>Мои подборки</PageTitle>
+						<PageTitle>My collections</PageTitle>
 						<HeroText>
-							Созданные вами полки отдельно от подборок, на которые вы подписались.
+							Shelves you created are shown separately from collections you
+							follow.
 						</HeroText>
 					</HeroCopy>
 					<Button
@@ -74,7 +75,7 @@ const MyCollectionsPage = () => {
 						type="button"
 						onClick={() => setIsCreateCollectionOpen(true)}
 					>
-						Создать подборку
+						Create collection
 					</Button>
 				</HeroInner>
 			</Hero>
@@ -88,18 +89,18 @@ const MyCollectionsPage = () => {
 								type="button"
 								onClick={() => setIsCreateCollectionOpen(true)}
 							>
-								Создать подборку
+								Create collection
 							</Button>
 						) : undefined
 					}
-					emptyText="Создайте первую подборку для любимых книг, настроений и будущих полок."
-					emptyTitle="Созданных подборок пока нет"
+					emptyText="Create your first collection for favorite books, moods, and future shelves."
+					emptyTitle="No created collections yet"
 					error={createdError}
 					isError={isCreatedError}
 					isLoading={isCreatedLoading}
 					page={createdPage}
 					pages={createdPages}
-					title="Созданные мной"
+					title="Created by me"
 					total={createdTotal}
 					onPageChange={setCreatedPage}
 				>
@@ -114,14 +115,14 @@ const MyCollectionsPage = () => {
 				</CollectionsSection>
 
 				<CollectionsSection
-					emptyText="Подписывайтесь на публичные подборки, чтобы быстро возвращаться к ним без добавления всех книг в библиотеку."
-					emptyTitle="Подписок пока нет"
+					emptyText="Follow public collections to quickly return to them without adding every book to your library."
+					emptyTitle="No subscriptions yet"
 					error={subscribedError}
 					isError={isSubscribedError}
 					isLoading={isSubscribedLoading}
 					page={subscribedPage}
 					pages={subscribedPages}
-					title="Подписки"
+					title="Subscriptions"
 					total={subscribedTotal}
 					onPageChange={setSubscribedPage}
 				>
@@ -180,18 +181,18 @@ const CollectionsSection = ({
 		<SectionHeader>
 			<SectionTitle>{title}</SectionTitle>
 			<SectionSummary>
-				{total} всего{pages > 1 ? `. Страница ${page} из ${pages}.` : ""}
+				{total} total{pages > 1 ? `. Page ${page} of ${pages}.` : ""}
 			</SectionSummary>
 		</SectionHeader>
 		{isLoading ? (
-			<CollectionList aria-label={`Загружаем: ${title}`}>
+			<CollectionList aria-label={`Loading: ${title}`}>
 				{Array.from({ length: 4 }, (_, index) => (
 					<CollectionSkeleton key={index} />
 				))}
 			</CollectionList>
 		) : isError ? (
 			<StateMessage>
-				Не удалось загрузить подборки: {error?.message ?? "ошибка запроса"}
+				Failed to load collections: {error?.message ?? "request error"}
 			</StateMessage>
 		) : total === 0 ? (
 			<EmptyState>

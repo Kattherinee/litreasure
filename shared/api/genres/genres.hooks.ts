@@ -1,9 +1,21 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { getGenres, getGenresByCategory } from "./genres.api";
 import { useAuthStore } from "@/shared/store/auth-store";
+
+import {
+	createGenre,
+	deleteGenre,
+	getGenres,
+	getGenresByCategory,
+	saveGenre,
+	updateGenre,
+} from "./genres.api";
+import type {
+	ICreateGenrePayload,
+	IUpdateGenrePayload,
+} from "./genres.types";
 
 export const useGenresQuery = () =>
 	useQuery({ queryFn: getGenres, queryKey: ["genres"] });
@@ -30,5 +42,55 @@ export const useGenresByCategoryQuery = ({
 			selected.join(","),
 			sessionKey,
 		],
+	});
+};
+
+export const useSaveGenreMutation = () => {
+	const queryClient = useQueryClient();
+	const userId = useAuthStore(
+		(state) => state.session?.user.id ?? state.session?.user.email ?? "guest",
+	);
+
+	return useMutation({
+		mutationFn: (genreId: string) => saveGenre(userId, genreId),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["genres"] });
+		},
+	});
+};
+
+export const useCreateGenreMutation = () => {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: (payload: ICreateGenrePayload) => createGenre(payload),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["genres"] });
+		},
+	});
+};
+
+export const useUpdateGenreMutation = () => {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: ({ id, payload }: { id: string; payload: IUpdateGenrePayload }) =>
+			updateGenre(id, payload),
+		onSuccess: (_data, { id }) => {
+			queryClient.invalidateQueries({ queryKey: ["genres"] });
+			queryClient.invalidateQueries({ queryKey: ["genres", id] });
+		},
+	});
+};
+
+export const useDeleteGenreMutation = () => {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: (id: string) => deleteGenre(id),
+		onSuccess: (_data, id) => {
+			queryClient.invalidateQueries({ queryKey: ["genres"] });
+			queryClient.invalidateQueries({ queryKey: ["genres", id] });
+		},
 	});
 };

@@ -82,9 +82,10 @@ export const GenresStep = ({ selectedGenres, onToggle }: IGenresStepProps) => {
 		() =>
 			Array.from(
 				new Map(
-					[...genreGroups.flatMap((group) => group.genres), ...recommendations].map(
-						(genre) => [genre.slug, genre],
-					),
+					[
+						...genreGroups.flatMap((group) => group.genres),
+						...recommendations,
+					].map((genre) => [genre.slug, genre]),
 				).values(),
 			),
 		[genreGroups, recommendations],
@@ -132,7 +133,7 @@ export const GenresStep = ({ selectedGenres, onToggle }: IGenresStepProps) => {
 					>
 						<SelectedGenresRow
 							ref={selectedGenresRowRef}
-							aria-label="Выбранные жанры"
+							aria-label="Selected genres"
 							onScroll={updateSelectedRowFade}
 						>
 							{selectedGenres.map((slug) => {
@@ -151,16 +152,18 @@ export const GenresStep = ({ selectedGenres, onToggle }: IGenresStepProps) => {
 						</SelectedGenresRow>
 					</SelectedGenresCarousel>
 				) : (
-					<SelectedPlaceholder>Выбранные жанры появятся здесь</SelectedPlaceholder>
+					<SelectedPlaceholder>
+						Selected genres will appear here
+					</SelectedPlaceholder>
 				)}
 				<GenreCount>
-					{selectedGenres.length} / {MIN_SELECTED_GENRES} мин.
+					{selectedGenres.length} / {MIN_SELECTED_GENRES} min.
 				</GenreCount>
 			</SelectedSummaryRow>
 
 			<GenrePicker>
-				<PanelLabel>Группы жанров</PanelLabel>
-				<GroupsRail aria-label="Группы жанров">
+				<PanelLabel>Genre groups</PanelLabel>
+				<GroupsRail aria-label="Genre groups">
 					{filteredGroups.map((group) => {
 						const isActive = visibleGroupKeys.includes(group.key);
 						const hasSelected = selectedGenres.some((slug) =>
@@ -185,9 +188,9 @@ export const GenresStep = ({ selectedGenres, onToggle }: IGenresStepProps) => {
 
 				<GenrePanel>
 					<GenrePanelHeader>
-						<PanelLabel>Жанры в выбранных группах</PanelLabel>
+						<PanelLabel>Genres in selected groups</PanelLabel>
 						<InlineSearchInput
-							placeholder="Поиск жанра..."
+							placeholder="Search genres..."
 							value={genreSearch}
 							onChange={(event) => setGenreSearch(event.target.value)}
 						/>
@@ -210,7 +213,7 @@ export const GenresStep = ({ selectedGenres, onToggle }: IGenresStepProps) => {
 							})}
 						</ScrollableGenrePillsWrap>
 					) : (
-						<GenreEmpty>Выбери одну или несколько групп выше.</GenreEmpty>
+						<GenreEmpty>Choose one or more groups above.</GenreEmpty>
 					)}
 				</GenrePanel>
 
@@ -218,15 +221,13 @@ export const GenresStep = ({ selectedGenres, onToggle }: IGenresStepProps) => {
 					<RecommendationPanel>
 						<RecommendationHeader>
 							<PanelLabel>
-								Если нравятся эти жанры, могут понравиться и эти
+								If you like these genres, you may like these too
 							</PanelLabel>
 							<ToggleRecommendationsButton
 								type="button"
-								onClick={() =>
-									setAreRecommendationsOpen((current) => !current)
-								}
+								onClick={() => setAreRecommendationsOpen((current) => !current)}
 							>
-								{areRecommendationsOpen ? "Скрыть" : "Показать"}
+								{areRecommendationsOpen ? "Hide" : "Show"}
 							</ToggleRecommendationsButton>
 						</RecommendationHeader>
 						{areRecommendationsOpen ? (
@@ -297,7 +298,11 @@ const SelectedGenresCarousel = styled.div<{
 
 	&::after {
 		right: 0;
-		background: linear-gradient(270deg, ${theme.colors.background}, transparent);
+		background: linear-gradient(
+			270deg,
+			${theme.colors.background},
+			transparent
+		);
 		opacity: ${({ $showRightFade }) => ($showRightFade ? 1 : 0)};
 	}
 `;

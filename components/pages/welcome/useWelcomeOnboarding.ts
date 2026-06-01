@@ -140,7 +140,7 @@ export const useWelcomeOnboarding = () => {
 				const available = await checkUsernameAvailability(username.trim());
 				if (!available) {
 					setHasUsernameError(true);
-					setFormError("Этот username уже занят. Попробуйте другой.");
+					setFormError("This username is already taken. Try another one.");
 					return;
 				}
 			} finally {
@@ -148,7 +148,7 @@ export const useWelcomeOnboarding = () => {
 			}
 
 			if (!userId) {
-				setFormError("Сессия не найдена. Попробуйте войти заново.");
+				setFormError("Session not found. Please sign in again.");
 				return;
 			}
 
@@ -174,7 +174,7 @@ export const useWelcomeOnboarding = () => {
 				setFormError(
 					error instanceof Error
 						? error.message
-						: "Не удалось сохранить профиль. Попробуйте еще раз.",
+						: "Could not save profile. Please try again.",
 				);
 			} finally {
 				setIsSavingProfile(false);
@@ -184,7 +184,7 @@ export const useWelcomeOnboarding = () => {
 
 		if (activeStep === "avatar") {
 			if (!userId) {
-				setFormError("Сессия не найдена. Попробуйте войти заново.");
+				setFormError("Session not found. Please sign in again.");
 				return;
 			}
 
@@ -207,7 +207,7 @@ export const useWelcomeOnboarding = () => {
 				setFormError(
 					error instanceof Error
 						? error.message
-						: "Не удалось сохранить аватар. Попробуйте еще раз.",
+						: "Could not save avatar. Please try again.",
 				);
 			} finally {
 				setIsSavingProfile(false);
@@ -240,12 +240,12 @@ export const useWelcomeOnboarding = () => {
 		}
 
 		if (!yearGoal) {
-			setFormError("Введите цель на год.");
+			setFormError("Enter a yearly goal.");
 			return;
 		}
 
 		if (!userId) {
-			setFormError("Сессия не найдена. Попробуйте войти заново.");
+			setFormError("Session not found. Please sign in again.");
 			return;
 		}
 
@@ -282,7 +282,7 @@ export const useWelcomeOnboarding = () => {
 			setFormError(
 				error instanceof Error
 					? error.message
-					: "Не удалось завершить регистрацию. Попробуйте еще раз.",
+					: "Could not complete registration. Please try again.",
 			);
 		} finally {
 			setIsSubmitting(false);
