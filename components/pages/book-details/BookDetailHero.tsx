@@ -6,10 +6,13 @@ import CheckCircleOutlinedIcon from "@mui/icons-material/CheckCircleOutlined";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
 import MoreHorizIcon from "@mui/icons-material/MoreHoriz";
+import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import styled from "styled-components";
 
+import { CreateBookModal } from "@/components/pages/my-books/CreateBookModal";
 import type { IBook } from "@/shared/api/books";
 import {
 	useCreatePaperBookStateMutation,
@@ -65,6 +68,7 @@ const paperBookStatuses: Array<{ id: IPaperBookStatus; label: string }> = [
 ];
 
 const BookDetailHero = ({ book, onAuthRequired }: IBookDetailHeroProps) => {
+	const router = useRouter();
 	const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 	const updateTrackingMutation = useUpdateBookTrackingMutation();
 	const deleteTrackingMutation = useDeleteBookTrackingMutation();
@@ -89,6 +93,7 @@ const BookDetailHero = ({ book, onAuthRequired }: IBookDetailHeroProps) => {
 	const [isNoteExpanded, setIsNoteExpanded] = useState(false);
 	const [hasClampedNoteOverflow, setHasClampedNoteOverflow] = useState(false);
 	const [isCollectionModalOpen, setIsCollectionModalOpen] = useState(false);
+	const [isEditBookOpen, setIsEditBookOpen] = useState(false);
 	const closeMoreMenuTimer = useRef<number | null>(null);
 	const noteTextRef = useRef<HTMLParagraphElement | null>(null);
 	const seriesTag = getSeriesTag(book);
@@ -122,6 +127,7 @@ const BookDetailHero = ({ book, onAuthRequired }: IBookDetailHeroProps) => {
 		deletePaperBookMutation.isPending;
 	const isActionPending = isTrackingPending || isPaperBookPending;
 	const isAnyMenuOpen = isStatusMenuOpen || isMoreMenuOpen || isPaperMenuOpen;
+	const canEditBook = book.isPublic === false;
 
 	useEffect(() => {
 		return () => {
@@ -380,6 +386,15 @@ const BookDetailHero = ({ book, onAuthRequired }: IBookDetailHeroProps) => {
 			{seriesTag ? <SeriesTag>{seriesTag}</SeriesTag> : null}
 			<Title>
 				<TitleText>{book.title}</TitleText>
+				{canEditBook ? (
+					<TitleEditButton
+						aria-label="Edit book"
+						type="button"
+						onClick={() => setIsEditBookOpen(true)}
+					>
+						<EditOutlinedIcon aria-hidden="true" />
+					</TitleEditButton>
+				) : null}
 				{currentStatus === "finished" ? (
 					<FinishedMark aria-label="Finished">
 						<CheckCircleOutlinedIcon aria-hidden="true" />
@@ -598,6 +613,22 @@ const BookDetailHero = ({ book, onAuthRequired }: IBookDetailHeroProps) => {
 					onClose={() => setIsCollectionModalOpen(false)}
 				/>
 			) : null}
+			{isEditBookOpen ? (
+				<CreateBookModal
+					bookId={book.id}
+					onClose={() => setIsEditBookOpen(false)}
+					onCreateError={(message) => setTrackingStatus(message)}
+					onDeleted={() => {
+						setTrackingStatus("Book deleted");
+						setIsEditBookOpen(false);
+						router.replace("/treasures/books");
+					}}
+					onUpdated={() => {
+						setTrackingStatus("Book updated");
+						setIsEditBookOpen(false);
+					}}
+				/>
+			) : null}
 		</HeaderBlock>
 	);
 };
@@ -708,6 +739,32 @@ const TitleText = styled.span`
 	overflow: hidden;
 	-webkit-box-orient: vertical;
 	-webkit-line-clamp: 2;
+`;
+
+const TitleEditButton = styled.button`
+	display: inline-flex;
+	flex: 0 0 auto;
+	align-items: center;
+	justify-content: center;
+	width: 2rem;
+	height: 2rem;
+	border: 0.0625rem solid rgb(242 239 237 / 0.22);
+	border-radius: 50%;
+	background: rgb(242 239 237 / 0.12);
+	color: ${theme.colors.orangeLight};
+	cursor: pointer;
+	padding: 0;
+
+	& svg {
+		width: 1.2rem;
+		height: 1.2rem;
+	}
+
+	&:hover,
+	&:focus-visible {
+		background: rgb(242 239 237 / 0.2);
+		outline: none;
+	}
 `;
 
 const FinishedMark = styled.span`

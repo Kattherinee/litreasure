@@ -317,7 +317,7 @@ export const CreateCollectionModalContent = ({
 							Back
 						</CreateSecondaryButton>
 						<CreatePrimaryButton
-							disabled={isSaving}
+							disabled={isSaving || !newTitle.trim()}
 							type="button"
 							onClick={() => void saveCollection()}
 						>

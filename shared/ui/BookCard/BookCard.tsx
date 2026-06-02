@@ -556,6 +556,7 @@ const BookMeta = styled.div.attrs<{ $coverWidth: number | null }>(
 	overflow: hidden;
 `;
 
+
 const BookTitle = styled.h2<{ $size: IBookCardSize }>`
 	display: -webkit-box;
 	overflow: hidden;

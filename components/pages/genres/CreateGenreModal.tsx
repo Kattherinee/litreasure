@@ -174,7 +174,7 @@ const CheckboxField = styled.label`
 
 const ErrorText = styled.p`
 	margin: 0;
-	color: ${theme.colors.error};
+	color: #a03434;
 	font-size: 0.86rem;
 	line-height: 1.3;
 `;

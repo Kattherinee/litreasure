@@ -35,6 +35,8 @@ const hasGenreFilter = (section: IHomeSection) =>
 	Boolean(section.query.genre) ||
 	Boolean(section.query.genres?.length) ||
 	Boolean(section.query.genreIds?.length);
+const isNewestSection = (section: IHomeSection) =>
+	section.query.sort === "newest" && !hasGenreFilter(section);
 
 const HomePage = () => {
 	const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -58,7 +60,16 @@ const HomePage = () => {
 
 	const explicitForYouSections = bookSections.filter(isForYouSection);
 	const forYouSection = explicitForYouSections[0] ?? null;
-	const afterForYouBookSections = bookSections.filter(
+	const newestBookSection =
+		bookSections.find(
+			(section: IHomeSection) =>
+				!isForYouSection(section) && isNewestSection(section),
+		) ?? null;
+	const introBookSection = isAuthenticated ? forYouSection : newestBookSection;
+	const afterIntroBookSections = bookSections.filter(
+		(section: IHomeSection) => section.key !== introBookSection?.key,
+	);
+	const afterForYouBookSections = afterIntroBookSections.filter(
 		(section: IHomeSection) => section.key !== forYouSection?.key,
 	);
 	const popularBookSection =
@@ -105,16 +116,31 @@ const HomePage = () => {
 			{hasDynamicSections ? (
 				<>
 					<GenreCarousel />
-					{forYouSection ? (
+					{isAuthenticated ? (
+						forYouSection ? (
+							<BookSliderSection
+								key={forYouSection.key}
+								source="for-you"
+								title="You Might Like"
+								{...forYouSection.query}
+							/>
+						) : (
+							<BookSliderSection
+								source="for-you"
+								title="You Might Like"
+								limit={20}
+							/>
+						)
+					) : newestBookSection ? (
 						<BookSliderSection
-							key={forYouSection.key}
-							source="for-you"
-							title="You Might Like"
-							{...forYouSection.query}
+							key={newestBookSection.key}
+							lazy
+							title="New releases"
+							{...newestBookSection.query}
 						/>
-					) : isAuthenticated ? (
-						<BookSliderSection source="for-you" title="You Might Like" limit={20} />
-					) : null}
+					) : (
+						<BookSliderSection title="New releases" sort="newest" limit={20} />
+					)}
 					<BookOfTheWeekSlider />
 					{popularBookSection ? (
 						<BookSliderSection
@@ -211,7 +237,7 @@ const HomePage = () => {
 							limit={20}
 						/>
 					) : (
-						<BookSliderSection title="Popular" sort="popular" limit={20} />
+						<BookSliderSection title="New releases" sort="newest" limit={20} />
 					)}
 					<BookOfTheWeekSlider />
 					{isAuthenticated ? (

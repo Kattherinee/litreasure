@@ -1,31 +1,40 @@
 ﻿"use client";
 
-import AutoStoriesOutlinedIcon from "@mui/icons-material/AutoStoriesOutlined";
 import StarBorderIcon from "@mui/icons-material/StarBorder";
 import StarIcon from "@mui/icons-material/Star";
-import type { ChangeEvent, FormEvent, KeyboardEvent } from "react";
-import { useEffect, useRef, useState } from "react";
-import type { CropperRef } from "react-advanced-cropper";
-import { Cropper } from "react-advanced-cropper";
+import type { KeyboardEvent } from "react";
+import { useEffect, useState } from "react";
 import styled from "styled-components";
 
 import {
 	type IBook,
 	type ICreateBookPayload,
+	useBookQuery,
 	useCreateBookMutation,
+	useDeleteBookMutation,
+	useUpdateBookMutation,
 } from "@/shared/api/books";
 import { useGenresQuery } from "@/shared/api/genres";
-import { useUploadImageMutation } from "@/shared/api/images";
 import { theme } from "@/shared/theme";
+import {
+	AuthorMultiSelectField,
+	type ISelectedAuthorOption,
+} from "@/shared/ui/AuthorMultiSelectField";
+import { ConfirmModal } from "@/shared/ui/ConfirmModal";
+import { FormModal } from "@/shared/ui/FormModal";
+import { ImageUploadField } from "@/shared/ui/ImageUploadField";
 import { Button } from "@/shared/ui/Button";
 
 interface ICreateBookModalProps {
+	bookId?: string;
 	onClose: () => void;
 	onCreated?: (book: IBook) => void;
+	onCreateError?: (message: string) => void;
+	onDeleted?: (bookId: string) => void;
+	onUpdated?: (book: IBook) => void;
 }
 
 type ICreateBookFormState = {
-	author: string;
 	coverUrl: string;
 	description: string;
 	genreInput: string;
@@ -36,12 +45,6 @@ type ICreateBookFormState = {
 	publisher: string;
 	rating: number;
 	title: string;
-};
-
-type ICoverCropState = {
-	file: File;
-	height: number;
-	width: number;
 };
 
 const bookCoverRules = {
@@ -55,7 +58,6 @@ const bookCoverRules = {
 };
 
 const createDefaultBookForm = (): ICreateBookFormState => ({
-	author: "",
 	coverUrl: "",
 	description: "",
 	genreInput: "",
@@ -68,47 +70,26 @@ const createDefaultBookForm = (): ICreateBookFormState => ({
 	title: "",
 });
 
-const loadImage = (src: string) =>
-	new Promise<HTMLImageElement>((resolve, reject) => {
-		const image = new Image();
-		image.onload = () => resolve(image);
-		image.onerror = () => reject(new Error("Failed to read image."));
-		image.src = src;
-	});
-
-const readImageSize = async (src: string) => {
-	const image = await loadImage(src);
-
-	return {
-		height: image.naturalHeight,
-		width: image.naturalWidth,
-	};
-};
-
-const isValidBookCoverSize = (width: number, height: number) => {
-	const ratio = width / height;
-
-	return (
-		width >= bookCoverRules.allowedMinWidth &&
-		height >= bookCoverRules.allowedMinHeight &&
-		ratio >= bookCoverRules.allowedMinRatio &&
-		ratio <= bookCoverRules.allowedMaxRatio
-	);
-};
-
 export const CreateBookModal = ({
+	bookId,
 	onClose,
 	onCreated,
+	onCreateError,
+	onDeleted,
+	onUpdated,
 }: ICreateBookModalProps) => {
+	const isEditMode = Boolean(bookId);
 	const createBookMutation = useCreateBookMutation();
-	const uploadImageMutation = useUploadImageMutation();
+	const updateBookMutation = useUpdateBookMutation();
+	const deleteBookMutation = useDeleteBookMutation();
+	const { data: editingBook } = useBookQuery(bookId ?? "");
 	const { data: genreSuggestionsSource = [] } = useGenresQuery();
-	const coverInputRef = useRef<HTMLInputElement | null>(null);
-	const coverCropperRef = useRef<CropperRef>(null);
 	const [form, setForm] = useState<ICreateBookFormState>(createDefaultBookForm);
+	const [selectedAuthors, setSelectedAuthors] = useState<ISelectedAuthorOption[]>(
+		[],
+	);
+	const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
 	const [error, setError] = useState("");
-	const [coverPreviewUrl, setCoverPreviewUrl] = useState("");
-	const [coverCrop, setCoverCrop] = useState<ICoverCropState | null>(null);
 	const normalizedGenreInput = form.genreInput.trim().toLowerCase();
 	const genreSuggestions = genreSuggestionsSource
 		.filter((genre) => {
@@ -124,18 +105,40 @@ export const CreateBookModal = ({
 		.slice(0, 6);
 
 	useEffect(() => {
-		return () => {
-			if (coverPreviewUrl) URL.revokeObjectURL(coverPreviewUrl);
-		};
-	}, [coverPreviewUrl]);
+		if (!isEditMode || !editingBook) return;
+		setForm({
+			coverUrl: editingBook.coverUrl ?? "",
+			description: editingBook.description ?? "",
+			genreInput: "",
+			genres: (editingBook.genres ?? []).map((genre) => genre.name),
+			language: editingBook.language ?? "",
+			pagesCount: editingBook.pagesCount ? String(editingBook.pagesCount) : "",
+			publishedYear: editingBook.publishedYear
+				? String(editingBook.publishedYear)
+				: "",
+			publisher: editingBook.publisher ?? "",
+			rating: editingBook.rating ?? 0,
+			title: editingBook.title ?? "",
+		});
+		setSelectedAuthors(
+			(editingBook.authors ?? []).map((author) => ({
+				id: author.id,
+				name: author.name,
+			})),
+		);
+	}, [editingBook, isEditMode]);
 
 	const closeModal = () => {
-		if (createBookMutation.isPending) return;
-		if (coverPreviewUrl) URL.revokeObjectURL(coverPreviewUrl);
-		setCoverPreviewUrl("");
-		setCoverCrop(null);
+		if (
+			createBookMutation.isPending ||
+			updateBookMutation.isPending ||
+			deleteBookMutation.isPending
+		) {
+			return;
+		}
 		setError("");
 		setForm(createDefaultBookForm());
+		setSelectedAuthors([]);
 		onClose();
 	};
 
@@ -176,119 +179,32 @@ export const CreateBookModal = ({
 		}
 	};
 
-	const uploadCoverFile = async (file: File, previewUrl?: string) => {
-		try {
-			const uploadedCover = await uploadImageMutation.mutateAsync({
-				file,
-				purpose: "book-cover",
-			});
-			if (previewUrl) URL.revokeObjectURL(previewUrl);
-			setCoverPreviewUrl("");
-			setCoverCrop(null);
-			updateForm("coverUrl", uploadedCover.url);
-		} catch (caughtError) {
-			if (previewUrl) URL.revokeObjectURL(previewUrl);
-			setCoverPreviewUrl("");
-			setCoverCrop(null);
-			setError(
-				caughtError instanceof Error
-					? caughtError.message
-					: "Failed to upload cover.",
-			);
-		}
-	};
+	const isBookFormValid =
+		Boolean(form.title.trim()) &&
+		Boolean(form.description.trim()) &&
+		Boolean(form.coverUrl.trim()) &&
+		form.genres.length > 0 &&
+		selectedAuthors.length > 0;
 
-	const handleCoverFileChange = async (
-		event: ChangeEvent<HTMLInputElement>,
-	) => {
-		const file = event.target.files?.[0];
-		event.target.value = "";
-		if (!file) return;
-
-		if (coverPreviewUrl) URL.revokeObjectURL(coverPreviewUrl);
-		const nextPreviewUrl = URL.createObjectURL(file);
-		setCoverPreviewUrl(nextPreviewUrl);
-		setCoverCrop(null);
-		setError("");
-
-		try {
-			const { height, width } = await readImageSize(nextPreviewUrl);
-			if (isValidBookCoverSize(width, height)) {
-				await uploadCoverFile(file, nextPreviewUrl);
-				return;
-			}
-
-			setCoverCrop({ file, height, width });
-			updateForm("coverUrl", "");
-			setError(
-				"Image dimensions are not suitable. Choose a new image or crop this one.",
-			);
-		} catch (caughtError) {
-			URL.revokeObjectURL(nextPreviewUrl);
-			setCoverPreviewUrl("");
-			setCoverCrop(null);
-			setError(
-				caughtError instanceof Error
-					? caughtError.message
-					: "Failed to read cover.",
-			);
-		}
-	};
-
-	const handleCropCover = async () => {
-		if (!coverCrop || !coverPreviewUrl) return;
-
-		try {
-			setError("");
-			const canvas = coverCropperRef.current?.getCanvas({
-				height: bookCoverRules.idealHeight,
-				imageSmoothingQuality: "high",
-				width: bookCoverRules.idealWidth,
-			});
-			if (!canvas) throw new Error("Failed to prepare crop.");
-
-			const blob = await new Promise<Blob | null>((resolve) =>
-				canvas.toBlob(resolve, "image/jpeg", 0.92),
-			);
-			if (!blob) throw new Error("Failed to crop image.");
-
-			const croppedFile = new File([blob], coverCrop.file.name, {
-				type: "image/jpeg",
-			});
-			await uploadCoverFile(croppedFile, coverPreviewUrl);
-		} catch (caughtError) {
-			setError(
-				caughtError instanceof Error
-					? caughtError.message
-					: "Failed to crop cover.",
-			);
-		}
-	};
-
-	const clearCover = () => {
-		if (coverPreviewUrl) URL.revokeObjectURL(coverPreviewUrl);
-		setCoverPreviewUrl("");
-		setCoverCrop(null);
-		updateForm("coverUrl", "");
-	};
-
-	const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-		event.preventDefault();
+	const handleSubmit = async () => {
 		setError("");
 
 		const title = form.title.trim();
-		const author = form.author.trim();
 		const pendingGenre = form.genreInput.trim();
 		const genres = pendingGenre
 			? Array.from(new Set([...form.genres, pendingGenre]))
 			: form.genres;
 
-		if (!title || !author) {
+		if (!title || selectedAuthors.length === 0) {
 			setError("Please provide title and author.");
 			return;
 		}
 
-		const payload: ICreateBookPayload = { author, genres, title };
+		const payload: ICreateBookPayload = {
+			authorIds: selectedAuthors.map((item) => item.id),
+			genres,
+			title,
+		};
 		const description = form.description.trim();
 		const coverUrl = form.coverUrl.trim();
 		const publishedYear = Number(form.publishedYear);
@@ -311,78 +227,100 @@ export const CreateBookModal = ({
 		}
 
 		try {
+			if (isEditMode && bookId) {
+				const book = await updateBookMutation.mutateAsync({
+					id: bookId,
+					payload,
+				});
+				setError("");
+				onUpdated?.(book);
+				onClose();
+				return;
+			}
+
 			const book = await createBookMutation.mutateAsync(payload);
-			if (coverPreviewUrl) URL.revokeObjectURL(coverPreviewUrl);
-			setCoverPreviewUrl("");
-			setCoverCrop(null);
 			setError("");
 			setForm(createDefaultBookForm());
+			setSelectedAuthors([]);
 			onCreated?.(book);
 			onClose();
 		} catch (caughtError) {
-			setError(
+			const message =
 				caughtError instanceof Error
 					? caughtError.message
-					: "Failed to create book.",
-			);
+					: "Failed to create book.";
+			setError(message);
+			onCreateError?.(message);
+		}
+	};
+
+	const handleDelete = async () => {
+		if (!bookId) return;
+
+		try {
+			await deleteBookMutation.mutateAsync(bookId);
+			setIsDeleteConfirmOpen(false);
+			onDeleted?.(bookId);
+			onClose();
+		} catch (caughtError) {
+			const message =
+				caughtError instanceof Error
+					? caughtError.message
+					: "Failed to delete book.";
+			setError(message);
+			onCreateError?.(message);
+			setIsDeleteConfirmOpen(false);
 		}
 	};
 
 	return (
-		<Overlay role="presentation" onMouseDown={closeModal}>
-			<Dialog
-				aria-modal="true"
-				role="dialog"
-				aria-labelledby="create-book-title"
-				onMouseDown={(event) => event.stopPropagation()}
-			>
-				<Header>
-					<Title id="create-book-title">New book</Title>
-					<CloseButton aria-label="Close" type="button" onClick={closeModal}>
-						×
-					</CloseButton>
-				</Header>
-				<Body>
-					<Form onSubmit={handleSubmit}>
+		<>
+		<FormModal
+			isSaveDisabled={!isBookFormValid}
+			isSaving={createBookMutation.isPending || updateBookMutation.isPending}
+			leftAction={
+				isEditMode ? (
+					<DeleteButton
+						buttonType="outlined"
+						disabled={deleteBookMutation.isPending}
+						type="button"
+						onClick={() => setIsDeleteConfirmOpen(true)}
+					>
+						Delete book
+					</DeleteButton>
+				) : undefined
+			}
+			saveLabel={isEditMode ? "Save changes" : "Create book"}
+			savingLabel={isEditMode ? "Saving..." : "Creating..."}
+			title={isEditMode ? "Edit book" : "New book"}
+			onClose={closeModal}
+			onSave={handleSubmit}
+		>
+			<Form onSubmit={(event) => event.preventDefault()}>
 						<Top>
 							<CoverColumn>
-								<CoverUpload
-									$coverUrl={coverPreviewUrl || form.coverUrl || undefined}
-									type="button"
-									onClick={() => coverInputRef.current?.click()}
-								>
-									{coverPreviewUrl || form.coverUrl ? null : (
-										<CoverUploadPlaceholder>
-											<AutoStoriesOutlinedIcon aria-hidden="true" />
-											<span>Upload cover</span>
-											<CoverUploadHint>
-												Best ratio 2:3, minimum 500x750 px
-											</CoverUploadHint>
-										</CoverUploadPlaceholder>
-									)}
-								</CoverUpload>
-								{coverPreviewUrl || form.coverUrl ? (
-									<CoverActions>
-										<CoverSmallButton
-											type="button"
-											onClick={() => coverInputRef.current?.click()}
-										>
-											{uploadImageMutation.isPending
-												? "Uploading..."
-												: "Replace"}
-										</CoverSmallButton>
-										<CoverSmallButton type="button" onClick={clearCover}>
-											Remove
-										</CoverSmallButton>
-									</CoverActions>
-								) : null}
+								<CoverLabel $required>Cover</CoverLabel>
+								<ImageUploadField
+									aspectRatio={bookCoverRules.idealRatio}
+									cropLabel="Crop and upload"
+									cropMessage="Image dimensions are not suitable. Choose a new image or crop this one."
+									idealHeight={bookCoverRules.idealHeight}
+									idealWidth={bookCoverRules.idealWidth}
+									placeholderHint="Best ratio 2:3, minimum 500x750 px"
+									placeholderText="Upload cover"
+									purpose="book-cover"
+									shape="square"
+									value={form.coverUrl}
+									validation={{
+										maxRatio: bookCoverRules.allowedMaxRatio,
+										minHeight: bookCoverRules.allowedMinHeight,
+										minRatio: bookCoverRules.allowedMinRatio,
+										minWidth: bookCoverRules.allowedMinWidth,
+									}}
+									onChange={(url) => updateForm("coverUrl", url)}
+									onError={(message) => setError(message)}
+								/>
 							</CoverColumn>
-							<HiddenFileInput
-								ref={coverInputRef}
-								accept="image/*"
-								type="file"
-								onChange={handleCoverFileChange}
-							/>
 							<TopFields>
 								<FormField>
 									<FormLabel $required>Title</FormLabel>
@@ -395,13 +333,18 @@ export const CreateBookModal = ({
 									/>
 								</FormField>
 								<FormField>
-									<FormLabel $required>Author</FormLabel>
-									<FormInput
+									<AuthorMultiSelectField
 										required
-										value={form.author}
-										onChange={(event) =>
-											updateForm("author", event.target.value)
+										error={
+											error && selectedAuthors.length === 0
+												? "Select at least one author."
+												: undefined
 										}
+										selectedAuthors={selectedAuthors}
+										onChange={(authors) => {
+											setError("");
+											setSelectedAuthors(authors);
+										}}
 									/>
 								</FormField>
 								<FormField>
@@ -452,7 +395,7 @@ export const CreateBookModal = ({
 													onMouseDown={(event) => event.preventDefault()}
 													onClick={() => addGenre(form.genreInput)}
 												>
-													Add "{form.genreInput.trim()}"
+													Add {form.genreInput.trim()}
 												</TagSuggestionButton>
 											) : null}
 										</TagSuggestions>
@@ -461,7 +404,7 @@ export const CreateBookModal = ({
 							</TopFields>
 						</Top>
 						<FormField>
-							<FormLabel>Description</FormLabel>
+							<FormLabel $required>Description</FormLabel>
 							<FormTextarea
 								rows={4}
 								value={form.description}
@@ -556,148 +499,23 @@ export const CreateBookModal = ({
 							</FormField>
 						</FormGrid>
 						{error ? <FormError role="alert">{error}</FormError> : null}
-						<Actions>
-							<CancelButton
-								buttonType="outlined"
-								disabled={createBookMutation.isPending}
-								type="button"
-								onClick={closeModal}
-							>
-								Cancel
-							</CancelButton>
-							<Button
-								buttonType="containedInverted"
-								disabled={createBookMutation.isPending}
-								type="submit"
-							>
-								{createBookMutation.isPending ? "Creating..." : "Create book"}
-							</Button>
-						</Actions>
 					</Form>
-				</Body>
-			</Dialog>
-			{coverCrop && coverPreviewUrl ? (
-				<CropOverlay
-					role="presentation"
-					onMouseDown={(event) => event.stopPropagation()}
-				>
-					<CropModal
-						aria-label="Crop cover"
-						aria-modal="true"
-						role="dialog"
-						onMouseDown={(event) => event.stopPropagation()}
-					>
-						<CropMessage>
-							Image dimensions are not suitable. Choose a new one or crop it to
-							a 2:3 ratio.
-						</CropMessage>
-						<CropperShell>
-							<StyledCropper
-								ref={coverCropperRef}
-								src={coverPreviewUrl}
-								stencilProps={{ aspectRatio: bookCoverRules.idealRatio }}
-							/>
-						</CropperShell>
-						<CropMeta>
-							Original size: {coverCrop.width}x{coverCrop.height} px. After
-							cropping, the cover will be uploaded as 1000x1500 px.
-						</CropMeta>
-						<CropActions>
-							<CoverSmallButton
-								type="button"
-								onClick={() => coverInputRef.current?.click()}
-							>
-								Choose another image
-							</CoverSmallButton>
-							<CoverSmallButton type="button" onClick={handleCropCover}>
-								Crop and upload
-							</CoverSmallButton>
-						</CropActions>
-					</CropModal>
-				</CropOverlay>
-			) : null}
-		</Overlay>
+		</FormModal>
+		{isDeleteConfirmOpen ? (
+			<ConfirmModal
+				confirmLabel="Delete"
+				confirmLoadingLabel="Deleting..."
+				isLoading={deleteBookMutation.isPending}
+				title="Delete this book?"
+				onCancel={() => setIsDeleteConfirmOpen(false)}
+				onConfirm={() => void handleDelete()}
+			>
+				This action cannot be undone.
+			</ConfirmModal>
+		) : null}
+		</>
 	);
 };
-
-const Overlay = styled.div`
-	position: fixed;
-	z-index: 1400;
-	inset: 0;
-	display: grid;
-	place-items: center;
-	background: rgb(4 18 26 / 0.48);
-	padding: 1rem;
-`;
-
-const Dialog = styled.section`
-	display: flex;
-	width: min(100%, 44rem);
-	max-height: min(100%, calc(100dvh - 4rem));
-	flex-direction: column;
-	overflow: hidden;
-	border: 0.0625rem solid rgb(238 179 141 / 0.62);
-	border-radius: 1.1rem;
-	background: ${theme.colors.background};
-	padding: 1.25rem;
-	box-shadow: 0 1.25rem 3rem rgb(4 18 26 / 0.18);
-`;
-
-const Body = styled.div`
-	min-height: 0;
-	overflow-x: hidden;
-	overflow-y: auto;
-	padding-right: 0.45rem;
-	scrollbar-color: rgb(185 174 167 / 0.68) transparent;
-	scrollbar-width: thin;
-
-	&::-webkit-scrollbar {
-		width: 0.38rem;
-	}
-
-	&::-webkit-scrollbar-track {
-		background: transparent;
-		margin: 0.4rem 0;
-	}
-
-	&::-webkit-scrollbar-thumb {
-		border-radius: 999px;
-		background: rgb(185 174 167 / 0.68);
-	}
-`;
-
-const Header = styled.div`
-	display: flex;
-	align-items: flex-start;
-	justify-content: space-between;
-	gap: 1rem;
-	margin-bottom: 1rem;
-`;
-
-const Title = styled.h2`
-	margin: 0;
-	color: ${theme.colors.foreground};
-	font-family: ${theme.fonts.serif};
-	font-size: 1.65rem;
-	font-weight: 600;
-	line-height: 1.15;
-`;
-
-const CloseButton = styled.button`
-	border: 0;
-	background: transparent;
-	color: ${theme.colors.softForeground};
-	cursor: pointer;
-	font: inherit;
-	font-size: 1.6rem;
-	line-height: 1;
-
-	&:hover,
-	&:focus-visible {
-		color: ${theme.colors.orangeDark};
-		outline: none;
-	}
-`;
 
 const Form = styled.form`
 	display: grid;
@@ -721,92 +539,9 @@ const CoverColumn = styled.div`
 	justify-items: center;
 `;
 
-const CoverUpload = styled.button<{ $coverUrl?: string }>`
-	position: relative;
-	display: grid;
-	width: 11rem;
-	aspect-ratio: 2 / 3;
-	place-items: center;
-	overflow: hidden;
-	border: 0.0625rem dashed
-		${({ $coverUrl }) => ($coverUrl ? "transparent" : "rgb(218 142 91 / 0.62)")};
-	border-radius: 0.8rem;
-	background:
-		linear-gradient(
-			rgb(4 18 26 / ${({ $coverUrl }) => ($coverUrl ? "0.12" : "0.06")}),
-			rgb(4 18 26 / ${({ $coverUrl }) => ($coverUrl ? "0.12" : "0.06")})
-		),
-		${({ $coverUrl }) =>
-			$coverUrl
-				? `url("${$coverUrl}") center / cover no-repeat`
-				: "rgb(242 239 237 / 0.72)"};
-	color: ${theme.colors.softForeground};
-	cursor: pointer;
-	font: inherit;
-
-	&:hover,
-	&:focus-visible {
-		border-color: ${theme.colors.orangeLight};
-		outline: none;
-	}
-`;
-
-const CoverUploadPlaceholder = styled.span`
-	display: grid;
-	justify-items: center;
-	gap: 0.45rem;
-	padding: 0.8rem;
-	font-size: 0.82rem;
-	font-weight: 700;
-	text-align: center;
-
-	& svg {
-		width: 2rem;
-		height: 2rem;
-		color: ${theme.colors.orangeDark};
-	}
-`;
-
-const CoverUploadHint = styled.small`
-	color: ${theme.colors.muted};
-	font-size: 0.72rem;
-	font-weight: 600;
-	line-height: 1.2;
-`;
-
-const HiddenFileInput = styled.input`
-	display: none;
-`;
-
 const TopFields = styled.div`
 	display: grid;
 	gap: 0.75rem;
-`;
-
-const CoverActions = styled.div`
-	display: flex;
-	flex-wrap: nowrap;
-	justify-content: center;
-	gap: 0.45rem;
-`;
-
-const CoverSmallButton = styled.button`
-	border: 0.0625rem solid rgb(211 202 196 / 0.82);
-	border-radius: 999px;
-	background: rgb(242 239 237 / 0.74);
-	padding: 0.35rem 0.7rem;
-	color: ${theme.colors.foreground};
-	cursor: pointer;
-	font: inherit;
-	font-size: 0.76rem;
-	font-weight: 700;
-
-	&:hover,
-	&:focus-visible {
-		border-color: ${theme.colors.orangeLight};
-		color: ${theme.colors.orangeDark};
-		outline: none;
-	}
 `;
 
 const FormGrid = styled.div<{ $columns?: number }>`
@@ -840,6 +575,11 @@ const FormLabel = styled.span<{ $required?: boolean }>`
 		content: ${({ $required }) => ($required ? '" *"' : '""')};
 		color: ${theme.colors.orangeDark};
 	}
+`;
+
+const CoverLabel = styled(FormLabel)`
+	justify-self: start;
+	width: 100%;
 `;
 
 const fieldStyles = `
@@ -917,7 +657,7 @@ const TagRemoveButton = styled.button`
 
 	&:hover,
 	&:focus-visible {
-		background: ${theme.colors.bluePrimary};
+		background: ${theme.colors.orangeLight};
 		color: ${theme.colors.invertedText};
 		outline: none;
 	}
@@ -1015,67 +755,16 @@ const FormError = styled.p`
 	font-weight: 700;
 `;
 
-const Actions = styled.div`
-	display: flex;
-	flex-wrap: wrap;
-	justify-content: flex-end;
-	gap: 0.65rem;
-	margin-top: 0.2rem;
-`;
-
-const CancelButton = styled(Button)``;
-
-const CropOverlay = styled.div`
-	position: fixed;
-	z-index: 1410;
-	inset: 0;
-	display: grid;
-	place-items: center;
-	background: rgb(4 18 26 / 0.48);
-	padding: 1rem;
-`;
-
-const CropModal = styled.section`
-	display: grid;
-	width: min(100%, 32rem);
-	gap: 0.75rem;
-	border: 0.0625rem solid rgb(218 142 91 / 0.42);
-	border-radius: 1rem;
-	background: ${theme.colors.background};
-	padding: 1rem;
-	box-shadow: 0 1.25rem 3rem rgb(4 18 26 / 0.2);
-`;
-
-const CropMessage = styled.p`
-	margin: 0;
-	color: ${theme.colors.orangeDark};
-	font-size: 0.84rem;
-	font-weight: 700;
-	line-height: 1.35;
-`;
-
-const CropperShell = styled.div`
-	height: 21rem;
-	overflow: hidden;
-	border: 0.0625rem solid rgb(218 142 91 / 0.2);
-	border-radius: 0.85rem;
-	background: rgb(242 239 237 / 0.72);
-`;
-
-const StyledCropper = styled(Cropper)`
-	width: 100%;
-	height: 100%;
-`;
-
-const CropMeta = styled.p`
-	margin: 0;
-	color: ${theme.colors.softForeground};
-	font-size: 0.78rem;
-	line-height: 1.35;
-`;
-
-const CropActions = styled.div`
-	display: flex;
-	flex-wrap: wrap;
-	gap: 0.45rem;
+const DeleteButton = styled(Button)`
+	min-height: 2.2rem;
+	&& {
+		border-color: #b34034;
+		color: #b34034;
+	}
+	&&:hover,
+	&&:focus-visible {
+		border-color: #a03434;
+		background: rgb(179 64 52 / 0.12);
+		color: #a03434;
+	}
 `;

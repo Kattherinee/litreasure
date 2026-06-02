@@ -63,6 +63,7 @@ export interface IBook {
 	isTracked?: boolean;
 	myStatus?: IUserBookStatus | null;
 	myCollectionIds?: string[];
+	isPublic?: boolean;
 	createdAt: string;
 	updatedAt: string;
 }
@@ -87,7 +88,7 @@ export type IBookSeriesRelationType =
 
 export interface ICreateBookPayload {
 	title: string;
-	author: string;
+	authorIds: string[];
 	description?: string;
 	coverUrl?: string;
 	genres: string[];
@@ -114,6 +115,7 @@ export interface IBookCardsParams {
 	genre?: string;
 	genreIds?: string[];
 	limit?: number;
+	onlyMine?: boolean;
 	page?: number;
 	search?: string;
 	searchScope?: IBookSearchScope;

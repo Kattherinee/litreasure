@@ -4,13 +4,12 @@ import { useMemo, useState } from "react";
 import styled from "styled-components";
 
 import {
-	type ISearchBook,
+	type IBookRecomendation,
 	useRecomendationsByPromptQuery,
 } from "@/shared/api/recomendations";
 import type { IByPromptRecomendationsParams } from "@/shared/api/recomendations/recomendations.types";
-import type { IBook } from "@/shared/api/books";
+import type { ISearchBook } from "@/shared/api/search";
 import { theme } from "@/shared/theme";
-import { InputField } from "@/shared/ui/InputField";
 import { BookResultCard } from "./BookResultCard";
 
 const RECOMMENDATION_LIMIT = 10;
@@ -23,8 +22,8 @@ interface IRecommendationSearchModeProps {
 	saveRecentSearch: (value: string) => void;
 }
 
-const mapBookToSearchBook = (book: IBook): ISearchBook => ({
-	author: book.author,
+const mapBookToSearchBook = (book: IBookRecomendation): ISearchBook => ({
+	author: book.author ?? book.authors?.[0]?.name ?? "",
 	authorId: book.authors?.[0]?.id,
 	coverUrl: book.coverUrl,
 	id: book.id,

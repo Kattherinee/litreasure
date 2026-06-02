@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import styled from "styled-components";
 
 import { CreateBookModal } from "@/components/pages/my-books/CreateBookModal";
+import { useBookCardsQuery } from "@/shared/api/books";
 import {
 	useUserBooksQuery,
 	type IUserBookStatus,
@@ -14,10 +15,11 @@ import { theme } from "@/shared/theme";
 import { AppPagination } from "@/shared/ui/AppPagination";
 import { BookCard } from "@/shared/ui/BookCard";
 import { Button } from "@/shared/ui/Button";
+import { ChipTabs } from "@/shared/ui/ChipTabs";
 
 const statusTabs: Array<{ id: IUserBookStatus | "all"; label: string }> = [
 	{ id: "all", label: "All books" },
-	{ id: "reading", label: "Currently reading" },
+	{ id: "reading", label: "Reading" },
 	{ id: "planned", label: "Planned" },
 	{ id: "finished", label: "Finished" },
 	{ id: "paused", label: "Paused" },
@@ -25,15 +27,17 @@ const statusTabs: Array<{ id: IUserBookStatus | "all"; label: string }> = [
 	{ id: "dropped", label: "Dropped" },
 ];
 
+type IBooksTab = IUserBookStatus | "all" | "created";
+
 const MyBooksPage = () => {
 	const router = useRouter();
 	const searchParams = useSearchParams();
 	const session = useAuthStore((state) => state.session);
 	const [page, setPage] = useState(1);
-	const [activeStatus, setActiveStatus] = useState<IUserBookStatus | "all">(
-		"all",
+	const [activeStatus, setActiveStatus] = useState<IBooksTab>("all");
+	const [isCreateBookOpen, setIsCreateBookOpen] = useState(
+		() => searchParams.get("create") === "1",
 	);
-	const [isCreateBookOpen, setIsCreateBookOpen] = useState(false);
 
 	const allBooksQuery = useUserBooksQuery(
 		{
@@ -66,18 +70,45 @@ const MyBooksPage = () => {
 		{ limit: 30, page, status: "dropped" },
 		{ enabled: Boolean(session) },
 	);
+	const createdBooksQuery = useBookCardsQuery(
+		{ limit: 30, onlyMine: true, page },
+		{ enabled: Boolean(session) },
+	);
 	const queriesByStatus = {
 		all: allBooksQuery,
+		created: createdBooksQuery,
 		dropped: droppedBooksQuery,
 		finished: finishedBooksQuery,
 		paused: pausedBooksQuery,
 		planned: plannedBooksQuery,
 		reading: readingBooksQuery,
 		rereading: rereadingBooksQuery,
-	} satisfies Record<IUserBookStatus | "all", typeof allBooksQuery>;
-	const activeBooksQuery = queriesByStatus[activeStatus];
-	const { data, isError, isLoading } = activeBooksQuery;
-	const books = data?.items ?? [];
+	} satisfies Record<
+		IBooksTab,
+		typeof allBooksQuery | typeof createdBooksQuery
+	>;
+	const activeTrackedBooksQuery =
+		activeStatus === "created"
+			? null
+			: (queriesByStatus[activeStatus] as typeof allBooksQuery);
+	const data =
+		activeStatus === "created"
+			? createdBooksQuery.data
+			: activeTrackedBooksQuery?.data;
+	const isError =
+		activeStatus === "created"
+			? createdBooksQuery.isError
+			: (activeTrackedBooksQuery?.isError ?? false);
+	const isLoading =
+		activeStatus === "created"
+			? createdBooksQuery.isLoading
+			: (activeTrackedBooksQuery?.isLoading ?? false);
+	const trackedBooks =
+		activeStatus === "created"
+			? []
+			: (activeTrackedBooksQuery?.data?.items ?? []);
+	const createdBooks =
+		activeStatus === "created" ? (createdBooksQuery.data?.items ?? []) : [];
 	const pages = data?.pages ?? 1;
 
 	useEffect(() => {
@@ -85,12 +116,6 @@ const MyBooksPage = () => {
 			router.replace("/?auth=required");
 		}
 	}, [router, session]);
-
-	useEffect(() => {
-		if (session && searchParams.get("create") === "1") {
-			setIsCreateBookOpen(true);
-		}
-	}, [searchParams, session]);
 
 	if (!session) {
 		return null;
@@ -113,49 +138,60 @@ const MyBooksPage = () => {
 					</Button>
 				</Hero>
 
-				<StatusTabs aria-label="Book statuses">
-					{statusTabs.map((status) => {
-						const isActive = activeStatus === status.id;
-
-						return (
-							<StatusTab
-								key={status.id}
-								$isActive={isActive}
-								type="button"
-								onClick={() => {
-									setActiveStatus(status.id);
-									setPage(1);
-								}}
-							>
-								{status.label}
-								{queriesByStatus[status.id].data ? (
-									<StatusCount>
-										{queriesByStatus[status.id].data?.total ?? 0}
-									</StatusCount>
-								) : null}
-							</StatusTab>
-						);
-					})}
-				</StatusTabs>
+				<StatusRow>
+					<StatusTabs
+						activeId={activeStatus}
+						ariaLabel="Book statuses"
+						items={statusTabs.map((status) => ({
+							count: queriesByStatus[status.id].data?.total ?? 0,
+							id: status.id,
+							label: status.label,
+						}))}
+						onChange={(id) => {
+							setActiveStatus(id as IBooksTab);
+							setPage(1);
+						}}
+					/>
+					<CreatedTabButton
+						$isActive={activeStatus === "created"}
+						type="button"
+						onClick={() => {
+							setActiveStatus("created");
+							setPage(1);
+						}}
+					>
+						Created by me
+						<CreatedCount>
+							{queriesByStatus.created.data?.total ?? 0}
+						</CreatedCount>
+					</CreatedTabButton>
+				</StatusRow>
 
 				{isLoading ? (
 					<StateMessage>Loading books...</StateMessage>
 				) : isError ? (
 					<StateMessage>Failed to load your books.</StateMessage>
-				) : books.length > 0 ? (
+				) : (activeStatus === "created" ? createdBooks : trackedBooks).length >
+				  0 ? (
 					<>
 						<BookGrid>
-							{books.map((item) => (
-								<BookItem key={item.id}>
-									<BookCard
-										book={{
-											...item.book,
-											isTracked: true,
-											myStatus: item.status,
-										}}
-									/>
-								</BookItem>
-							))}
+							{activeStatus === "created"
+								? createdBooks.map((book) => (
+										<BookItem key={book.id}>
+											<BookCard book={book} />
+										</BookItem>
+									))
+								: trackedBooks.map((item) => (
+										<BookItem key={item.id}>
+											<BookCard
+												book={{
+													...item.book,
+													isTracked: true,
+													myStatus: item.status,
+												}}
+											/>
+										</BookItem>
+									))}
 						</BookGrid>
 						<AppPagination count={pages} page={page} onChange={setPage} />
 					</>
@@ -225,14 +261,17 @@ const Lead = styled.p`
 	line-height: 1.5;
 `;
 
-const StatusTabs = styled.div`
+const StatusTabs = styled(ChipTabs)``;
+
+const StatusRow = styled.div`
 	display: flex;
-	flex-wrap: wrap;
-	gap: 0.55rem;
+	justify-content: space-between;
+	gap: 1rem;
+	align-items: center;
 	margin-bottom: 1.25rem;
 `;
 
-const StatusTab = styled.button<{ $isActive: boolean }>`
+const CreatedTabButton = styled.button<{ $isActive: boolean }>`
 	display: inline-flex;
 	align-items: center;
 	gap: 0.45rem;
@@ -249,6 +288,7 @@ const StatusTab = styled.button<{ $isActive: boolean }>`
 	font: inherit;
 	font-size: 0.9rem;
 	font-weight: ${({ $isActive }) => ($isActive ? 700 : 400)};
+	white-space: nowrap;
 
 	&:hover,
 	&:focus-visible {
@@ -258,7 +298,7 @@ const StatusTab = styled.button<{ $isActive: boolean }>`
 	}
 `;
 
-const StatusCount = styled.span`
+const CreatedCount = styled.span`
 	color: ${theme.colors.orangeDark};
 	font-weight: 700;
 `;

@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { createPortal } from "react-dom";
 import styled from "styled-components";
 
 import { theme } from "@/shared/theme";
@@ -27,8 +28,9 @@ export const ConfirmModal = ({
 	onCancel,
 	onConfirm,
 	title,
-	zIndex = 1500,
-}: IConfirmModalProps) => (
+	zIndex = 2600,
+}: IConfirmModalProps) => {
+	const modal = (
 	<Overlay $zIndex={zIndex} role="presentation" onMouseDown={onCancel}>
 		<Dialog
 			aria-modal="true"
@@ -55,7 +57,14 @@ export const ConfirmModal = ({
 			</Actions>
 		</Dialog>
 	</Overlay>
-);
+	);
+
+	if (typeof document === "undefined") {
+		return null;
+	}
+
+	return createPortal(modal, document.body);
+};
 
 const Overlay = styled.div<{ $zIndex: number }>`
 	position: fixed;
