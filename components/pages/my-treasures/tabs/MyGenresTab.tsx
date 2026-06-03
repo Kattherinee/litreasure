@@ -40,8 +40,24 @@ export const MyGenresTab = ({ isMyGenresLoading, myGenres }: IMyGenresTabProps) 
 );
 
 const Panel = styled.div``;
-const Header = styled.div`display:flex;justify-content:space-between;margin-bottom:.75rem;`;
-const Row = styled.div`display:flex;align-items:center;gap:.85rem;`;
+const Header = styled.div`
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 0.75rem;
+
+	@media (max-width: ${theme.rubberSize.tablet}) {
+		flex-direction: row;
+		align-items: center;
+	}
+`;
+const Row = styled.div`
+	display: flex;
+	align-items: center;
+	gap: 0.85rem;
+	min-width: 0;
+	flex: 1;
+`;
 const Title = styled.h2`margin:0;color:${theme.colors.foreground};font-family:${theme.fonts.serif};font-size:1.35rem;`;
 const List = styled.div`display:flex;flex-wrap:wrap;gap:.55rem;`;
 const Chip = styled(Link)`

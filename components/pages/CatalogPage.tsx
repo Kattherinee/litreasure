@@ -148,12 +148,13 @@ const StateMessage = styled.p`
 `;
 
 const BookGrid = styled.div`
-	--book-card-column: 12rem;
+	--book-card-column: 11rem;
 
 	display: grid;
 	gap: 1rem;
 	grid-template-columns: repeat(auto-fill, var(--book-card-column));
-	justify-content: start;
+	justify-content: center;
+	justify-items: center;
 	margin-top: clamp(2.5rem, 5vw, 4rem);
 `;
 

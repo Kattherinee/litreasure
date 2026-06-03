@@ -320,7 +320,7 @@ const Page = styled.div`
 `;
 
 const Content = styled.div`
-	width: min(calc(100% - (${theme.layout.contentGutter} * 2)), 70rem);
+	width: min(calc(100% - (${theme.layout.contentGutter} * 2)), ${theme.layout.contentMaxWidth});
 	margin: 0 auto;
 `;
 

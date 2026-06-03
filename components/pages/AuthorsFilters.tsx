@@ -296,23 +296,33 @@ export const AuthorsFilters = ({
 export const Filters = styled.div`
 	position: sticky;
 	z-index: 15;
-	top: 4rem;
+	top: 3.25rem;
 	display: grid;
 	align-items: end;
 	gap: 0.65rem;
 	grid-template-columns:
 		minmax(10rem, 0.85fr) minmax(12rem, 1.2fr) minmax(16rem, 1.7fr)
 		minmax(10rem, 0.8fr) auto;
-	margin-top: 1.25rem;
+	margin-top: 0.75rem;
 	background: ${theme.colors.background};
-	padding: 0.55rem 0;
+	padding: 0.35rem 0 0.65rem;
 
 	@media (max-width: 72rem) {
 		grid-template-columns: repeat(2, minmax(0, 1fr));
 	}
 
 	@media (max-width: 40rem) {
-		grid-template-columns: 1fr;
+		position: static;
+		top: auto;
+		margin-top: 0;
+		grid-template-columns: repeat(5, minmax(12rem, 1fr));
+		overflow-x: auto;
+		padding-bottom: 0.5rem;
+		scrollbar-width: none;
+
+		&::-webkit-scrollbar {
+			display: none;
+		}
 	}
 `;
 

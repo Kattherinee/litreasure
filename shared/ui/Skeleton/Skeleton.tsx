@@ -50,20 +50,22 @@ export const SkeletonBlock = styled.div<ISkeletonBlockProps>`
 export const BookCardSkeleton = ({ size = "default" }: { size?: "compact" | "default" }) => (
 	<BookCardSkeletonWrap $size={size} aria-hidden="true">
 		<SkeletonBlock
-			$height={size === "compact" ? "11.5rem" : "15.25rem"}
+			$height={size === "compact" ? "11.45rem" : "15.25rem"}
 			$radius="0.7rem"
-			$width={size === "compact" ? "7.5rem" : "10rem"}
+			$width={size === "compact" ? "6.9rem" : "10rem"}
 		/>
-		<SkeletonBlock $height="1.1rem" $width={size === "compact" ? "7rem" : "9rem"} />
-		<SkeletonBlock $height="0.85rem" $width={size === "compact" ? "5.5rem" : "7rem"} />
+		<SkeletonBlock $height="1rem" $width={size === "compact" ? "6.3rem" : "9rem"} />
+		<SkeletonBlock $height="0.8rem" $width={size === "compact" ? "5rem" : "7rem"} />
 	</BookCardSkeletonWrap>
 );
 
 const BookCardSkeletonWrap = styled.div<{ $size: "compact" | "default" }>`
 	display: flex;
-	width: ${({ $size }) => ($size === "compact" ? "7.5rem" : "10rem")};
+	width: ${({ $size }) => ($size === "compact" ? "6.9rem" : "10rem")};
+	height: ${({ $size }) => ($size === "compact" ? "14.75rem" : "18.95rem")};
 	flex-direction: column;
 	gap: 0.5rem;
+	overflow: hidden;
 `;
 
 export const GenrePillSkeleton = () => (

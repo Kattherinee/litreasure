@@ -19,6 +19,8 @@ interface ICarouselControls {
 	scrollPrev: () => void;
 }
 
+const finePointer = "@media (hover: hover) and (pointer: fine)";
+
 interface IBookSliderSectionProps {
 	genre?: string;
 	genreIds?: string[];
@@ -165,7 +167,7 @@ const Section = styled.section`
 		calc(100% - (${theme.layout.contentGutter} * 2)),
 		${theme.layout.contentMaxWidth}
 	);
-	margin: 4rem auto 0;
+	margin: 3rem auto 0;
 	height: fit-content;
 `;
 
@@ -175,6 +177,13 @@ const SectionHeader = styled.div`
 	justify-content: space-between;
 	gap: 1.25rem;
 	margin-bottom: 1.75rem;
+
+	@media (max-width: ${theme.rubberSize.tablet}) {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 0.75rem;
+		margin-bottom: 0.9rem;
+	}
 `;
 
 const SectionHeading = styled.div`
@@ -182,6 +191,10 @@ const SectionHeading = styled.div`
 	align-items: center;
 	gap: 1.25rem;
 	min-width: 0;
+
+	@media (max-width: ${theme.rubberSize.tablet}) {
+		width: 100%;
+	}
 `;
 
 const SectionTitle = styled.h2`
@@ -191,6 +204,10 @@ const SectionTitle = styled.h2`
 	font-size: 2rem;
 	font-weight: 600;
 	line-height: 1.1;
+
+	@media (max-width: ${theme.rubberSize.tablet}) {
+		font-size: 1.5rem;
+	}
 `;
 
 const ShowMoreButton = styled(Button)`
@@ -205,6 +222,10 @@ const Controls = styled.div<{ $isVisible: boolean }>`
 	display: ${({ $isVisible }) => ($isVisible ? "flex" : "none")};
 	flex: 0 0 auto;
 	gap: 0.625rem;
+
+	@media (max-width: ${theme.rubberSize.tablet}) {
+		display: none;
+	}
 `;
 
 const ControlButton = styled.button`
@@ -228,11 +249,13 @@ const ControlButton = styled.button`
 		opacity 180ms ease,
 		transform 180ms ease;
 
-	&:not(:disabled):hover {
-		background: ${theme.colors.orangeLight};
-		border-color: ${theme.colors.orangeLight};
-		color: ${theme.colors.invertedText};
-		transform: translateY(-0.0625rem);
+	${finePointer} {
+		&:not(:disabled):hover {
+			background: ${theme.colors.orangeLight};
+			border-color: ${theme.colors.orangeLight};
+			color: ${theme.colors.invertedText};
+			transform: translateY(-0.0625rem);
+		}
 	}
 
 	&:disabled {

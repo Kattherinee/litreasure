@@ -48,27 +48,27 @@ const PaperNotePanel = ({
 }: IPaperNotePanelProps) => {
 	return (
 		<Panel>
-			<Actions>
-				<IconButton
-					aria-label={hasNote ? "Edit paper note" : "Add paper note"}
-					title={hasNote ? "Edit note" : "Add note"}
-					type="button"
-					onClick={onEdit}
-				>
-					<EditNoteOutlinedIcon aria-hidden="true" />
-				</IconButton>
-				{showClearAction ? (
-					<IconButton
-						aria-label="Clear paper note"
-						title="Clear note"
-						type="button"
-						onClick={onClear}
-					>
-						<DeleteOutlinedIcon aria-hidden="true" />
-					</IconButton>
-				) : null}
-			</Actions>
 			<Block>
+				<Actions>
+					<IconButton
+						aria-label={hasNote ? "Edit paper note" : "Add paper note"}
+						title={hasNote ? "Edit note" : "Add note"}
+						type="button"
+						onClick={onEdit}
+					>
+						<EditNoteOutlinedIcon aria-hidden="true" />
+					</IconButton>
+					{showClearAction ? (
+						<IconButton
+							aria-label="Clear paper note"
+							title="Clear note"
+							type="button"
+							onClick={onClear}
+						>
+							<DeleteOutlinedIcon aria-hidden="true" />
+						</IconButton>
+					) : null}
+				</Actions>
 				<Title>{title}</Title>
 				{isInlineEditing ? (
 					<>
@@ -113,16 +113,12 @@ const PaperNotePanel = ({
 export default PaperNotePanel;
 
 const Panel = styled.div`
-	position: absolute;
-	top: var(--detail-cover-offset);
-	right: 0;
-	width: min(22rem, 42vw);
+	position: relative;
+	width: 100%;
 	z-index: 12;
 
 	@media (max-width: 62rem) {
-		position: static;
-		width: min(34rem, 100%);
-		margin-top: 0.9rem;
+		margin-top: 0;
 	}
 `;
 
@@ -169,6 +165,7 @@ const IconButton = styled.button`
 `;
 
 const Block = styled.div`
+	position: relative;
 	max-width: 100%;
 	border: 0.0625rem solid rgb(242 239 237 / 0.4);
 	border-radius: 0.65rem;

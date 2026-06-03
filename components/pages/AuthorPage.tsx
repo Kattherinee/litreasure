@@ -566,7 +566,7 @@ const Page = styled.div`
 `;
 
 const Content = styled.section`
-	width: min(100%, 70rem);
+	width: min(calc(100% - (${theme.layout.contentGutter} * 2)), ${theme.layout.contentMaxWidth});
 	margin: 0 auto;
 `;
 
@@ -992,6 +992,7 @@ const SeriesExpandButton = styled.button<{ $isExpanded: boolean }>`
 const BookGrid = styled.div`
 	display: flex;
 	flex-wrap: wrap;
+	justify-content: center;
 	gap: 1rem;
 `;
 

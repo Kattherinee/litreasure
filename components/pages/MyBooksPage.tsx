@@ -224,7 +224,7 @@ const Page = styled.div`
 `;
 
 const Content = styled.div`
-	width: min(calc(100% - (${theme.layout.contentGutter} * 2)), 74rem);
+	width: min(calc(100% - (${theme.layout.contentGutter} * 2)), ${theme.layout.contentMaxWidth});
 	margin: 0 auto;
 `;
 
@@ -269,6 +269,11 @@ const StatusRow = styled.div`
 	gap: 1rem;
 	align-items: center;
 	margin-bottom: 1.25rem;
+
+	@media (max-width: ${theme.rubberSize.tablet}) {
+		flex-direction: column;
+		align-items: stretch;
+	}
 `;
 
 const CreatedTabButton = styled.button<{ $isActive: boolean }>`
@@ -290,6 +295,11 @@ const CreatedTabButton = styled.button<{ $isActive: boolean }>`
 	font-weight: ${({ $isActive }) => ($isActive ? 700 : 400)};
 	white-space: nowrap;
 
+	@media (max-width: ${theme.rubberSize.tablet}) {
+		align-self: flex-start;
+		width: fit-content;
+	}
+
 	&:hover,
 	&:focus-visible {
 		border-color: ${theme.colors.orangeLight};
@@ -304,17 +314,27 @@ const CreatedCount = styled.span`
 `;
 
 const BookGrid = styled.div`
-	--book-card-column: 8rem;
+	--book-card-column: 7.25rem;
 
 	display: grid;
 	gap: 1rem;
 	grid-template-columns: repeat(auto-fill, var(--book-card-column));
-	justify-content: start;
+	justify-content: center;
+	justify-items: center;
 	margin-top: clamp(2.5rem, 5vw, 4rem);
+
+	@media (max-width: ${theme.rubberSize.tablet}) {
+		--book-card-column: 7rem;
+		gap: 0.75rem;
+		margin-top: 1.5rem;
+		grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
+	}
 `;
 
 const BookItem = styled.div`
-	width: fit-content;
+	display: flex;
+	justify-content: center;
+	width: 100%;
 `;
 
 const StateMessage = styled.p`

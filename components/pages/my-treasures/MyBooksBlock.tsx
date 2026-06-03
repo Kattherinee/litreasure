@@ -177,6 +177,10 @@ const LibraryPanel = styled.section`
 	border-radius: 1rem;
 	background: rgb(242 239 237 / 0.74);
 	padding: 1.25rem 1.35rem 1.45rem;
+
+	@media (max-width: ${theme.rubberSize.tablet}) {
+		padding: 1rem;
+	}
 `;
 const PanelHeader = styled.div`
 	display: flex;
@@ -184,26 +188,53 @@ const PanelHeader = styled.div`
 	justify-content: space-between;
 	gap: 1rem;
 	margin-bottom: 0.75rem;
+
+	@media (max-width: ${theme.rubberSize.tablet}) {
+		align-items: center;
+		gap: 0.75rem;
+	}
 `;
 const PanelTitleRow = styled.div`
 	display: flex;
+	flex: 1;
 	align-items: center;
 	gap: 0.85rem;
+
+	@media (max-width: ${theme.rubberSize.tablet}) {
+		min-width: 0;
+		justify-content: flex-start;
+	}
 `;
 const PanelTitle = styled.h2`
 	margin: 0;
 	color: ${theme.colors.foreground};
 	font-family: ${theme.fonts.serif};
 	font-size: 1.35rem;
+
+	@media (max-width: ${theme.rubberSize.tablet}) {
+		font-size: 1.2rem;
+	}
 `;
 const HeaderActions = styled.div`
 	display: flex;
 	gap: 0.6rem;
+	margin-left: auto;
+
+	@media (max-width: ${theme.rubberSize.tablet}) {
+		flex: 0 0 auto;
+		flex-wrap: nowrap;
+		gap: 0.45rem;
+	}
 `;
 const BooksToolbar = styled.div`
 	display: flex;
 	justify-content: space-between;
 	gap: 1rem;
+
+	@media (max-width: ${theme.rubberSize.tablet}) {
+		flex-direction: column;
+		align-items: stretch;
+	}
 `;
 const TabsRow = styled.div`
 	display: flex;
@@ -211,6 +242,23 @@ const TabsRow = styled.div`
 	align-items: center;
 	justify-content: space-between;
 	gap: 1rem;
+
+	@media (max-width: ${theme.rubberSize.tablet}) {
+		width: 100%;
+		flex-direction: row;
+		flex-wrap: nowrap;
+		align-items: center;
+		gap: 0.65rem;
+		overflow-x: auto;
+		overflow-y: hidden;
+		padding-bottom: 0.15rem;
+		scrollbar-width: none;
+		-ms-overflow-style: none;
+
+		&::-webkit-scrollbar {
+			display: none;
+		}
+	}
 `;
 const CreatedTabButton = styled.button<{ $isActive: boolean }>`
 	display: inline-flex;
@@ -231,6 +279,11 @@ const CreatedTabButton = styled.button<{ $isActive: boolean }>`
 	font-weight: ${({ $isActive }) => ($isActive ? 700 : 400)};
 	white-space: nowrap;
 
+	@media (max-width: ${theme.rubberSize.tablet}) {
+		flex: 0 0 auto;
+		width: fit-content;
+	}
+
 	&:hover,
 	&:focus-visible {
 		border-color: ${theme.colors.orangeLight};
@@ -246,12 +299,21 @@ const BookCarouselFrame = styled.div`
 	min-height: 12.75rem;
 	margin-top: 1rem;
 	overflow: visible;
+
+	@media (max-width: ${theme.rubberSize.tablet}) {
+		min-height: 0;
+		margin-top: 0.5rem;
+	}
 `;
 const BookEmptyState = styled.div`
 	margin-top: 1rem;
 	border: 0.0625rem dashed ${theme.colors.border};
 	border-radius: 0.8rem;
 	padding: 1.5rem;
+
+	@media (max-width: ${theme.rubberSize.tablet}) {
+		padding: 1rem;
+	}
 `;
 const BookEmptyTitle = styled.h3`
 	margin: 0;

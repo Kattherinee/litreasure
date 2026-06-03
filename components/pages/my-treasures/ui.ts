@@ -64,6 +64,17 @@ export const HeaderActionLink = styled(Link)`
 		width: 1.15rem;
 		height: 1.15rem;
 	}
+
+	@media (max-width: ${theme.rubberSize.tablet}) {
+		width: 2.35rem;
+		height: 2.35rem;
+		padding: 0;
+		justify-content: center;
+
+		span {
+			display: none;
+		}
+	}
 `;
 
 export const HeaderActionButton = styled.button`
@@ -72,12 +83,27 @@ export const HeaderActionButton = styled.button`
 		width: 1.15rem;
 		height: 1.15rem;
 	}
+
+	@media (max-width: ${theme.rubberSize.tablet}) {
+		width: 2.35rem;
+		height: 2.35rem;
+		padding: 0;
+		justify-content: center;
+
+		span {
+			display: none;
+		}
+	}
 `;
 
 export const RailControls = styled.div`
 	display: inline-flex;
 	align-items: center;
 	gap: 0.45rem;
+
+	@media (max-width: ${theme.rubberSize.tablet}) {
+		display: none;
+	}
 `;
 
 export const RailControlButton = styled.button`

@@ -18,6 +18,7 @@ const EMBLA_WHEEL_FRICTION = 0.68;
 const SCROLL_EDGE_THRESHOLD = 0.002;
 const HORIZONTAL_GESTURE_RATIO = 1.15;
 const MIN_HORIZONTAL_DELTA = 4;
+const finePointer = "@media (hover: hover) and (pointer: fine)";
 
 interface IBookCarouselControls {
 	canScrollNext: boolean;
@@ -296,6 +297,10 @@ const Controls = styled.div`
 	justify-content: flex-end;
 	gap: 0.625rem;
 	margin-top: 1rem;
+
+	@media (max-width: ${theme.rubberSize.tablet}) {
+		display: none;
+	}
 `;
 
 const ControlButton = styled.button`
@@ -319,11 +324,13 @@ const ControlButton = styled.button`
 		opacity 180ms ease,
 		transform 180ms ease;
 
-	&:not(:disabled):hover {
-		background: ${theme.colors.orangeLight};
-		border-color: ${theme.colors.orangeLight};
-		color: ${theme.colors.invertedText};
-		transform: translateY(-0.0625rem);
+	${finePointer} {
+		&:not(:disabled):hover {
+			background: ${theme.colors.orangeLight};
+			border-color: ${theme.colors.orangeLight};
+			color: ${theme.colors.invertedText};
+			transform: translateY(-0.0625rem);
+		}
 	}
 
 	&:disabled {

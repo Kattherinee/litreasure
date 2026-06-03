@@ -406,6 +406,7 @@ const StateMessage = styled.p`
 const BookGrid = styled.div`
 	display: flex;
 	flex-wrap: wrap;
+	justify-content: center;
 	gap: 1rem;
 	margin-top: clamp(1.75rem, 3.5vw, 3rem);
 `;

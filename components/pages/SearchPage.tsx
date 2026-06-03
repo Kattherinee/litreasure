@@ -874,7 +874,7 @@ const PageWrap = styled.div`
 	display: flex;
 	min-height: 100dvh;
 	flex-direction: column;
-	width: 60vw;
+	width: min(95vw, ${theme.layout.contentMaxWidth});
 	margin: 0 auto;
 `;
 
@@ -887,7 +887,7 @@ const SearchHeader = styled.div`
 	gap: 0.75rem;
 	border-bottom: 0.0625rem solid rgb(211 202 196 / 0.5);
 	background: ${theme.colors.background};
-	padding: 2rem 2rem 1rem;
+	padding: 2rem 1rem 1rem;
 
 	@media (max-width: 720px) {
 		padding: 1rem;
@@ -1001,6 +1001,10 @@ const TabsWrapper = styled.div`
 	justify-content: space-between;
 	gap: 1rem;
 	flex-wrap: wrap;
+
+	@media (max-width: 48rem) {
+		gap: 0.65rem;
+	}
 `;
 
 const RecommendationBanner = styled.div`
@@ -1071,7 +1075,7 @@ const ResultsArea = styled.div`
 	flex: 1;
 	flex-direction: column;
 	gap: 0.5rem;
-	padding: 1rem 2rem 3rem;
+	padding: 1rem 1rem 3rem;
 
 	@media (max-width: 720px) {
 		padding: 1rem;

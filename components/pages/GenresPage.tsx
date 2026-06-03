@@ -291,9 +291,9 @@ const Page = styled.div`
 `;
 
 const Hero = styled.section`
-	width: min(calc(100% - (${theme.layout.contentGutter} * 2)), 72rem);
+	width: min(calc(100% - (${theme.layout.contentGutter} * 2)), ${theme.layout.contentMaxWidth});
 	margin: 0 auto;
-	padding: clamp(2.4rem, 4.4vw, 4rem) 0 1rem;
+	padding: clamp(1.8rem, 3.6vw, 3rem) 0 0.85rem;
 `;
 
 const HeroTop = styled.div`
@@ -334,13 +334,13 @@ const HeroControls = styled.div`
 `;
 
 const SearchInput = styled.input`
-	width: min(100%, 21rem);
-	flex: 0 1 21rem;
-	min-height: 2.2rem;
+	width: min(100%, 18rem);
+	flex: 0 1 18rem;
+	min-height: 2.45rem;
 	border: 0.0625rem solid rgb(211 202 196 / 0.82);
-	border-radius: 999px;
+	border-radius: 0.9rem;
 	background: rgb(242 239 237 / 0.72);
-	padding: 0.42rem 0.85rem;
+	padding: 0.45rem 0.85rem;
 	color: ${theme.colors.foreground};
 	font: inherit;
 	font-size: 0.9rem;
@@ -374,7 +374,7 @@ const ClearButton = styled.button`
 
 const Content = styled.section`
 	display: flex;
-	width: min(calc(100% - (${theme.layout.contentGutter} * 2)), 72rem);
+	width: min(95vw, ${theme.layout.contentMaxWidth});
 	flex-direction: column;
 	gap: 0.85rem;
 	margin: 0 auto;
@@ -383,15 +383,15 @@ const Content = styled.section`
 const StickyFilters = styled.div`
 	position: sticky;
 	z-index: 5;
-	top: 4rem;
+	top: 3.25rem;
 	display: flex;
 	flex-direction: column;
 	gap: 0.85rem;
 	background: ${theme.colors.background};
-	padding: 0.65rem 0 1.4rem;
+	padding: 0.4rem 0 0.9rem;
 
 	@media (max-width: 40rem) {
-		top: 4.625rem;
+		top: 4.25rem;
 	}
 `;
 
@@ -399,7 +399,7 @@ const GroupSection = styled.section`
 	border: 0.0625rem solid rgb(186 183 180 / 0.5);
 	border-radius: 0.85rem;
 	background: rgb(242 239 237 / 0.22);
-	padding: 1rem 1rem 1.25rem;
+	padding: 0.85rem 0.85rem 1rem;
 `;
 
 const GroupRow = styled.div`
@@ -518,6 +518,10 @@ const GenreGrid = styled.div`
 	display: flex;
 	flex-wrap: wrap;
 	gap: 0.6rem;
+
+	@media (max-width: 40rem) {
+		gap: 0.5rem;
+	}
 `;
 
 const GenreChip = styled.article`

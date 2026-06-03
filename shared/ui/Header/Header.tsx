@@ -2,10 +2,21 @@
 
 import AppBar from "@mui/material/AppBar";
 import Box from "@mui/material/Box";
+import HomeRoundedIcon from "@mui/icons-material/HomeRounded";
+import LoginRoundedIcon from "@mui/icons-material/LoginRounded";
+import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
+import MoreHorizRoundedIcon from "@mui/icons-material/MoreHorizRounded";
+import PersonRoundedIcon from "@mui/icons-material/PersonRounded";
+import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
+import CategoryRoundedIcon from "@mui/icons-material/CategoryRounded";
+import CollectionsBookmarkRoundedIcon from "@mui/icons-material/CollectionsBookmarkRounded";
+import PeopleRoundedIcon from "@mui/icons-material/PeopleRounded";
+import BookmarkBorderOutlinedIcon from "@mui/icons-material/BookmarkBorderOutlined";
+import ConfirmationNumberRoundedIcon from "@mui/icons-material/ConfirmationNumberRounded";
 import Toolbar from "@mui/material/Toolbar";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import styled from "styled-components";
 
 import AuthModal, { type IAuthModalMode } from "@/components/pages/AuthModal";
@@ -51,6 +62,7 @@ const emptySubscribe = () => () => undefined;
 const getClientSnapshot = () => true;
 const getServerSnapshot = () => false;
 const AUTH_REQUIRED_MESSAGE = "Please sign in to perform this action.";
+const finePointer = "@media (hover: hover) and (pointer: fine)";
 const isAuthRequiredRedirect = () =>
 	typeof window !== "undefined" &&
 	new URLSearchParams(window.location.search).get("auth") === "required";
@@ -69,6 +81,8 @@ const Header = () => {
 	);
 	const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
 	const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
+	const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+	const mobileMenuRef = useRef<HTMLDivElement | null>(null);
 	const session = useAuthStore((state) => state.session);
 	const logout = useAuthStore((state) => state.logout);
 	const { data: genres = [], isLoading: isGenresLoading } = useGenresQuery();
@@ -97,17 +111,58 @@ const Header = () => {
 					match: (currentPathname: string) =>
 						currentPathname.startsWith("/treasures"),
 				},
-			]
+		]
 		: [];
 	const visibleNavItems = [...navItems, ...userNavItems];
+	const mobileNavItems = user
+		? [
+				{
+					href: "/",
+					icon: HomeRoundedIcon,
+					label: "Home",
+					match: (currentPathname: string) => currentPathname === "/",
+				},
+				{
+					href: "/search",
+					icon: SearchRoundedIcon,
+					label: "Search",
+					match: (currentPathname: string) =>
+						currentPathname.startsWith("/search"),
+				},
+				{
+					href: "/treasures",
+					icon: BookmarkBorderOutlinedIcon,
+					label: "My Treasures",
+					match: (currentPathname: string) =>
+						currentPathname.startsWith("/treasures"),
+				},
+			]
+		: [
+				{
+					href: "/",
+					icon: HomeRoundedIcon,
+					label: "Home",
+					match: (currentPathname: string) => currentPathname === "/",
+				},
+				{
+					href: "/search",
+					icon: SearchRoundedIcon,
+					label: "Search",
+					match: (currentPathname: string) =>
+						currentPathname.startsWith("/search"),
+				},
+			];
 
 	const closeProfileMenu = () => setIsProfileMenuOpen(false);
+	const closeMobileMenu = () => setIsMobileMenuOpen(false);
 
 	const toggleProfileMenu = () => setIsProfileMenuOpen((current) => !current);
+	const toggleMobileMenu = () => setIsMobileMenuOpen((current) => !current);
 	const openAuthModal = (mode: IAuthModalMode) => {
 		setAuthModalMode(mode);
 
 		closeProfileMenu();
+		closeMobileMenu();
 	};
 	const closeAuthModal = () => {
 		setAuthModalMode(null);
@@ -120,12 +175,47 @@ const Header = () => {
 		setIsLogoutConfirmOpen(true);
 
 		closeProfileMenu();
+		closeMobileMenu();
 	};
 	const closeLogoutConfirm = () => setIsLogoutConfirmOpen(false);
 	const confirmLogout = () => {
 		logout();
 		closeLogoutConfirm();
 	};
+
+	useEffect(() => {
+		if (!isMobileMenuOpen) {
+			return;
+		}
+
+		const handlePointerDown = (event: PointerEvent) => {
+			const target = event.target;
+
+			if (!(target instanceof Node)) {
+				return;
+			}
+
+			if (mobileMenuRef.current?.contains(target)) {
+				return;
+			}
+
+			closeMobileMenu();
+		};
+
+		const handleKeyDown = (event: globalThis.KeyboardEvent) => {
+			if (event.key === "Escape") {
+				closeMobileMenu();
+			}
+		};
+
+		document.addEventListener("pointerdown", handlePointerDown);
+		document.addEventListener("keydown", handleKeyDown);
+
+		return () => {
+			document.removeEventListener("pointerdown", handlePointerDown);
+			document.removeEventListener("keydown", handleKeyDown);
+		};
+	}, [isMobileMenuOpen]);
 
 	if (isWelcomePage) {
 		return null;
@@ -274,6 +364,115 @@ const Header = () => {
 					</AuthActions>
 				</HeaderToolbar>
 			</HeaderBar>
+			<MobileNavigation aria-label="Primary navigation">
+				{mobileNavItems.map((item) => {
+					const Icon = item.icon;
+
+					return (
+						<MobileNavLink
+							key={item.label}
+							href={item.href}
+							$isActive={item.match(pathname)}
+							aria-current={item.match(pathname) ? "page" : undefined}
+							aria-label={item.label}
+							title={item.label}
+							onClick={closeMobileMenu}
+						>
+							<Icon aria-hidden="true" />
+						</MobileNavLink>
+					);
+				})}
+				<MobileMenuContainer ref={mobileMenuRef}>
+					<MobileMenuButton
+						aria-expanded={isMobileMenuOpen}
+						aria-haspopup="menu"
+						aria-label="More options"
+						title="More"
+						type="button"
+						onClick={toggleMobileMenu}
+					>
+						<MoreHorizRoundedIcon aria-hidden="true" />
+					</MobileMenuButton>
+					{isMobileMenuOpen ? (
+						<MobileMenuPanel aria-label="More navigation">
+							{user ? (
+								<MobileMenuUser>
+									<ProfileMenuName>{profileName}</ProfileMenuName>
+									{profileMeta ? (
+										<ProfileMenuEmail>{profileMeta}</ProfileMenuEmail>
+									) : null}
+								</MobileMenuUser>
+							) : null}
+							{user ? (
+								<>
+									<MobileMenuLink href="/genres" onClick={closeMobileMenu}>
+										<CategoryRoundedIcon aria-hidden="true" />
+										<span>Genres</span>
+									</MobileMenuLink>
+									<MobileMenuLink href="/authors" onClick={closeMobileMenu}>
+										<PeopleRoundedIcon aria-hidden="true" />
+										<span>Authors</span>
+									</MobileMenuLink>
+									<MobileMenuLink href="/collections" onClick={closeMobileMenu}>
+										<CollectionsBookmarkRoundedIcon aria-hidden="true" />
+										<span>Collections</span>
+									</MobileMenuLink>
+									<MobileMenuLink href="/treasures" onClick={closeMobileMenu}>
+										<BookmarkBorderOutlinedIcon aria-hidden="true" />
+										<span>My Treasures</span>
+									</MobileMenuLink>
+									<MobileMenuLink
+										href="/book-challenge"
+										onClick={closeMobileMenu}
+									>
+										<ConfirmationNumberRoundedIcon aria-hidden="true" />
+										<span>Book Challenge</span>
+									</MobileMenuLink>
+									<MobileMenuLink href="/profile" onClick={closeMobileMenu}>
+										<PersonRoundedIcon aria-hidden="true" />
+										<span>Profile</span>
+									</MobileMenuLink>
+									<MobileMenuDivider />
+									<MobileMenuAction type="button" onClick={openLogoutConfirm}>
+										<LogoutRoundedIcon aria-hidden="true" />
+										<span>Log out</span>
+									</MobileMenuAction>
+								</>
+							) : (
+								<>
+									<MobileMenuLink href="/genres" onClick={closeMobileMenu}>
+										<CategoryRoundedIcon aria-hidden="true" />
+										<span>Genres</span>
+									</MobileMenuLink>
+									<MobileMenuLink href="/authors" onClick={closeMobileMenu}>
+										<PeopleRoundedIcon aria-hidden="true" />
+										<span>Authors</span>
+									</MobileMenuLink>
+									<MobileMenuLink href="/collections" onClick={closeMobileMenu}>
+										<CollectionsBookmarkRoundedIcon aria-hidden="true" />
+										<span>Collections</span>
+									</MobileMenuLink>
+									<MobileMenuDivider />
+									<MobileMenuAction
+										type="button"
+										onClick={() => openAuthModal("register")}
+									>
+										<PersonRoundedIcon aria-hidden="true" />
+										<span>Sign up</span>
+									</MobileMenuAction>
+									<MobileMenuAction
+										type="button"
+										onClick={() => openAuthModal("login")}
+									>
+										<LoginRoundedIcon aria-hidden="true" />
+										<span>Log in</span>
+									</MobileMenuAction>
+								</>
+							)}
+						</MobileMenuPanel>
+					) : null}
+				</MobileMenuContainer>
+			</MobileNavigation>
 			{visibleAuthModalMode ? (
 				<AuthModal
 					mode={visibleAuthModalMode}
@@ -316,7 +515,201 @@ const HeaderBar = styled(AppBar)`
 		background: ${theme.colors.bluePrimary};
 		color: ${theme.colors.invertedText};
 		overflow: visible;
+
+		@media (max-width: ${theme.rubberSize.tablet}) {
+			display: none;
+		}
 	}
+`;
+
+const MobileNavigation = styled.nav`
+	display: none;
+
+	@media (max-width: ${theme.rubberSize.tablet}) {
+		position: fixed;
+		right: 0;
+		bottom: 0;
+		left: 0;
+		z-index: 1300;
+		display: flex;
+		align-items: center;
+		justify-content: space-around;
+		gap: 0.2rem;
+		width: 100vw;
+		border-top: 0.0625rem solid rgb(242 239 237 / 0.14);
+		border-radius: 1.1rem 1.1rem 0 0;
+		background: rgb(35 61 77 / 0.92);
+		backdrop-filter: blur(18px) saturate(1.35);
+		padding: 0.4rem 0.6rem calc(0.35rem + env(safe-area-inset-bottom));
+		box-shadow: 0 -0.85rem 2rem rgb(4 18 26 / 0.16);
+	}
+`;
+
+const MobileNavLink = styled(Link)<{ $isActive: boolean }>`
+	display: inline-flex;
+	width: 3rem;
+	height: 3rem;
+	flex: 0 0 auto;
+	align-items: center;
+	justify-content: center;
+	border-radius: 999px;
+	color: ${({ $isActive }) =>
+		$isActive ? theme.colors.orangeLight : theme.colors.invertedText};
+	text-decoration: none;
+	transition:
+		background 180ms ease,
+		color 180ms ease,
+		transform 180ms ease;
+
+	& svg {
+		width: 1.48rem;
+		height: 1.48rem;
+	}
+
+	${finePointer} {
+		&:hover,
+		&:focus-visible {
+			background: rgb(242 239 237 / 0.12);
+			color: ${theme.colors.orangeLight};
+			outline: none;
+			transform: translateY(-0.0625rem);
+		}
+	}
+
+	&[aria-current="page"] {
+		background: rgb(242 239 237 / 0.08);
+		box-shadow: inset 0 0 0 0.0625rem rgb(242 239 237 / 0.12);
+	}
+`;
+
+const MobileMenuContainer = styled.div`
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+`;
+
+const MobileMenuButton = styled.button`
+	display: inline-flex;
+	width: 3rem;
+	height: 3rem;
+	flex: 0 0 auto;
+	align-items: center;
+	justify-content: center;
+	border: 0;
+	border-radius: 999px;
+	background: transparent;
+	color: ${theme.colors.invertedText};
+	cursor: pointer;
+	transition:
+		background 180ms ease,
+		color 180ms ease,
+		transform 180ms ease;
+
+	& svg {
+		width: 1.48rem;
+		height: 1.48rem;
+	}
+
+	&[aria-expanded="true"] {
+		background: rgb(242 239 237 / 0.12);
+		color: ${theme.colors.orangeLight};
+	}
+
+	${finePointer} {
+		&:hover,
+		&:focus-visible {
+			background: rgb(242 239 237 / 0.12);
+			color: ${theme.colors.orangeLight};
+			outline: none;
+			transform: translateY(-0.0625rem);
+		}
+	}
+`;
+
+const MobileMenuPanel = styled.div`
+	position: fixed;
+	right: 0.75rem;
+	bottom: calc(4.85rem + env(safe-area-inset-bottom));
+	z-index: 1301;
+	display: flex;
+	width: min(19rem, calc(100vw - 1.5rem));
+	flex-direction: column;
+	overflow: hidden;
+	border: 0.0625rem solid rgb(238 179 141 / 0.32);
+	border-radius: 1.25rem 1.25rem 1.5rem 1.5rem;
+	background: ${theme.colors.background};
+	box-shadow: 0 1.25rem 3rem rgb(4 18 26 / 0.24);
+	padding: 0.5rem;
+`;
+
+const MobileMenuUser = styled.div`
+	padding: 0.35rem 0.6rem 0.55rem;
+`;
+
+const MobileMenuLink = styled(Link)`
+	display: flex;
+	align-items: center;
+	gap: 0.65rem;
+	border-radius: 0.75rem;
+	padding: 0.8rem 0.75rem;
+	color: ${theme.colors.foreground};
+	font: inherit;
+	font-size: 0.95rem;
+	font-weight: 600;
+	text-decoration: none;
+
+	& svg {
+		width: 1.15rem;
+		height: 1.15rem;
+		color: ${theme.colors.orangeDark};
+	}
+
+	${finePointer} {
+		&:hover,
+		&:focus-visible {
+			background: rgb(218 142 91 / 0.12);
+			color: ${theme.colors.orangeDark};
+			outline: none;
+		}
+	}
+`;
+
+const MobileMenuAction = styled.button`
+	display: flex;
+	align-items: center;
+	gap: 0.65rem;
+	border: 0;
+	border-radius: 0.75rem;
+	background: transparent;
+	padding: 0.8rem 0.75rem;
+	color: ${theme.colors.foreground};
+	font: inherit;
+	font-size: 0.95rem;
+	font-weight: 600;
+	text-align: left;
+	cursor: pointer;
+
+	& svg {
+		width: 1.15rem;
+		height: 1.15rem;
+		color: ${theme.colors.orangeDark};
+	}
+
+	${finePointer} {
+		&:hover,
+		&:focus-visible {
+			background: rgb(218 142 91 / 0.12);
+			color: ${theme.colors.orangeDark};
+			outline: none;
+		}
+	}
+`;
+
+const MobileMenuDivider = styled.div`
+	height: 0.0625rem;
+	margin: 0.35rem 0.25rem;
+	background: rgb(186 183 180 / 0.5);
 `;
 
 const HeaderToolbar = styled(Toolbar)`
@@ -469,6 +862,8 @@ const GenresDropdown = styled.div`
 	width: min(38rem, calc(100vw - 2rem));
 	max-height: min(31rem, calc(100dvh - 7rem));
 	flex-direction: column;
+	transform: translateX(-50%);
+	box-sizing: border-box;
 	overflow: hidden;
 	border: 0.0625rem solid rgb(242 239 237 / 0.18);
 	border-radius: 1.25rem;

@@ -72,11 +72,45 @@ export const MyAuthorsTab = ({
 );
 
 const Panel = styled.div``;
-const Header = styled.div`display:flex;justify-content:space-between;gap:1rem;margin-bottom:.75rem;`;
-const Row = styled.div`display:flex;align-items:center;gap:.85rem;`;
+const Header = styled.div`
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 1rem;
+	margin-bottom: 0.75rem;
+
+	@media (max-width: ${theme.rubberSize.tablet}) {
+		flex-direction: row;
+		align-items: center;
+	}
+`;
+const Row = styled.div`
+	display: flex;
+	align-items: center;
+	gap: 0.85rem;
+	min-width: 0;
+	flex: 1;
+`;
 const Title = styled.h2`margin:0;color:${theme.colors.foreground};font-family:${theme.fonts.serif};font-size:1.35rem;`;
-const Actions = styled.div`display:flex;gap:.6rem;`;
-const Grid = styled.div`display:grid;gap:.75rem;grid-template-columns:repeat(auto-fill,minmax(13rem,1fr));`;
+const Actions = styled.div`
+	display: flex;
+	gap: 0.6rem;
+	margin-left: auto;
+
+	@media (max-width: ${theme.rubberSize.tablet}) {
+		flex-wrap: nowrap;
+		gap: 0.45rem;
+	}
+`;
+const Grid = styled.div`
+	display: grid;
+	gap: 0.75rem;
+	grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
+
+	@media (max-width: ${theme.rubberSize.tablet}) {
+		grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+	}
+`;
 const Card = styled(Link)`display:grid;grid-template-columns:3.9rem minmax(0,1fr);gap:.75rem;border:.0625rem solid rgb(211 202 196 / .72);border-radius:.75rem;background:rgb(255 255 255 /.58);padding:.55rem;color:inherit;text-decoration:none;`;
 const Meta = styled.div`min-width:0;`;
 const Name = styled.h3`margin:0;color:${theme.colors.foreground};font-family:${theme.fonts.serif};font-size:1rem;`;

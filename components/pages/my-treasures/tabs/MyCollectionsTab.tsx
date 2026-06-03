@@ -131,11 +131,53 @@ export const MyCollectionsTab = ({
 );
 
 const Panel = styled.div``;
-const Header = styled.div`display:flex;justify-content:space-between;gap:1rem;margin-bottom:.75rem;`;
-const Row = styled.div`display:flex;align-items:center;gap:.85rem;`;
-const Title = styled.h2`margin:0;color:${theme.colors.foreground};font-family:${theme.fonts.serif};font-size:1.35rem;`;
-const FilterRow = styled.div`display:flex;justify-content:space-between;align-items:center;gap:1rem;margin-bottom:1rem;`;
-const RightMeta = styled.div`display:flex;align-items:center;gap:.85rem;`;
+const Header = styled.div`
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 1rem;
+	margin-bottom: 0.75rem;
+
+	@media (max-width: ${theme.rubberSize.tablet}) {
+		flex-direction: row;
+		align-items: center;
+	}
+`;
+const Row = styled.div`
+	display: flex;
+	align-items: center;
+	gap: 0.85rem;
+	min-width: 0;
+	flex: 1;
+`;
+const Title = styled.h2`
+	margin: 0;
+	color: ${theme.colors.foreground};
+	font-family: ${theme.fonts.serif};
+	font-size: 1.35rem;
+`;
+const FilterRow = styled.div`
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 1rem;
+	margin-bottom: 1rem;
+
+	@media (max-width: ${theme.rubberSize.tablet}) {
+		flex-direction: column;
+		align-items: stretch;
+		gap: 0.75rem;
+	}
+`;
+const RightMeta = styled.div`
+	display: flex;
+	align-items: center;
+	gap: 0.85rem;
+
+	@media (max-width: ${theme.rubberSize.tablet}) {
+		justify-content: space-between;
+	}
+`;
 const Total = styled.span`display:inline-flex;align-items:baseline;gap:.3rem;`;
 const TotalLabel = styled.span`color:${theme.colors.softForeground};font-size:.78rem;text-transform:uppercase;letter-spacing:.03em;`;
 const TotalValue = styled.span`color:${theme.colors.orangeDark};font-family:${theme.fonts.serif};font-size:1.25rem;font-weight:600;line-height:1;`;
@@ -147,10 +189,41 @@ const Rail = styled.div`
 	scrollbar-width: none;
 	-ms-overflow-style: none;
 	&::-webkit-scrollbar { display: none; }
+	@media (max-width: ${theme.rubberSize.tablet}) {
+		padding-bottom: 0.35rem;
+	}
 `;
-const Chip = styled.article`display:grid;min-width:15rem;grid-template-columns:4.25rem minmax(0,1fr);gap:.75rem;align-items:center;border:.0625rem solid rgb(211 202 196 / .72);border-radius:.75rem;background:rgb(255 255 255 /.64);padding:.55rem;cursor:pointer;`;
-const Cover = styled.div<{ $coverUrl?: string }>`width:4.25rem;aspect-ratio:1/1;border-radius:.6rem;background:linear-gradient(rgb(4 18 26 / .08), rgb(4 18 26 / .08)),url("${({ $coverUrl }) => $coverUrl || "/images/book-placeholder.svg"}") center / cover;`;
-const Meta = styled.div`min-width:0;overflow:hidden;`;
+const Chip = styled.article`
+	display: grid;
+	min-width: clamp(12.5rem, 42vw, 15rem);
+	grid-template-columns: 4.25rem minmax(0, 1fr);
+	gap: 0.75rem;
+	align-items: center;
+	border: 0.0625rem solid rgb(211 202 196 / 0.72);
+	border-radius: 0.9rem;
+	background: rgb(255 255 255 / 0.64);
+	padding: 0.55rem;
+	cursor: pointer;
+	height: fit-content;
+
+	@media (max-width: ${theme.rubberSize.tablet}) {
+		min-width: 13rem;
+		align-items: start;
+		gap: 0.6rem;
+	}
+`;
+const Cover = styled.div<{ $coverUrl?: string }>`
+	width: 4.25rem;
+	aspect-ratio: 1/1;
+	border-radius: 0.6rem;
+	background:
+		linear-gradient(rgb(4 18 26 / 0.08), rgb(4 18 26 / 0.08)),
+		url("${({ $coverUrl }) => $coverUrl || "/images/book-placeholder.svg"}") center / cover;
+`;
+const Meta = styled.div`
+	min-width: 0;
+	overflow: hidden;
+`;
 const Name = styled.h3`
 	margin: 0;
 	color: ${theme.colors.foreground};
@@ -163,6 +236,11 @@ const Name = styled.h3`
 	-webkit-box-orient: vertical;
 	overflow: hidden;
 	word-break: break-word;
+
+	@media (max-width: ${theme.rubberSize.tablet}) {
+		white-space: normal;
+		overflow-wrap: anywhere;
+	}
 `;
 const BookCount = styled(ResultSeries)`margin-top:.3rem;`;
 const Text = styled.p`margin:0;color:${theme.colors.softForeground};font-size:.95rem;line-height:1.45;`;

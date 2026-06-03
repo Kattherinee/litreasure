@@ -117,7 +117,6 @@ export const CollectionRow = ({
 						<span>{ownerLabel}</span>
 					</OwnerLink>
 					<BookCount>{collection.bookCount} books</BookCount>
-					<BookCount>{collection.bookCount} books</BookCount>
 					<SubscriberCount>{subscriberCount} subscribers</SubscriberCount>
 					{collectionRelationLabel ? (
 						<RelationChip
@@ -189,14 +188,21 @@ const RowTitle = styled.h2`
 	overflow: hidden;
 	color: ${theme.colors.foreground};
 	font-family: ${theme.fonts.serif};
-	font-size: 1.25vw;
+	font-size: clamp(1.05rem, 1.2vw, 1.4rem);
 	font-weight: 500;
-	line-height: 1.65vw;
+	line-height: 1.2;
 	text-overflow: ellipsis;
 	white-space: nowrap;
 
 	&:hover {
 		text-decoration: underline 1px;
+	}
+
+	@media (max-width: 42rem) {
+		overflow: visible;
+		white-space: normal;
+		text-overflow: clip;
+		overflow-wrap: anywhere;
 	}
 `;
 
@@ -204,7 +210,7 @@ const BookCount = styled.span`
 	flex: 0 0 auto;
 	color: ${theme.colors.bluePrimary};
 	font-family: ${theme.fonts.sans};
-	font-size: 0.84vw;
+	font-size: clamp(0.78rem, 0.84vw, 0.92rem);
 	font-weight: 400;
 	letter-spacing: 0.01em;
 	line-height: 1rem;
@@ -220,6 +226,10 @@ const RowMeta = styled.div`
 	align-items: center;
 	flex-wrap: wrap;
 	gap: 0.75rem;
+
+	@media (max-width: 42rem) {
+		gap: 0.45rem 0.65rem;
+	}
 `;
 
 const OwnerLink = styled.span`
@@ -228,7 +238,7 @@ const OwnerLink = styled.span`
 	gap: 0.4vw;
 	color: ${theme.colors.orangePrimary};
 	font-family: ${theme.fonts.sans};
-	font-size: 0.84vw;
+	font-size: clamp(0.78rem, 0.84vw, 0.92rem);
 	font-weight: 400;
 	letter-spacing: 0.01em;
 	line-height: 1rem;
@@ -240,8 +250,8 @@ const OwnerLink = styled.span`
 `;
 
 const OwnerAvatar = styled.img`
-	width: 1.3vw;
-	height: 1.3vw;
+	width: 1.35rem;
+	height: 1.35rem;
 	border-radius: 50%;
 	object-fit: cover;
 `;
@@ -249,16 +259,16 @@ const OwnerAvatar = styled.img`
 const SaveButton = styled(Button)`
 	&& {
 		width: max-content;
-		gap: 0.4vw;
+		gap: 0.4rem;
 		font-weight: 400;
 		font-family: ${theme.fonts.sans};
-		margin-top: 0.7vw;
-		font-size: 0.94vw;
-		padding: 0.35vw 1vw 0.4vw;
+		margin-top: 0.5rem;
+		font-size: 0.92rem;
+		padding: 0.35rem 1rem 0.4rem;
 
 		svg {
-			width: 1vw;
-			height: 1vw;
+			width: 1rem;
+			height: 1rem;
 		}
 	}
 `;
@@ -306,20 +316,22 @@ const SaveToast = styled.div`
 const Row = styled.article`
 	position: relative;
 	display: flex;
-	min-height: 7.5rem;
-	align-items: center;
+	min-height: 7rem;
+	align-items: flex-start;
 	justify-content: space-between;
-	gap: 3.75rem;
+	gap: 1.5rem;
 	overflow: visible;
 	border: 0.0625rem solid rgb(218 142 91 / 0.18);
 	border-radius: 1rem;
 	background: rgb(242 239 237 / 0.58);
-	padding: 1.05vw;
+	padding: 1rem;
 	color: inherit;
 	cursor: pointer;
 	transition:
 		box-shadow 180ms ease,
 		transform 180ms ease;
+
+	height: fit-content;
 
 	&:hover,
 	&:focus-visible {
@@ -335,16 +347,18 @@ const Row = styled.article`
 	@media (max-width: 42rem) {
 		flex-direction: column;
 		align-items: stretch;
+		gap: 0.9rem;
+		min-height: auto;
 	}
 `;
 
 const PreviewBook = styled.span`
 	position: relative;
 	display: block;
-	width: 3.75rem;
-	height: 5rem;
+	width: 3.5rem;
+	height: 4.75rem;
 	flex: 0 0 auto;
-	border-radius: 0.625rem;
+	border-radius: 0.75rem;
 	background: #dadada;
 	box-shadow: none;
 `;

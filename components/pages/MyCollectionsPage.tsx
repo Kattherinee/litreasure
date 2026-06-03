@@ -266,6 +266,7 @@ const HeroInner = styled.div`
 	@media (max-width: 42rem) {
 		align-items: flex-start;
 		flex-direction: column;
+		width: calc(100% - 2rem);
 	}
 `;
 
@@ -301,6 +302,11 @@ const Content = styled.section`
 	);
 	margin: 0 auto;
 	padding-top: clamp(2.5rem, 5vw, 4rem);
+
+	@media (max-width: ${theme.rubberSize.tablet}) {
+		width: calc(100% - 2rem);
+		padding-top: 1.5rem;
+	}
 `;
 
 const Section = styled.section`
@@ -315,6 +321,12 @@ const SectionHeader = styled.div`
 	justify-content: space-between;
 	gap: 1rem;
 	margin-bottom: 1rem;
+
+	@media (max-width: ${theme.rubberSize.tablet}) {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 0.35rem;
+	}
 `;
 
 const SectionTitle = styled.h2`
@@ -331,6 +343,10 @@ const SectionSummary = styled.p`
 	color: ${theme.colors.softForeground};
 	font-size: 0.95rem;
 	line-height: 1.4;
+
+	@media (max-width: ${theme.rubberSize.tablet}) {
+		font-size: 0.84rem;
+	}
 `;
 
 const CollectionList = styled.div`
@@ -351,6 +367,10 @@ const EmptyState = styled.section`
 	border-radius: 1rem;
 	background: rgb(255 255 255 / 0.54);
 	padding: 1.5rem;
+
+	@media (max-width: ${theme.rubberSize.tablet}) {
+		padding: 1rem;
+	}
 `;
 
 const EmptyTitle = styled.h3`

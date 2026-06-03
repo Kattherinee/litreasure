@@ -1,6 +1,7 @@
 "use client";
 
 import MuiPagination from "@mui/material/Pagination";
+import { useEffect, useState } from "react";
 import styled from "styled-components";
 
 import { theme } from "@/shared/theme";
@@ -16,15 +17,27 @@ export const AppPagination = ({
 	page,
 	onChange,
 }: IAppPaginationProps) => {
+	const [isMobile, setIsMobile] = useState(false);
+
+	useEffect(() => {
+		const media = window.matchMedia(`(max-width: ${theme.rubberSize.tablet})`);
+
+		const update = () => setIsMobile(media.matches);
+		update();
+		media.addEventListener("change", update);
+
+		return () => media.removeEventListener("change", update);
+	}, []);
+
 	if (count <= 1) return null;
 
 	return (
 		<PaginationWrap>
 			<MuiPagination
-				boundaryCount={1}
+				boundaryCount={isMobile ? 1 : 2}
 				count={count}
 				page={page}
-				siblingCount={2}
+				siblingCount={isMobile ? 1 : 2}
 				onChange={(_, value) => onChange(value)}
 			/>
 		</PaginationWrap>
@@ -38,6 +51,17 @@ const PaginationWrap = styled.div`
 
 	.MuiPagination-ul {
 		gap: 0.2rem;
+	}
+
+	@media (max-width: ${theme.rubberSize.tablet}) {
+		.MuiPagination-ul {
+			gap: 0.1rem;
+		}
+
+		.MuiPaginationItem-root {
+			min-width: 1.9rem;
+			height: 1.9rem;
+		}
 	}
 
 	.MuiPaginationItem-root {

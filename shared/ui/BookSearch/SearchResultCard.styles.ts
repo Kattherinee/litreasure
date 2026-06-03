@@ -11,7 +11,7 @@ export const ResultItem = styled.div`
 	align-items: center;
 	gap: 0.9rem;
 	grid-template-columns: minmax(0, 1fr) auto;
-	border-radius: 0.8rem;
+	border-radius: 1rem;
 	transition:
 		background 160ms ease,
 		transform 160ms ease;
@@ -40,7 +40,7 @@ export const ResultLinkCard = styled(Link)`
 	align-items: center;
 	gap: 1.05rem;
 	grid-template-columns: 4.5rem minmax(0, 1fr) 1.5rem;
-	border-radius: 0.8rem;
+	border-radius: 1rem;
 	padding: 0.75rem 0.9rem;
 	color: inherit;
 	text-decoration: none;
@@ -73,7 +73,7 @@ export const ResultEntityCard = styled.div`
 	align-items: center;
 	gap: 1.05rem;
 	grid-template-columns: 4.5rem minmax(0, 1fr) auto;
-	border-radius: 0.8rem;
+	border-radius: 1rem;
 	padding: 0.75rem 0.9rem;
 	transition:
 		background 160ms ease,
@@ -103,7 +103,7 @@ export const ResultActionCard = styled.div`
 	align-items: center;
 	gap: 1.05rem;
 	grid-template-columns: 4.5rem minmax(0, 1fr) auto;
-	border-radius: 0.8rem;
+	border-radius: 1rem;
 	padding: 0.75rem 0.9rem;
 	transition:
 		background 160ms ease,
@@ -220,7 +220,7 @@ export const ResultCoverLink = styled(Link)<{ $isRecommendation?: boolean }>`
 		$isRecommendation ? "3.75rem" : "3.25rem"};
 	height: ${({ $isRecommendation }) =>
 		$isRecommendation ? "5.4rem" : "4.7rem"};
-	border-radius: 0.35rem;
+	border-radius: 0.8rem;
 
 	&:focus-visible {
 		outline: 0.125rem solid ${theme.colors.orangeLight};
@@ -247,7 +247,7 @@ export const ResultCover = styled.img<{ $isRecommendation?: boolean }>`
 		$isRecommendation ? "3.75rem" : "3.25rem"};
 	height: ${({ $isRecommendation }) =>
 		$isRecommendation ? "5.4rem" : "4.7rem"};
-	border-radius: 0.35rem;
+	border-radius: 0.8rem;
 	object-fit: cover;
 `;
 

@@ -405,10 +405,7 @@ const Page = styled.div`
 const Hero = styled.section``;
 
 const HeroInner = styled.div`
-	width: min(
-		calc(100% - (${theme.layout.contentGutter} * 2)),
-		${theme.layout.collectionsPageMaxWidth}
-	);
+	width: min(95vw, ${theme.layout.collectionsPageMaxWidth});
 	margin: 0 auto;
 	padding: 4vw 0 0vw;
 `;
@@ -417,7 +414,7 @@ const PageTitle = styled.h1`
 	margin: 0;
 	color: ${theme.colors.foreground};
 	font-family: ${theme.fonts.serif};
-	font-size: 2.5vw;
+	font-size: clamp(1.9rem, 2.8vw, 2.6rem);
 	font-weight: 600;
 	line-height: 0.98;
 `;
@@ -431,12 +428,9 @@ const HeroText = styled.p`
 `;
 
 const Content = styled.section`
-	width: min(
-		calc(100% - (${theme.layout.contentGutter} * 2)),
-		${theme.layout.collectionsPageMaxWidth}
-	);
+	width: min(95vw, ${theme.layout.collectionsPageMaxWidth});
 	margin: 0 auto;
-	padding-top: clamp(2.5rem, 5vw, 4rem);
+	padding-top: clamp(2rem, 4vw, 3rem);
 `;
 
 const CollectionFilters = styled(Filters)`
@@ -450,7 +444,14 @@ const CollectionFilters = styled(Filters)`
 	}
 
 	@media (max-width: 40rem) {
-		grid-template-columns: 1fr;
+		grid-template-columns: repeat(6, minmax(12rem, 1fr));
+		overflow-x: auto;
+		padding-bottom: 0.75rem;
+		scrollbar-width: none;
+
+		&::-webkit-scrollbar {
+			display: none;
+		}
 	}
 `;
 
@@ -458,6 +459,7 @@ const CollectionList = styled.div`
 	display: flex;
 	flex-direction: column;
 	gap: 0.8rem;
+	width: 100%;
 `;
 
 const SkeletonRow = styled.article`
@@ -499,8 +501,12 @@ export const PreviewRail = styled.div`
 	overflow: visible;
 
 	@media (max-width: 40rem) {
+		width: 100%;
+		justify-content: flex-start;
+		gap: 0.4rem;
 		max-width: 100%;
 		overflow-x: auto;
+		margin-top: 0.15rem;
 		padding-bottom: 0.25rem;
 	}
 `;

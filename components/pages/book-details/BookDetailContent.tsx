@@ -120,8 +120,7 @@ const BookDetailContent = ({ book }: IBookDetailContentProps) => {
 	const paperCopyLabel = getPaperCopyLabel(book.myPaperBook?.status);
 	const paperBadgeTone = getPaperBadgeTone(book.myPaperBook?.status);
 	const PaperBadgeIcon = paperBadgeTone.icon;
-
-	const handleQuickRatingChange = async (value: number | null) => {
+	async function handleQuickRatingChange(value: number | null) {
 		const nextRating = value ?? 0;
 		setQuickRating(nextRating);
 		setQuickRatingMessage("");
@@ -145,7 +144,129 @@ const BookDetailContent = ({ book }: IBookDetailContentProps) => {
 				error instanceof Error ? error.message : "Could not save rating",
 			);
 		}
-	};
+	}
+
+	const desktopRatingContent = (
+		<>
+			<RatingTop>
+				<RatingScore>{formattedRating}</RatingScore>
+				<RatingMeta>
+					<Stars
+						name="book-average-rating"
+						precision={0.5}
+						readOnly
+						value={normalizedRating}
+					/>
+					{book.ratingsCount ? (
+						<Votes>{book.ratingsCount.toLocaleString("en-US")} votes</Votes>
+					) : (
+						<Votes>No votes yet</Votes>
+					)}
+				</RatingMeta>
+			</RatingTop>
+			{hasRatingBars ? (
+				<RatingBars aria-hidden="true">
+					{ratingLabels.map((label) => {
+						const value = book.ratingsByStars[label - 1] ?? 0;
+						const width = (value / maxRatingLine) * 100;
+
+						return (
+							<BarRow key={label}>
+								<BarLabel>{label}</BarLabel>
+								<BarTrack>
+									<BarFill $width={width} />
+								</BarTrack>
+							</BarRow>
+						);
+					})}
+				</RatingBars>
+			) : null}
+			<QuickRatingBlock>
+				<QuickRatingHeader>
+					<QuickRatingTitle>Your rating</QuickRatingTitle>
+					<Votes>
+						{book.ratingsCount
+							? `${book.ratingsCount.toLocaleString("en-US")} votes`
+							: "No votes yet"}
+					</Votes>
+				</QuickRatingHeader>
+				<QuickMuiRating
+					name="quick-book-rating"
+					disabled={rateBookMutation.isPending}
+					value={quickRating}
+					onChange={(_, value) => void handleQuickRatingChange(value)}
+				/>
+				{quickRatingMessage ? (
+					<QuickRatingMessage>{quickRatingMessage}</QuickRatingMessage>
+				) : null}
+				<QuickReviewLink type="button" onClick={() => setActiveTab("reviews")}>
+					Write a review
+				</QuickReviewLink>
+			</QuickRatingBlock>
+		</>
+	);
+
+	const mobileRatingContent = (
+		<>
+			<MobileRatingHeader>
+				<RatingTop>
+					<RatingScore>{formattedRating}</RatingScore>
+					<RatingMeta>
+						<Stars
+							name="book-average-rating"
+							precision={0.5}
+							readOnly
+							value={normalizedRating}
+						/>
+						{book.ratingsCount ? (
+							<Votes>{book.ratingsCount.toLocaleString("en-US")} votes</Votes>
+						) : (
+							<Votes>No votes yet</Votes>
+						)}
+					</RatingMeta>
+				</RatingTop>
+				<QuickRatingBlock $compact>
+					<QuickRatingHeader>
+						<QuickRatingTitle>Your rating</QuickRatingTitle>
+						<Votes>
+							{book.ratingsCount
+								? `${book.ratingsCount.toLocaleString("en-US")} votes`
+								: "No votes yet"}
+						</Votes>
+					</QuickRatingHeader>
+					<QuickMuiRating
+						name="quick-book-rating"
+						disabled={rateBookMutation.isPending}
+						value={quickRating}
+						onChange={(_, value) => void handleQuickRatingChange(value)}
+					/>
+					{quickRatingMessage ? (
+						<QuickRatingMessage>{quickRatingMessage}</QuickRatingMessage>
+					) : null}
+					<QuickReviewLink type="button" onClick={() => setActiveTab("reviews")}>
+						Write a review
+					</QuickReviewLink>
+				</QuickRatingBlock>
+			</MobileRatingHeader>
+			{hasRatingBars ? (
+				<RatingBars aria-hidden="true">
+					{ratingLabels.map((label) => {
+						const value = book.ratingsByStars[label - 1] ?? 0;
+						const width = (value / maxRatingLine) * 100;
+
+						return (
+							<BarRow key={label}>
+								<BarLabel>{label}</BarLabel>
+								<BarTrack>
+									<BarFill $width={width} />
+								</BarTrack>
+							</BarRow>
+						);
+					})}
+				</RatingBars>
+			) : null}
+		</>
+	);
 
 	return (
 		<ContentWrap>
@@ -172,64 +293,7 @@ const BookDetailContent = ({ book }: IBookDetailContentProps) => {
 							<span>{paperCopyLabel}</span>
 						</PaperStatusBadge>
 					) : null}
-
-					<AsideRating>
-						<RatingTop>
-							<RatingScore>{formattedRating}</RatingScore>
-							<RatingMeta>
-								<Stars
-									name="book-average-rating"
-									precision={0.5}
-									readOnly
-									value={normalizedRating}
-								/>
-								{book.ratingsCount ? (
-									<Votes>
-										{book.ratingsCount.toLocaleString("en-US")} votes
-									</Votes>
-								) : (
-									<Votes>No votes yet</Votes>
-								)}
-							</RatingMeta>
-						</RatingTop>
-
-						{hasRatingBars ? (
-							<RatingBars aria-hidden="true">
-								{ratingLabels.map((label) => {
-									const value = book.ratingsByStars[label - 1] ?? 0;
-									const width = (value / maxRatingLine) * 100;
-
-									return (
-										<BarRow key={label}>
-											<BarLabel>{label}</BarLabel>
-											<BarTrack>
-												<BarFill $width={width} />
-											</BarTrack>
-										</BarRow>
-									);
-								})}
-							</RatingBars>
-						) : null}
-
-						<QuickRatingBlock>
-							<QuickRatingTitle>Your rating</QuickRatingTitle>
-							<QuickMuiRating
-								name="quick-book-rating"
-								disabled={rateBookMutation.isPending}
-								value={quickRating}
-								onChange={(_, value) => void handleQuickRatingChange(value)}
-							/>
-							{quickRatingMessage ? (
-								<QuickRatingMessage>{quickRatingMessage}</QuickRatingMessage>
-							) : null}
-							<QuickReviewLink
-								type="button"
-								onClick={() => setActiveTab("reviews")}
-							>
-								Write a review
-							</QuickReviewLink>
-						</QuickRatingBlock>
-					</AsideRating>
+					<DesktopAsideRating>{desktopRatingContent}</DesktopAsideRating>
 				</LeftColumn>
 
 				<RightColumn>
@@ -278,6 +342,7 @@ const BookDetailContent = ({ book }: IBookDetailContentProps) => {
 							) : null}
 						</BookFactsGrid>
 					) : null}
+					<AsideRating>{mobileRatingContent}</AsideRating>
 					<BookSeriesBlock book={book} />
 				</RightColumn>
 			</ContentGrid>
@@ -401,6 +466,16 @@ const LeftColumn = styled.aside`
 	}
 `;
 
+const DesktopAsideRating = styled.section`
+	width: min(100%, 16rem);
+	margin-top: 1rem;
+	color: ${theme.colors.foreground};
+
+	@media (max-width: 47.9375rem) {
+		display: none;
+	}
+`;
+
 const PaperStatusBadge = styled.span<{
 	$background: string;
 	$border: string;
@@ -516,8 +591,24 @@ const AsideRating = styled.section`
 	padding: 1rem;
 	color: ${theme.colors.foreground};
 
+	@media (min-width: 47.9375rem) {
+		display: none;
+	}
+
 	@media (max-width: 47.9375rem) {
-		max-width: var(--detail-cover-max-width);
+		max-width: 100%;
+		padding-inline: 0;
+	}
+`;
+
+const MobileRatingHeader = styled.div`
+	display: none;
+
+	@media (max-width: 47.9375rem) {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+		gap: 0.85rem;
+		align-items: start;
 	}
 `;
 
@@ -547,8 +638,8 @@ const Stars = styled(Rating)`
 	color: ${theme.colors.orangePrimary} !important;
 	gap: 0.05vw;
 	& svg {
-		width: 1.2vw;
-		height: 1.2vw;
+		width: clamp(0.95rem, 1.2vw, 1.1rem);
+		height: clamp(0.95rem, 1.2vw, 1.1rem);
 	}
 `;
 
@@ -560,7 +651,7 @@ const Votes = styled.p`
 	line-height: 1.2;
 `;
 
-const QuickRatingBlock = styled.div`
+const QuickRatingBlock = styled.div<{ $compact?: boolean }>`
 	display: flex;
 	flex-direction: column;
 	align-items: stretch;
@@ -568,6 +659,19 @@ const QuickRatingBlock = styled.div`
 	margin-top: 1rem;
 	border-top: 0.0625rem solid rgb(242 239 237 / 0.72);
 	padding-top: 0.95rem;
+
+	@media (max-width: 47.9375rem) {
+		margin-top: ${({ $compact }) => ($compact ? "0" : "1rem")};
+		padding-top: ${({ $compact }) => ($compact ? "0" : "0.95rem")};
+		border-top: ${({ $compact }) => ($compact ? "0" : "0.0625rem solid rgb(242 239 237 / 0.72)")};
+	}
+`;
+
+const QuickRatingHeader = styled.div`
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 0.75rem;
 `;
 
 const QuickRatingTitle = styled.h3`
@@ -583,13 +687,13 @@ const QuickMuiRating = styled(Rating)`
 	color: ${theme.colors.orangePrimary} !important;
 
 	& .MuiRating-icon {
-		width: 1.8vw;
-		height: 1.8vw;
+		width: clamp(1.15rem, 1.8vw, 1.45rem);
+		height: clamp(1.15rem, 1.8vw, 1.45rem);
 	}
 
 	& .MuiSvgIcon-root {
-		width: 1.6vw;
-		height: 1.6vw;
+		width: clamp(1.1rem, 1.6vw, 1.35rem);
+		height: clamp(1.1rem, 1.6vw, 1.35rem);
 	}
 `;
 

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import Providers from "@/app/providers";
 import { Header } from "@/shared/ui/Header";
+import PageBackButton from "@/shared/ui/PageBackButton/PageBackButton";
 
 import "react-advanced-cropper/dist/style.css";
 import "./globals.css";
@@ -22,6 +23,7 @@ export default function RootLayout({
 			<body>
 				<Providers>
 					<Header />
+					<PageBackButton />
 					<main>{children}</main>
 				</Providers>
 			</body>

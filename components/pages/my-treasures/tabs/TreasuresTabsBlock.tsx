@@ -3,10 +3,12 @@
 import type { MutableRefObject } from "react";
 import styled from "styled-components";
 
+import { theme } from "@/shared/theme";
 import type { ICollectionTreasureFilter, ITreasureTab } from "../types";
 import { MyAuthorsTab } from "./MyAuthorsTab";
 import { MyCollectionsTab } from "./MyCollectionsTab";
 import { MyGenresTab } from "./MyGenresTab";
+import { MyPaperBooksTab } from "./MyPaperBooksTab";
 import { MySeriesTab } from "./MySeriesTab";
 import { ChipTabs } from "@/shared/ui/ChipTabs";
 
@@ -104,17 +106,24 @@ export const TreasuresTabsBlock = ({
 					onScrollCollections={onScrollCollections}
 				/>
 			) : null}
+			{activeTreasureTab === "paper-books" ? <MyPaperBooksTab /> : null}
 		</TreasureTabContent>
 	</TreasureTabsPanel>
 );
 
-const TreasureTabsPanel = styled.section`--tabs-content-bg: rgb(255 255 255 / 0.42);`;
+const TreasureTabsPanel = styled.section`
+	--tabs-content-bg: rgb(255 255 255 / 0.42);
+`;
 const TabsRow = styled(ChipTabs)`
 	margin-bottom: 0.75rem;
 `;
 const TreasureTabContent = styled.div`
-	border: .0625rem solid rgb(211 202 196 / 0.72);
+	border: 0.0625rem solid rgb(211 202 196 / 0.72);
 	border-radius: 1rem;
 	background: var(--tabs-content-bg);
 	padding: 1rem;
+
+	@media (max-width: ${theme.rubberSize.tablet}) {
+		padding: 0.85rem;
+	}
 `;

@@ -87,10 +87,17 @@ const BookOfTheWeekSlider = ({ lazy = false }: IBookOfTheWeekSliderProps) => {
 								<CoverPlaceholder aria-hidden="true" />
 							</BookCoverWrap>
 							<BookInfo>
-								<BookTitle>Selecting book of the week...</BookTitle>
+								<BookHeadingRow>
+									<SeriesChip>Selecting</SeriesChip>
+									<BookTitle>book of the week...</BookTitle>
+								</BookHeadingRow>
 								<BookDescription>
 									Your personalized recommendation will appear soon.
 								</BookDescription>
+								<BookTag>
+									<TagIcon aria-hidden="true" />
+									<span>Book of the week</span>
+								</BookTag>
 							</BookInfo>
 						</Slide>
 					</Container>
@@ -139,10 +146,12 @@ const BookOfTheWeekSlider = ({ lazy = false }: IBookOfTheWeekSliderProps) => {
 								alt={`Cover of ${book.title}`}
 							/>
 							<BookInfo>
-								{getSeriesTag(book) ? (
-									<SeriesChip>{getSeriesTag(book)}</SeriesChip>
-								) : null}
-								<BookTitle>{book.title}</BookTitle>
+								<BookHeadingRow>
+									{getSeriesTag(book) ? (
+										<SeriesChip>{getSeriesTag(book)}</SeriesChip>
+									) : null}
+									<BookTitle>{book.title}</BookTitle>
+								</BookHeadingRow>
 								{book.description ? (
 									<BookDescription>{book.description}</BookDescription>
 								) : null}
@@ -230,21 +239,28 @@ const Slider = styled.section`
 
 	position: relative;
 	width: 100vw;
-	height: 20.8125rem;
+	min-height: 20.8125rem;
 	margin-top: 3rem;
-	margin-left: calc(50% - 50vw);
+	height: 20.8125rem;
 	background: ${theme.colors.border};
+
+	@media (max-width: ${theme.rubberSize.tablet}) {
+		min-height: 16.75rem;
+		height: fit-content;
+		padding: 2rem 0;
+		--content-side-space: clamp(2.75rem, 8vw, 4rem);
+	}
 `;
 
 const Viewport = styled.div`
-	height: 100%;
 	overflow: hidden;
 `;
 
 const Container = styled.div`
 	display: flex;
-	height: 100%;
+	align-items: stretch;
 	touch-action: pan-y pinch-zoom;
+	height: 100%;
 `;
 
 const Slide = styled.article`
@@ -254,7 +270,7 @@ const Slide = styled.article`
 	justify-content: center;
 	gap: clamp(2rem, 5vw, 3.375rem);
 	min-width: 0;
-	padding: 2.5rem var(--content-side-space);
+	padding: 2.5rem calc(var(--content-side-space));
 	cursor: pointer;
 
 	&:hover h2,
@@ -266,58 +282,96 @@ const Slide = styled.article`
 		outline: 0.125rem solid ${theme.colors.orangeDark};
 		outline-offset: 0.125rem;
 	}
+
+	@media (max-width: ${theme.rubberSize.tablet}) {
+		gap: 1.1rem;
+		padding: 1.15rem calc(var(--content-side-space) + 0.95rem);
+		flex-direction: column;
+	}
 `;
 
 const BookCoverWrap = styled.div`
 	position: relative;
 	overflow: hidden;
+
 	width: fit-content;
 	height: 15.75rem;
 	border-radius: 0.45rem;
+
+	@media (max-width: ${theme.rubberSize.tablet}) {
+		height: 12.75rem;
+	}
 `;
 
 const BookCover = styled.img<{ $isLoaded: boolean }>`
 	display: block;
-	width: auto;
-	height: 15.75rem;
+	width: 100%;
+	height: 100%;
 	object-fit: cover;
 	opacity: ${({ $isLoaded }) => ($isLoaded ? 1 : 0)};
 	transition: opacity 220ms ease;
 `;
 
 const BookInfo = styled.div`
-	display: flex;
-	width: 25.75rem;
+	display: grid;
+	width: min(100%, 25.75rem);
 	flex-direction: column;
-	justify-content: center;
-	gap: 1.25rem;
+	gap: 0.85rem;
 	color: ${theme.colors.textPrimary};
+	justify-items: center;
+	text-align: center;
+
+	@media (max-width: ${theme.rubberSize.tablet}) {
+		width: min(100%, 22rem);
+		gap: 0.7rem;
+		align-items: center;
+	}
+`;
+
+const BookHeadingRow = styled.div`
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: center;
+	gap: 0.75rem;
 `;
 
 const BookTitle = styled.h2`
 	margin: 0;
 	font-family: ${theme.fonts.serif};
-	font-size: 2rem;
+	font-size: clamp(1.65rem, 2.2vw, 2rem);
 	font-weight: 400;
-	line-height: 2.625rem;
+	line-height: 1.1;
 	transition: color 180ms ease;
+
+	@media (max-width: ${theme.rubberSize.tablet}) {
+		font-size: 1.45rem;
+		text-align: center;
+		align-self: center;
+	}
 `;
 
 const BookDescription = styled.p`
 	margin: 0;
 	font-family: ${theme.fonts.serif};
-	font-size: 1.125rem;
+	font-size: 1rem;
 	font-weight: 400;
-	line-height: 1.5rem;
+	line-height: 1.45;
 	display: -webkit-box;
 	overflow: hidden;
 	-webkit-box-orient: vertical;
-	-webkit-line-clamp: 5;
+	-webkit-line-clamp: 4;
+
+	@media (max-width: ${theme.rubberSize.tablet}) {
+		font-size: 0.92rem;
+		-webkit-line-clamp: 3;
+	}
 `;
 
 const BookTag = styled.p`
 	display: inline-flex;
 	align-items: center;
+	justify-content: center;
 	gap: 0.25rem;
 	margin: 0;
 	color: ${theme.colors.orangeDark};
@@ -329,12 +383,16 @@ const BookTag = styled.p`
 		width: 1.25rem;
 		height: 1.25rem;
 	}
+
+	@media (max-width: ${theme.rubberSize.tablet}) {
+		font-size: 0.9rem;
+	}
 `;
 
 const SeriesChip = styled.p`
 	display: inline-flex;
 	align-items: center;
-	width: fit-content;
+	flex: 0 0 auto;
 	max-width: 100%;
 	overflow: hidden;
 	border: 0.0625rem solid rgb(242 239 237 / 0.22);
@@ -374,8 +432,8 @@ const ArrowButton = styled.button<{ $side?: "right" }>`
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	width: 3rem;
-	height: 3rem;
+	width: 2.5rem;
+	height: 2.5rem;
 	border: 0;
 	border-radius: 50%;
 	background: rgb(120 120 120 / 0.2);
@@ -389,8 +447,8 @@ const ArrowButton = styled.button<{ $side?: "right" }>`
 		transform 180ms ease;
 
 	& svg {
-		width: 2.125rem;
-		height: 2.125rem;
+		width: 1.75rem;
+		height: 1.75rem;
 	}
 
 	&:not(:disabled):hover,
@@ -407,13 +465,13 @@ const ArrowButton = styled.button<{ $side?: "right" }>`
 	}
 
 	@media (max-width: 64rem) {
-		${({ $side }) => ($side === "right" ? "right: 1.5rem;" : "left: 1.5rem;")}
-		width: 3.5rem;
-		height: 3.5rem;
+		${({ $side }) => ($side === "right" ? "right: 1rem;" : "left: 1rem;")}
+		width: 2.25rem;
+		height: 2.25rem;
 
 		& svg {
-			width: 2.25rem;
-			height: 2.25rem;
+			width: 1.5rem;
+			height: 1.5rem;
 		}
 	}
 `;

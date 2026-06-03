@@ -271,6 +271,10 @@ const ReadingShelf = styled.div`
 	padding: 1rem 1.5rem 0.6rem;
 	width: 100%;
 	max-width: 19.5rem;
+
+	@media (max-width: ${theme.rubberSize.tablet}) {
+		max-width: none;
+	}
 `;
 const ReadingHeader = styled.div`
 	display: flex;
@@ -336,6 +340,10 @@ const RailControlButton = styled.button`
 	&:disabled {
 		opacity: 0.38;
 	}
+
+	@media (max-width: ${theme.rubberSize.tablet}) {
+		display: none;
+	}
 `;
 const ChallengeCard = styled.section`
 	display: flex;
@@ -347,6 +355,10 @@ const ChallengeCard = styled.section`
 	border: 0.0625rem solid rgb(211 202 196 / 0.72);
 	border-radius: 1rem;
 	background: rgb(242 239 237 / 0.74);
+
+	@media (max-width: ${theme.rubberSize.tablet}) {
+		max-width: none;
+	}
 `;
 const ChallengeCopy = styled.div`
 	width: 100%;

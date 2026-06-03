@@ -199,7 +199,7 @@ const ModalTitle = styled.h2`
 	margin: 0 3rem 1.75rem;
 	color: ${theme.colors.foreground};
 	font-family: ${theme.fonts.serif};
-	font-size: 1.55rem;
+	font-size: 1.35rem;
 	font-weight: 600;
 	line-height: 1.2;
 	text-align: center;
@@ -294,13 +294,13 @@ const CreateCollectionText = styled.span`
 
 const CollectionOption = styled.button`
 	display: grid;
-	align-items: center;
-	grid-template-columns: 4.625rem minmax(0, 1fr) 2.35rem;
-	gap: 1rem;
+	align-items: start;
+	grid-template-columns: 4.125rem minmax(0, 1fr) 2rem;
+	gap: 0.85rem;
 	border: 0;
 	border-radius: 0.6rem;
 	background: transparent;
-	padding: 0.35rem 0.55rem 0.35rem 0;
+	padding: 0.35rem 0.45rem 0.35rem 0;
 	color: ${theme.colors.foreground};
 	cursor: pointer;
 	text-align: left;
@@ -322,8 +322,8 @@ const CollectionCover = styled.span<{
 	$variant: "image" | "color";
 }>`
 	display: inline-flex;
-	width: 4.625rem;
-	height: 4.625rem;
+	width: 4.125rem;
+	height: 4.125rem;
 	border-radius: 50%;
 	background: ${({ $coverUrl, $variant }) =>
 		$coverUrl
@@ -339,13 +339,17 @@ const CollectionMeta = styled.span`
 
 const CollectionName = styled.span`
 	display: flex;
+	flex-wrap: wrap;
 	align-items: center;
-	gap: 0.35rem;
+	min-width: 0;
+	overflow: hidden;
+	gap: 0.3rem;
 	color: ${theme.colors.foreground};
 	font-family: ${theme.fonts.sans};
-	font-size: 1.2rem;
+	font-size: 1rem;
 	font-weight: 700;
-	line-height: 1.15;
+	line-height: 1.2;
+	overflow-wrap: anywhere;
 
 	& svg {
 		width: 1rem;
@@ -359,17 +363,18 @@ const CollectionOwner = styled.span`
 	margin-top: 0.25rem;
 	color: ${theme.colors.softForeground};
 	font-family: ${theme.fonts.sans};
-	font-size: 0.9rem;
+	font-size: 0.82rem;
 	line-height: 1.2;
 `;
 
 const CollectionCheckbox = styled.span<{ $isChecked?: boolean }>`
 	display: inline-flex;
-	width: 1.8rem;
-	height: 1.8rem;
+	width: 1.65rem;
+	height: 1.65rem;
 	align-items: center;
 	justify-content: center;
 	justify-self: end;
+	align-self: center;
 	border: 0.0625rem solid
 		${({ $isChecked }) =>
 			$isChecked ? theme.colors.orangeLight : "rgb(186 183 180 / 0.78)"};
@@ -379,8 +384,8 @@ const CollectionCheckbox = styled.span<{ $isChecked?: boolean }>`
 	color: ${theme.colors.invertedText};
 
 	& svg {
-		width: 1.35rem;
-		height: 1.35rem;
+		width: 1.1rem;
+		height: 1.1rem;
 	}
 `;
 
@@ -390,4 +395,8 @@ const CollectionMessage = styled.p`
 	font-family: ${theme.fonts.sans};
 	font-size: 0.9rem;
 	line-height: 1.35;
+
+	${CollectionOption} + & {
+		margin-left: calc(4.125rem + 0.85rem);
+	}
 `;

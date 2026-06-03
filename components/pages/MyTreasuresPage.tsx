@@ -21,6 +21,7 @@ import {
 	useSubscribedCollectionsQuery,
 } from "@/shared/api/collections";
 import { useMySeriesQuery } from "@/shared/api/series";
+import { usePaperBookStatusCountsQuery } from "@/shared/api/paper-books";
 import {
 	useUserBookStatusCountsQuery,
 	useUserBooksQuery,
@@ -116,6 +117,9 @@ const MyTreasuresPage = () => {
 		{ enabled: isSessionReady },
 	);
 	const { data: statusCounts } = useUserBookStatusCountsQuery({ enabled: isSessionReady });
+	const { data: paperBookCounts } = usePaperBookStatusCountsQuery({
+		enabled: isSessionReady,
+	});
 	const { data: myCollectionsData, isLoading: isMyCollectionsLoading } = useMyCollectionsQuery(
 		{ limit: 5 },
 		{ enabled: isSessionReady },
@@ -176,6 +180,7 @@ const MyTreasuresPage = () => {
 		{ id: "series" as const, label: "My series", count: mySeriesData?.total ?? 0 },
 		{ id: "genres" as const, label: "My genres", count: myGenres.length },
 		{ id: "collections" as const, label: "My collections", count: visibleCollectionsTotal },
+		{ id: "paper-books" as const, label: "Paper books", count: paperBookCounts?.total ?? 0 },
 	];
 	const shouldShowAllBooksLink =
 		(activeStatus === "created"
@@ -428,6 +433,6 @@ const Page = styled.div`
 	padding: 4rem 0 6rem;
 `;
 const Content = styled.div`
-	width: min(calc(100% - (${theme.layout.contentGutter} * 2)), 74rem);
+	width: min(calc(100% - (${theme.layout.contentGutter} * 2)), ${theme.layout.contentMaxWidth});
 	margin: 0 auto;
 `;

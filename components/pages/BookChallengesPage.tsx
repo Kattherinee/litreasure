@@ -1168,7 +1168,7 @@ const Page = styled.div`
 `;
 
 const Content = styled.section`
-	width: min(calc(100% - (${theme.layout.contentGutter} * 2)), 78rem);
+	width: min(calc(100% - (${theme.layout.contentGutter} * 2)), ${theme.layout.contentMaxWidth});
 	margin: 0 auto;
 `;
 
@@ -1340,9 +1340,14 @@ const PlanLine = styled.div`
 	display: flex;
 	align-items: center;
 	width: 100%;
-	overflow-x: visible;
+	overflow-x: auto;
 	overflow-y: visible;
-	padding: 1.75rem 0 1.75rem;
+	padding: 1.25rem 0 1rem;
+	scrollbar-width: none;
+
+	&::-webkit-scrollbar {
+		display: none;
+	}
 `;
 
 const PlanDotWrap = styled.div`
@@ -1400,12 +1405,12 @@ const PlanRail = styled.div<{
 	$granularity: IPlanGranularity;
 }>`
 	height: 3px;
-	flex: ${({ $granularity }) =>
+	flex: 1 0 ${({ $granularity }) =>
 		$granularity === "month"
-			? "1 1 6.875rem"
+			? "6.875rem"
 			: $granularity === "week"
-				? "1 1 clamp(3.75rem, 6vw, 5.5rem)"
-				: "1 1 clamp(2.75rem, 4.5vw, 4rem)"};
+				? "clamp(3.75rem, 6vw, 5.5rem)"
+				: "clamp(2.75rem, 4.5vw, 4rem)"};
 	border-radius: 2px;
 	background: ${({ $done }) =>
 		$done ? theme.colors.bluePrimary : "rgb(35 61 77 / 0.16)"};
@@ -1607,7 +1612,7 @@ const ActionButton = styled.button`
 `;
 
 const GraphsPanel = styled.section`
-	width: min(100%, 70rem);
+	width: min(calc(100% - (${theme.layout.contentGutter} * 2)), ${theme.layout.contentMaxWidth});
 	margin: 0.7rem auto 0;
 `;
 
@@ -1755,6 +1760,12 @@ const PlanPanel = styled.section`
 	border-radius: 1rem;
 	background: transparent;
 	padding: 0.35rem 0 1rem;
+	overflow-x: auto;
+	scrollbar-width: none;
+
+	&::-webkit-scrollbar {
+		display: none;
+	}
 `;
 
 const PlanHint = styled.span`

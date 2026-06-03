@@ -1,5 +1,6 @@
 ﻿"use client";
 
+import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import { useMemo, useState } from "react";
 import styled from "styled-components";
 
@@ -23,6 +24,7 @@ const AuthorsPage = () => {
 		0,
 		BOOKS_RANGE_MAX,
 	]);
+	const [isFiltersOpen, setIsFiltersOpen] = useState(false);
 	const authorsParams = useMemo(
 		() => ({
 			genreMode: selectedGenres.length > 0 ? genreMode : undefined,
@@ -60,30 +62,44 @@ const AuthorsPage = () => {
 				<Title>Authors</Title>
 				<Lead>Public authors and your personal author records.</Lead>
 
-				<AuthorsFilters
-					booksRange={booksRange}
-					genreMode={genreMode}
-					selectedGenres={selectedGenres}
-					sort={sort}
-					total={total}
-					onBooksRangeChange={(value) => {
-						setBooksRange(value);
-						setPage(1);
-					}}
-					onClearGenres={() => {
-						setSelectedGenres([]);
-						setPage(1);
-					}}
-					onGenreModeChange={(value) => {
-						setGenreMode(value);
-						setPage(1);
-					}}
-					onSortChange={(value) => {
-						setSort(value);
-						setPage(1);
-					}}
-					onToggleGenre={toggleGenre}
-				/>
+				<FiltersDock>
+					<FiltersToggle
+						type="button"
+						onClick={() => setIsFiltersOpen((current) => !current)}
+					>
+						<span>Filters</span>
+						<KeyboardArrowDownIcon
+							aria-hidden="true"
+							data-open={isFiltersOpen ? "true" : "false"}
+						/>
+					</FiltersToggle>
+					<FiltersDrawer $isOpen={isFiltersOpen}>
+						<AuthorsFilters
+							booksRange={booksRange}
+							genreMode={genreMode}
+							selectedGenres={selectedGenres}
+							sort={sort}
+							total={total}
+							onBooksRangeChange={(value) => {
+								setBooksRange(value);
+								setPage(1);
+							}}
+							onClearGenres={() => {
+								setSelectedGenres([]);
+								setPage(1);
+							}}
+							onGenreModeChange={(value) => {
+								setGenreMode(value);
+								setPage(1);
+							}}
+							onSortChange={(value) => {
+								setSort(value);
+								setPage(1);
+							}}
+							onToggleGenre={toggleGenre}
+						/>
+					</FiltersDrawer>
+				</FiltersDock>
 
 				{isLoading ? (
 					<AuthorGrid aria-label="Loading authors">
@@ -128,11 +144,11 @@ const AuthorSkeleton = () => (
 const Page = styled.div`
 	min-height: 100dvh;
 	background: ${theme.colors.background};
-	padding: clamp(3rem, 5vw, 4.5rem) clamp(1.5rem, 2.78vw, 2.5rem);
+	padding: clamp(2rem, 4vw, 3.5rem) 0 3rem;
 `;
 
 const Content = styled.section`
-	width: 72vw;
+	width: min(95vw, ${theme.layout.contentMaxWidth});
 	margin: 0 auto;
 `;
 
@@ -140,7 +156,7 @@ const Title = styled.h1`
 	margin: 0;
 	color: ${theme.colors.foreground};
 	font-family: ${theme.fonts.serif};
-	font-size: 3vw;
+	font-size: clamp(2rem, 3vw, 2.75rem);
 	font-weight: 600;
 	line-height: 1;
 `;
@@ -158,6 +174,45 @@ const AuthorGrid = styled.div`
 	gap: 1rem;
 	grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr));
 	margin-top: 2rem;
+`;
+
+const FiltersDock = styled.div`
+	margin-top: 1rem;
+`;
+
+const FiltersToggle = styled.button`
+	display: none;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.75rem;
+	width: 100%;
+	border: 0.0625rem solid rgb(211 202 196 / 0.72);
+	border-radius: 0.9rem;
+	background: ${theme.colors.surface};
+	padding: 0.8rem 1rem;
+	color: ${theme.colors.foreground};
+	cursor: pointer;
+	font: inherit;
+	font-weight: 700;
+
+	& svg {
+		transition: transform 160ms ease;
+	}
+
+	& svg[data-open="true"] {
+		transform: rotate(180deg);
+	}
+
+	@media (max-width: ${theme.rubberSize.tablet}) {
+		display: flex;
+	}
+`;
+
+const FiltersDrawer = styled.div<{ $isOpen: boolean }>`
+	@media (max-width: ${theme.rubberSize.tablet}) {
+		display: ${({ $isOpen }) => ($isOpen ? "block" : "none")};
+		margin-top: 0.75rem;
+	}
 `;
 
 const SkeletonCard = styled.div`

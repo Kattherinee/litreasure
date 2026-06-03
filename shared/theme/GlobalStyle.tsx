@@ -51,10 +51,35 @@ const GlobalStyle = createGlobalStyle`
 		margin: 0;
 		overflow-x: clip;
 		overscroll-behavior-x: none;
-			background: ${theme.colors.background};
+		background: ${theme.colors.background};
 		color: ${theme.colors.foreground};
 		font-family: ${theme.fonts.sans};
 		text-rendering: optimizeLegibility;
+	}
+
+	@media (hover: none), (pointer: coarse) {
+		button:hover,
+		a:hover,
+		[role="button"]:hover,
+		[role="link"]:hover,
+		[role="menuitem"]:hover {
+			background: inherit;
+			box-shadow: none;
+			color: inherit;
+			transform: none;
+			text-decoration: none;
+		}
+	}
+
+	main {
+		flex: 1 0 auto;
+		min-width: 0;
+	}
+
+	@media (max-width: ${theme.rubberSize.tablet}) {
+		main {
+			padding-bottom: calc(5.25rem + env(safe-area-inset-bottom));
+		}
 	}
 
 	h1,

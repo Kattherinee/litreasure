@@ -25,7 +25,7 @@ interface IBookDetailTabsProps {
 	onActiveTabChange?: (tab: ITabId) => void;
 }
 
-export type ITabId = "collections" | "description" | "quotes" | "reviews";
+export type ITabId = "collections" | "description" | "reviews";
 type ICollectionFilter = "all" | "saved" | "mine";
 
 const tabs: Array<{
@@ -35,7 +35,6 @@ const tabs: Array<{
 }> = [
 	{ id: "description", label: "Description" },
 	{ id: "collections", label: "In collections" },
-	{ id: "quotes", label: "Quotes" },
 	{ id: "reviews", label: "Reviews" },
 ];
 
@@ -265,12 +264,6 @@ const BookDetailTabs = ({
 					</DescriptionWrap>
 				) : null}
 
-				{activeTab === "quotes" ? (
-					<PlaceholderText>
-						No quotes have been added for this book yet.
-					</PlaceholderText>
-				) : null}
-
 				{activeTab === "collections" ? (
 					<CollectionsPanel>
 						{bookCollections.length > 0 ? (
@@ -481,6 +474,10 @@ const TabsBlock = styled.section`
 	min-width: 0;
 	margin-top: 1.6rem;
 	overflow: hidden;
+
+	@media (max-width: 47.9375rem) {
+		margin-top: 0.8rem;
+	}
 `;
 
 const Tabs = styled.div`
@@ -490,7 +487,7 @@ const Tabs = styled.div`
 
 	@media (max-width: 56rem) {
 		flex-wrap: wrap;
-		gap: 1rem;
+		gap: 0.75rem;
 	}
 `;
 
@@ -525,6 +522,10 @@ const TabButton = styled.button<{ $isActive: boolean }>`
 	&:focus-visible {
 		color: ${theme.colors.orangeDark};
 		outline: none;
+	}
+
+	@media (max-width: 56rem) {
+		font-size: 1.05rem;
 	}
 `;
 

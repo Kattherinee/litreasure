@@ -56,13 +56,47 @@ const Root = styled.div<{ $variant: "pill" | "block" }>`
 	flex-wrap: wrap;
 	${({ $variant }) =>
 		$variant === "block"
-			? css`
+				? css`
 					display: grid;
 					gap: 0.5rem;
-					grid-template-columns: repeat(4, minmax(0, 1fr));
+					grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+
+					@media (max-width: ${theme.rubberSize.tablet}) {
+						display: flex;
+						flex-wrap: nowrap;
+						overflow-x: auto;
+						overflow-y: hidden;
+						padding-bottom: 0.15rem;
+						scroll-snap-type: x proximity;
+						scrollbar-width: none;
+						-ms-overflow-style: none;
+						grid-template-columns: none;
+
+						&::-webkit-scrollbar {
+							display: none;
+						}
+					}
+
+					@media (max-width: 30rem) {
+						gap: 0.45rem;
+					}
 				`
 			: css`
 					gap: 0.55rem;
+
+					@media (max-width: ${theme.rubberSize.tablet}) {
+						flex-wrap: nowrap;
+						overflow-x: auto;
+						overflow-y: hidden;
+						padding-bottom: 0.15rem;
+						scroll-snap-type: x proximity;
+						scrollbar-width: none;
+						-ms-overflow-style: none;
+
+						&::-webkit-scrollbar {
+							display: none;
+						}
+					}
 				`};
 `;
 
@@ -87,6 +121,11 @@ const TabButton = styled.button<{ $isActive: boolean; $variant: "pill" | "block"
 					font-weight: 500;
 					line-height: 1.2;
 					text-align: left;
+
+					@media (max-width: ${theme.rubberSize.tablet}) {
+						padding: 0.6rem 0.7rem;
+						font-size: 0.95rem;
+					}
 				`
 			: css`
 					display: inline-flex;
@@ -105,6 +144,14 @@ const TabButton = styled.button<{ $isActive: boolean; $variant: "pill" | "block"
 					font-size: 0.9rem;
 					font-weight: ${$isActive ? 700 : 400};
 					line-height: 1.2;
+
+					@media (max-width: ${theme.rubberSize.tablet}) {
+						flex: 0 0 auto;
+						min-width: 11rem;
+						padding: 0.4rem 0.75rem;
+						font-size: 0.86rem;
+						scroll-snap-align: start;
+					}
 				`};
 
 	&:hover,

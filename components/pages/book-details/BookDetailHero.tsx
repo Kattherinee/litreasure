@@ -6,6 +6,7 @@ import CheckCircleOutlinedIcon from "@mui/icons-material/CheckCircleOutlined";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
 import MoreHorizIcon from "@mui/icons-material/MoreHoriz";
+import EditNoteOutlinedIcon from "@mui/icons-material/EditNoteOutlined";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -31,6 +32,8 @@ import { AuthorAvatar } from "@/shared/ui/AuthorAvatar";
 import { PaperNotePanel } from "@/shared/ui/PaperNotePanel";
 
 import { BookCollectionModal } from "./BookCollectionModal";
+
+const finePointer = "@media (hover: hover) and (pointer: fine)";
 
 interface IBookDetailHeroProps {
 	book: IBook;
@@ -88,6 +91,7 @@ const BookDetailHero = ({ book, onAuthRequired }: IBookDetailHeroProps) => {
 	const [isStatusMenuOpen, setIsStatusMenuOpen] = useState(false);
 	const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
 	const [isPaperMenuOpen, setIsPaperMenuOpen] = useState(false);
+	const [isPaperNoteOpen, setIsPaperNoteOpen] = useState(true);
 	const [isNoteEditorOpen, setIsNoteEditorOpen] = useState(false);
 	const [noteDraft, setNoteDraft] = useState("");
 	const [isNoteExpanded, setIsNoteExpanded] = useState(false);
@@ -116,6 +120,7 @@ const BookDetailHero = ({ book, onAuthRequired }: IBookDetailHeroProps) => {
 	const hasPaperBookNote = paperBookNote.length > 0;
 	const currentStatus = trackingState?.status;
 	const isBookTracked = Boolean(currentStatus);
+	const canShowPaperNote = isBookTracked || hasPaperBook;
 	const currentStatusLabel = currentStatus
 		? statusLabels[currentStatus]
 		: "Add to library";
@@ -126,7 +131,8 @@ const BookDetailHero = ({ book, onAuthRequired }: IBookDetailHeroProps) => {
 		updatePaperBookMutation.isPending ||
 		deletePaperBookMutation.isPending;
 	const isActionPending = isTrackingPending || isPaperBookPending;
-	const isAnyMenuOpen = isStatusMenuOpen || isMoreMenuOpen || isPaperMenuOpen;
+	const isAnyMenuOpen =
+		isStatusMenuOpen || isMoreMenuOpen || isPaperMenuOpen || isPaperNoteOpen;
 	const canEditBook = book.isPublic === false;
 
 	useEffect(() => {
@@ -331,7 +337,11 @@ const BookDetailHero = ({ book, onAuthRequired }: IBookDetailHeroProps) => {
 
 	const openPaperNoteEditor = () => {
 		if (!paperBookState?.status) {
-			setTrackingStatus("Choose paper status first");
+			setTrackingStatus("");
+			setIsStatusMenuOpen(false);
+			setIsMoreMenuOpen(true);
+			setIsPaperMenuOpen(true);
+			setIsNoteEditorOpen(false);
 			return;
 		}
 
@@ -341,15 +351,11 @@ const BookDetailHero = ({ book, onAuthRequired }: IBookDetailHeroProps) => {
 		setIsPaperMenuOpen(false);
 	};
 
-	const handlePaperQuickEdit = () => {
-		if (!paperBookState?.status) {
-			setIsMoreMenuOpen(true);
-			setIsPaperMenuOpen(true);
-			setIsNoteEditorOpen(false);
-			return;
-		}
-
-		openPaperNoteEditor();
+	const togglePaperNotePanel = () => {
+		setIsPaperNoteOpen((current) => !current);
+		setIsMoreMenuOpen(false);
+		setIsPaperMenuOpen(false);
+		setIsNoteEditorOpen(false);
 	};
 
 	const handleClearPaperNote = async () => {
@@ -419,34 +425,6 @@ const BookDetailHero = ({ book, onAuthRequired }: IBookDetailHeroProps) => {
 					<AuthorName>{authorName}</AuthorName>
 				</Author>
 			)}
-
-			{isBookTracked ? (
-				<PaperNotePanel
-					canExpand={hasClampedNoteOverflow}
-					emptyText={
-						paperBookState?.status
-							? "Add a short note about your paper copy."
-							: "Have a paper copy or plan to get one? Set the status."
-					}
-					hasNote={hasPaperBookNote}
-					isActionPending={isActionPending}
-					isExpanded={isNoteExpanded}
-					isInlineEditing={isNoteEditorOpen && Boolean(paperBookState?.status)}
-					noteText={paperBookNote}
-					noteTextRef={noteTextRef}
-					showClearAction={hasPaperBookNote && Boolean(paperBookState?.status)}
-					value={noteDraft}
-					onCancelInlineEdit={() => {
-						setNoteDraft(paperBookState?.note ?? "");
-						setIsNoteEditorOpen(false);
-					}}
-					onClear={() => void handleClearPaperNote()}
-					onDraftChange={setNoteDraft}
-					onEdit={handlePaperQuickEdit}
-					onSaveInlineEdit={() => void handleSavePaperNote()}
-					onToggleExpand={() => setIsNoteExpanded((current) => !current)}
-				/>
-			) : null}
 
 			<ActionRow>
 				<LibraryAction
@@ -520,6 +498,14 @@ const BookDetailHero = ({ book, onAuthRequired }: IBookDetailHeroProps) => {
 				>
 					<AutoStoriesOutlinedIcon aria-hidden="true" />
 				</RoundAction>
+				<PaperNoteToggleAction
+					aria-expanded={isPaperNoteOpen}
+					aria-label="Paper note"
+					type="button"
+					onClick={togglePaperNotePanel}
+				>
+					<EditNoteOutlinedIcon aria-hidden="true" />
+				</PaperNoteToggleAction>
 				<MoreActionWrap
 					onMouseEnter={cancelCloseMoreMenu}
 					onMouseLeave={scheduleCloseMoreMenu}
@@ -602,6 +588,37 @@ const BookDetailHero = ({ book, onAuthRequired }: IBookDetailHeroProps) => {
 					) : null}
 				</MoreActionWrap>
 			</ActionRow>
+			{canShowPaperNote ? (
+				<PaperNoteDock>
+					<PaperNotePanelWrap $isOpen={isPaperNoteOpen}>
+						<PaperNotePanel
+							canExpand={hasClampedNoteOverflow}
+							emptyText={
+								paperBookState?.status
+									? "Add a short note about your paper copy."
+									: "Have a paper copy or plan to get one? Set the status."
+							}
+							hasNote={hasPaperBookNote}
+							isActionPending={isActionPending}
+							isExpanded={isNoteExpanded}
+							isInlineEditing={isNoteEditorOpen && Boolean(paperBookState?.status)}
+							noteText={paperBookNote}
+							noteTextRef={noteTextRef}
+							showClearAction={hasPaperBookNote && Boolean(paperBookState?.status)}
+							value={noteDraft}
+							onCancelInlineEdit={() => {
+								setNoteDraft(paperBookState?.note ?? "");
+								setIsNoteEditorOpen(false);
+							}}
+							onClear={() => void handleClearPaperNote()}
+							onDraftChange={setNoteDraft}
+							onEdit={openPaperNoteEditor}
+							onSaveInlineEdit={() => void handleSavePaperNote()}
+							onToggleExpand={() => setIsNoteExpanded((current) => !current)}
+						/>
+					</PaperNotePanelWrap>
+				</PaperNoteDock>
+			) : null}
 			{trackingStatus ? (
 				<VisuallyHidden role="status">{trackingStatus}</VisuallyHidden>
 			) : null}
@@ -730,6 +747,7 @@ const Title = styled.h1`
 
 	@media (max-width: 47.9375rem) {
 		font-size: 2rem;
+		color: ${theme.colors.bluePrimary};
 	}
 `;
 
@@ -760,10 +778,12 @@ const TitleEditButton = styled.button`
 		height: 1.2rem;
 	}
 
-	&:hover,
-	&:focus-visible {
-		background: rgb(242 239 237 / 0.2);
-		outline: none;
+	${finePointer} {
+		&:hover,
+		&:focus-visible {
+			background: rgb(242 239 237 / 0.2);
+			outline: none;
+		}
 	}
 `;
 
@@ -880,10 +900,82 @@ const ActionRow = styled.div`
 
 	@media (max-width: 47.9375rem) {
 		justify-content: center;
+		padding-top: 0.65rem;
 	}
 
 	@media (max-width: 32rem) {
 		flex-wrap: wrap;
+	}
+`;
+
+const PaperNoteToggleAction = styled.button`
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 2.65rem;
+	height: 2.65rem;
+	border: 0;
+	border-radius: 50%;
+	background: ${theme.colors.surface};
+	color: ${theme.colors.darkerOrangeLight};
+	cursor: pointer;
+	transition:
+		background 180ms ease,
+		color 180ms ease,
+		transform 180ms ease;
+
+	& svg {
+		width: 1.65rem;
+		height: 1.65rem;
+	}
+
+	&[aria-expanded="true"] {
+		background: ${theme.colors.orangeLight};
+		color: ${theme.colors.invertedText};
+	}
+
+	margin-left: 0.45rem;
+
+	@media (min-width: 48rem) {
+		display: none;
+	}
+
+	@media (max-width: 74.9375rem) {
+		width: 2.35rem;
+		height: 2.35rem;
+
+		& svg {
+			width: 1.45rem;
+			height: 1.45rem;
+		}
+	}
+
+	${finePointer} {
+		&:hover,
+		&:focus-visible {
+			background: ${theme.colors.orangeLight};
+			color: ${theme.colors.invertedText};
+			outline: none;
+			transform: translateY(-0.0625rem);
+		}
+	}
+`;
+
+const PaperNoteDock = styled.div`
+	position: absolute;
+	right: 0;
+	top: 50%;
+	transform: translateY(-50%);
+	width: min(22rem, 42vw);
+	z-index: 12;
+
+	@media (max-width: 62rem) {
+		position: static;
+		top: auto;
+		right: auto;
+		transform: none;
+		width: min(34rem, 100%);
+		margin-top: 0.85rem;
 	}
 `;
 
@@ -1051,12 +1143,14 @@ const MoreActionWrap = styled.div`
 
 const MoreMenu = styled.div`
 	position: absolute;
-	top: 0;
-	left: calc(100% + 0.45rem);
+	top: calc(100% + 0.45rem);
+	right: 0;
 	z-index: 25;
 	display: grid;
 	width: 13.5rem;
+	max-width: min(13.5rem, calc(100vw - 1rem));
 	overflow: visible;
+	box-sizing: border-box;
 	border: 0.0625rem solid ${theme.colors.orangeLight};
 	border-radius: 0.9rem;
 	background: #f2efed;
@@ -1096,11 +1190,14 @@ const MoreMenuItem = styled.button`
 
 const PaperSubmenu = styled.div`
 	position: absolute;
-	top: 0;
-	left: calc(100% + 0.35rem);
+	top: calc(100% + 0.35rem);
+	right: 0;
+	left: auto;
 	z-index: 30;
 	display: grid;
 	width: 14.5rem;
+	max-width: min(14.5rem, calc(100vw - 1rem));
+	box-sizing: border-box;
 	border: 0.0625rem solid ${theme.colors.orangeLight};
 	border-radius: 0.9rem;
 	background: #f2efed;
@@ -1130,6 +1227,11 @@ const RoundAction = styled.button`
 		height: 1.65rem;
 	}
 
+	&[aria-expanded="true"] {
+		background: ${theme.colors.orangeLight};
+		color: ${theme.colors.invertedText};
+	}
+
 	@media (max-width: 74.9375rem) {
 		width: 2.35rem;
 		height: 2.35rem;
@@ -1146,5 +1248,13 @@ const RoundAction = styled.button`
 		color: ${theme.colors.invertedText};
 		outline: none;
 		transform: translateY(-0.0625rem);
+	}
+`;
+
+const PaperNotePanelWrap = styled.div<{ $isOpen: boolean }>`
+	display: block;
+
+	@media (max-width: ${theme.rubberSize.tablet}) {
+		display: ${({ $isOpen }) => ($isOpen ? "block" : "none")};
 	}
 `;

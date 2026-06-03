@@ -69,6 +69,10 @@ const bookStatuses: Array<{ id: IUserBookStatus; label: string }> = [
 	{ id: "dropped", label: statusLabels.dropped },
 ];
 
+const finePointer = "@media (hover: hover) and (pointer: fine)";
+const getFallbackCoverWidthBySize = (size: IBookCardSize) =>
+	size === "tiny" ? "6.15rem" : size === "compact" ? "6.9rem" : "10rem";
+
 export interface IBookCardData {
 	id: string;
 	title: string;
@@ -168,11 +172,19 @@ const BookCard = ({
 
 			const rect = action.getBoundingClientRect();
 			const menuWidth = 150;
+			const menuHeight = 286;
 			const maxLeft = Math.max(8, window.innerWidth - menuWidth - 8);
+			const belowTop = rect.bottom + 6;
+			const aboveTop = rect.top - menuHeight - 6;
+			const maxTop = Math.max(8, window.innerHeight - menuHeight - 8);
+			const top =
+				belowTop + menuHeight <= window.innerHeight - 8
+					? belowTop
+					: Math.max(8, Math.min(aboveTop, maxTop));
 
 			setMenuPosition({
 				left: Math.min(Math.max(8, rect.right - menuWidth), maxLeft),
-				top: rect.bottom + 6,
+				top,
 			});
 		};
 
@@ -306,7 +318,7 @@ const BookCard = ({
 			onClick={openBookPage}
 			onKeyDown={handleCardKeyDown}
 		>
-			<BookCover $size={size}>
+			<BookCover $coverWidth={coverWidth} $size={size}>
 				{isCoverLoaded ? null : <CoverPlaceholder aria-hidden="true" />}
 				{isBookTracked && showStatusBadge ? (
 					<StatusBadge
@@ -401,7 +413,7 @@ const BookCard = ({
 				{addStatus ? <AddStatus>{addStatus}</AddStatus> : null}
 			</BookCover>
 
-			<BookMeta $coverWidth={coverWidth}>
+			<BookMeta $coverWidth={coverWidth} $size={size}>
 				<BookTitle $size={size}>
 					{seriesBadgeLabel ? (
 						<SeriesTitlePrefix>{seriesBadgeLabel} · </SeriesTitlePrefix>
@@ -462,38 +474,62 @@ const BookCardWrapper = styled.article<{
 	position: relative;
 	display: flex;
 	width: min-content;
+	height: ${({ $size }) =>
+		$size === "tiny"
+			? "11.3rem"
+			: $size === "compact"
+				? "14.75rem"
+				: "18.95rem"};
 	max-width: 100%;
 	flex-direction: column;
 	gap: 0.5rem;
+	overflow: hidden;
 	background: ${theme.colors.transparent};
 	box-shadow: none;
 	color: ${theme.colors.foreground};
 	cursor: pointer;
+	transition: transform 220ms ease;
+	align-items: flex-start;
 
 	&:focus-visible {
 		outline: 0.25rem solid ${theme.colors.orangeDark};
 		outline-offset: 0.25rem;
 	}
 
-	&:hover,
 	&:focus-within {
 		z-index: 30;
 	}
+
+	${finePointer} {
+		&:hover {
+			z-index: 30;
+		}
+	}
+
+	@media (max-width: ${theme.rubberSize.tablet}) {
+		gap: 0.35rem;
+		height: fit-content;
+	}
 `;
 
-const BookCover = styled.div<{ $size: IBookCardSize }>`
+const BookCover = styled.div<{
+	$size: IBookCardSize;
+	$coverWidth: number | null;
+}>`
 	position: relative;
 	z-index: 2;
-	overflow: visible;
-	width: fit-content;
+	flex: 0 0 auto;
+	overflow: hidden;
+	width: ${({ $size, $coverWidth }) =>
+		$coverWidth ? `${$coverWidth}px` : getFallbackCoverWidthBySize($size)};
 	height: ${({ $size }) =>
 		$size === "tiny"
-			? "9.25rem"
+			? "8.6rem"
 			: $size === "compact"
-				? "12.5rem"
+				? "11.45rem"
 				: "15.25rem"};
 
-	border-radius: 0.7rem;
+	border-radius: 0.9rem;
 	transition:
 		border-color 220ms ease,
 		box-shadow 220ms ease,
@@ -503,19 +539,25 @@ const BookCover = styled.div<{ $size: IBookCardSize }>`
 		border: 0.175rem solid ${theme.colors.orangeDark};
 	}
 
-	${BookCardWrapper}:hover &,
 	${BookCardWrapper}:focus-visible & {
 		transform: scale(1.02);
+	}
+
+	${finePointer} {
+		${BookCardWrapper}:hover &,
+		${BookCardWrapper}:focus-visible & {
+			transform: scale(1.02);
+		}
 	}
 `;
 
 const BookCoverImage = styled.img<{ $isLoaded: boolean }>`
 	display: block;
-	width: auto;
-	max-width: 100%;
+	width: 100%;
 	height: 100%;
 	object-fit: contain;
-	border-radius: 0.7rem;
+	object-position: center;
+	border-radius: 0.9rem;
 	opacity: ${({ $isLoaded }) => ($isLoaded ? 1 : 0)};
 	transition: opacity 220ms ease;
 `;
@@ -542,20 +584,24 @@ const StatusBadge = styled.span<{ $color: string }>`
 	}
 `;
 
-const BookMeta = styled.div.attrs<{ $coverWidth: number | null }>(
-	({ $coverWidth }) => ({
-		style: $coverWidth
-			? { width: `${$coverWidth}px` }
-			: { minWidth: "100%", width: 0 },
-	}),
-)<{ $coverWidth: number | null }>`
+const BookMeta = styled.div<{
+	$coverWidth: number | null;
+	$size: IBookCardSize;
+}>`
 	position: relative;
 	z-index: 1;
 	display: flex;
 	flex-direction: column;
 	overflow: hidden;
-`;
+	width: ${({ $size, $coverWidth }) =>
+		$coverWidth ? `${$coverWidth}px` : getFallbackCoverWidthBySize($size)};
+	height: ${({ $size }) =>
+		$size === "tiny" ? "2.25rem" : $size === "compact" ? "2.8rem" : "3.2rem"};
 
+	@media (max-width: ${theme.rubberSize.tablet}) {
+		display: ${({ $size }) => ($size === "default" ? "flex" : "none")};
+	}
+`;
 
 const BookTitle = styled.h2<{ $size: IBookCardSize }>`
 	display: -webkit-box;
@@ -567,19 +613,25 @@ const BookTitle = styled.h2<{ $size: IBookCardSize }>`
 	font-family: ${theme.fonts.serif};
 	font-size: ${({ $size }) =>
 		$size === "tiny"
-			? "0.78rem"
+			? "0.72rem"
 			: $size === "compact"
-				? "0.95rem"
+				? "0.88rem"
 				: "1.045rem"};
 	font-weight: 500;
 	line-height: ${({ $size }) =>
-		$size === "tiny" ? "1.02rem" : $size === "compact" ? "1.18rem" : "1.55rem"};
+		$size === "tiny" ? "0.96rem" : $size === "compact" ? "1.06rem" : "1.55rem"};
 	transition: color 220ms ease;
 	overflow-wrap: anywhere;
 
-	${BookCardWrapper}:hover &,
 	${BookCardWrapper}:focus-visible & {
 		color: ${theme.colors.orangeDark};
+	}
+
+	${finePointer} {
+		${BookCardWrapper}:hover &,
+		${BookCardWrapper}:focus-visible & {
+			color: ${theme.colors.orangeDark};
+		}
 	}
 `;
 
@@ -591,11 +643,7 @@ const BookAuthor = styled.p<{ $size: IBookCardSize }>`
 	margin-block: 0;
 	color: ${theme.colors.lightText};
 	font-size: ${({ $size }) =>
-		$size === "tiny"
-			? "0.66rem"
-			: $size === "compact"
-				? "0.76rem"
-				: "0.875rem"};
+		$size === "tiny" ? "0.62rem" : $size === "compact" ? "0.7rem" : "0.875rem"};
 	line-height: 1.3334;
 `;
 
@@ -607,19 +655,17 @@ const BookAuthorLink = styled(Link)<{ $size: IBookCardSize }>`
 	margin-block: 0;
 	color: ${theme.colors.lightText};
 	font-size: ${({ $size }) =>
-		$size === "tiny"
-			? "0.66rem"
-			: $size === "compact"
-				? "0.76rem"
-				: "0.875rem"};
+		$size === "tiny" ? "0.62rem" : $size === "compact" ? "0.7rem" : "0.875rem"};
 	line-height: 1.3334;
 	text-decoration: none;
 
-	&:hover,
-	&:focus-visible {
-		color: ${theme.colors.orangeDark};
-		outline: none;
-		text-decoration: underline;
+	${finePointer} {
+		&:hover,
+		&:focus-visible {
+			color: ${theme.colors.orangeDark};
+			outline: none;
+			text-decoration: underline;
+		}
 	}
 `;
 
@@ -644,10 +690,26 @@ const CardLibraryAction = styled.div<{ $isTracked: boolean }>`
 		opacity 0.2s ease,
 		transform 0.15s ease;
 
-	${BookCardWrapper}:hover &,
+	@media (max-width: ${theme.rubberSize.tablet}) {
+		display: none;
+	}
+
 	${BookCardWrapper}:focus-within & {
 		opacity: 1;
 		transform: translateY(0);
+	}
+
+	@media (hover: none), (pointer: coarse) {
+		opacity: 1;
+		transform: none;
+	}
+
+	${finePointer} {
+		${BookCardWrapper}:hover &,
+		${BookCardWrapper}:focus-within & {
+			opacity: 1;
+			transform: translateY(0);
+		}
 	}
 `;
 
@@ -676,7 +738,6 @@ const CoverActionButton = styled.button`
 		transition: fill 0.2s ease;
 	}
 
-	&:hover,
 	&:focus-visible {
 		outline: none;
 	}
@@ -693,12 +754,16 @@ const BookAddButton = styled(CoverActionButton)<{ $isTracked: boolean }>`
 	color: ${({ $isTracked }) =>
 		$isTracked ? theme.colors.darkerOrangeLight : theme.colors.invertedText};
 
-	&:hover,
-	&:focus-visible {
-		background: ${({ $isTracked }) =>
-			$isTracked ? theme.colors.orangeLight : theme.colors.surface};
-		color: ${({ $isTracked }) =>
-			$isTracked ? theme.colors.invertedText : theme.colors.darkerOrangeLight};
+	${finePointer} {
+		&:hover,
+		&:focus-visible {
+			background: ${({ $isTracked }) =>
+				$isTracked ? theme.colors.orangeLight : theme.colors.surface};
+			color: ${({ $isTracked }) =>
+				$isTracked
+					? theme.colors.invertedText
+					: theme.colors.darkerOrangeLight};
+		}
 	}
 
 	&[aria-expanded="true"] svg {
@@ -714,10 +779,12 @@ const BookStatusMenuButton = styled(CoverActionButton)`
 	padding: 0;
 	color: ${theme.colors.invertedText};
 
-	&:hover,
-	&:focus-visible {
-		background: ${theme.colors.surface};
-		color: ${theme.colors.darkerOrangeLight};
+	${finePointer} {
+		&:hover,
+		&:focus-visible {
+			background: ${theme.colors.surface};
+			color: ${theme.colors.darkerOrangeLight};
+		}
 	}
 
 	&[aria-expanded="true"] svg {
@@ -765,11 +832,13 @@ const CardStatusMenuItem = styled.button<{ $isActive: boolean }>`
 		color: ${theme.colors.orangeDark};
 	}
 
-	&:hover,
-	&:focus-visible {
-		background: rgb(238 179 141 / 0.16);
-		color: ${theme.colors.orangeDark};
-		outline: none;
+	${finePointer} {
+		&:hover,
+		&:focus-visible {
+			background: rgb(238 179 141 / 0.16);
+			color: ${theme.colors.orangeDark};
+			outline: none;
+		}
 	}
 `;
 

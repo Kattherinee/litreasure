@@ -198,7 +198,14 @@ export const Filters = styled.div`
 	}
 
 	@media (max-width: 40rem) {
-		grid-template-columns: 1fr;
+		grid-template-columns: repeat(5, minmax(12rem, 1fr));
+		overflow-x: auto;
+		padding-bottom: 0.75rem;
+		scrollbar-width: none;
+
+		&::-webkit-scrollbar {
+			display: none;
+		}
 	}
 `;
 
