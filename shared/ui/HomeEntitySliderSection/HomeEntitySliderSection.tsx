@@ -1,9 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { EmblaCarouselType } from "embla-carousel";
-import useEmblaCarousel from "embla-carousel-react";
+import { useEffect, useMemo, useState } from "react";
 import styled from "styled-components";
 
 import type {
@@ -28,6 +26,18 @@ import { usePublicSeriesQuery } from "@/shared/api/series";
 import { theme } from "@/shared/theme";
 import { AuthorAvatar } from "@/shared/ui/AuthorAvatar";
 import { Button } from "@/shared/ui/Button";
+import {
+	CarouselContainer,
+	CarouselControlButton,
+	CarouselControls,
+	CarouselSlide,
+	CarouselStateMessage,
+	CarouselViewport,
+} from "@/shared/ui/Carousel/Carousel.styles";
+import {
+	type IHorizontalCarouselControls,
+	useHorizontalCarousel,
+} from "@/shared/ui/Carousel/useHorizontalCarousel";
 import { useLazyLoadTrigger } from "@/shared/utils/useLazyLoadTrigger";
 import { SeriesSliderCard } from "./SeriesSliderCard";
 
@@ -37,20 +47,6 @@ interface IHomeEntitySliderSectionProps {
 	query: IHomeSectionQuery;
 	title: string;
 }
-
-interface ICarouselControls {
-	canScrollNext: boolean;
-	canScrollPrev: boolean;
-	scrollNext: () => void;
-	scrollPrev: () => void;
-}
-
-const WHEEL_SENSITIVITY = -0.91;
-const EMBLA_WHEEL_DURATION = 15;
-const EMBLA_WHEEL_FRICTION = 0.68;
-const SCROLL_EDGE_THRESHOLD = 0.002;
-const HORIZONTAL_GESTURE_RATIO = 1.15;
-const MIN_HORIZONTAL_DELTA = 4;
 
 const HomeEntitySliderSection = ({
 	entity,
@@ -144,25 +140,23 @@ const HomeEntitySliderSection = ({
 				? "/collections"
 				: "/series";
 	const [carouselControls, setCarouselControls] =
-		useState<ICarouselControls | null>(null);
-	const handleControlsChange = useCallback(
-		(nextControls: ICarouselControls) => {
-			setCarouselControls((prevControls) => {
-				if (
-					prevControls &&
-					prevControls.canScrollNext === nextControls.canScrollNext &&
-					prevControls.canScrollPrev === nextControls.canScrollPrev &&
-					prevControls.scrollNext === nextControls.scrollNext &&
-					prevControls.scrollPrev === nextControls.scrollPrev
-				) {
-					return prevControls;
-				}
+		useState<IHorizontalCarouselControls | null>(null);
 
-				return nextControls;
-			});
-		},
-		[],
-	);
+	const handleControlsChange = (controls: IHorizontalCarouselControls) => {
+		setCarouselControls((currentControls) => {
+			if (
+				currentControls?.canScrollNext === controls.canScrollNext &&
+				currentControls?.canScrollPrev === controls.canScrollPrev &&
+				currentControls?.scrollNext === controls.scrollNext &&
+				currentControls?.scrollPrev === controls.scrollPrev
+			) {
+				return currentControls;
+			}
+
+			return controls;
+		});
+	};
+
 	const hasCarouselControls = Boolean(
 		carouselControls?.canScrollPrev || carouselControls?.canScrollNext,
 	);
@@ -176,24 +170,24 @@ const HomeEntitySliderSection = ({
 						See all
 					</ShowMoreButton>
 				</SectionHeading>
-				<Controls $isVisible={hasCarouselControls}>
-					<ControlButton
+				<CarouselControls $isVisible={hasCarouselControls}>
+					<CarouselControlButton
 						aria-label="Previous items"
 						disabled={!carouselControls?.canScrollPrev}
 						type="button"
 						onClick={carouselControls?.scrollPrev}
 					>
-						‹
-					</ControlButton>
-					<ControlButton
+						{"\u2039"}
+					</CarouselControlButton>
+					<CarouselControlButton
 						aria-label="Next items"
 						disabled={!carouselControls?.canScrollNext}
 						type="button"
 						onClick={carouselControls?.scrollNext}
 					>
-						›
-					</ControlButton>
-				</Controls>
+						{"\u203A"}
+					</CarouselControlButton>
+				</CarouselControls>
 			</SectionHeader>
 			{!isTriggered || isLoading ? (
 				<StateMessage>Loading...</StateMessage>
@@ -215,166 +209,12 @@ const HomeEntitySliderSection = ({
 				/>
 			) : (
 				<SeriesCarousel
-					series={items as ISeriesPreview[]}
 					onControlsChange={handleControlsChange}
+					series={items as ISeriesPreview[]}
 				/>
 			)}
 		</Section>
 	);
-};
-
-const useHorizontalCarousel = () => {
-	const [emblaRef, emblaApi] = useEmblaCarousel({
-		align: "start",
-		containScroll: "keepSnaps",
-		dragFree: true,
-		duration: 28,
-	});
-	const viewportNode = useRef<HTMLDivElement | null>(null);
-	const containerNode = useRef<HTMLDivElement | null>(null);
-	const [canScrollPrev, setCanScrollPrev] = useState(false);
-	const [canScrollNext, setCanScrollNext] = useState(false);
-	const [hasOverflow, setHasOverflow] = useState(false);
-
-	const updateControls = useCallback((api: EmblaCarouselType) => {
-		const viewport = viewportNode.current;
-		const container = containerNode.current;
-		const measuredOverflow =
-			viewport && container
-				? container.scrollWidth - viewport.clientWidth > 1
-				: false;
-		const hasCarouselScroll =
-			measuredOverflow || api.canScrollPrev() || api.canScrollNext();
-		const progress = api.scrollProgress();
-
-		setHasOverflow(hasCarouselScroll);
-		setCanScrollPrev(hasCarouselScroll && progress > SCROLL_EDGE_THRESHOLD);
-		setCanScrollNext(hasCarouselScroll && progress < 1 - SCROLL_EDGE_THRESHOLD);
-	}, []);
-
-	const scrollNext = useCallback(() => {
-		emblaApi?.scrollNext();
-	}, [emblaApi]);
-
-	const scrollPrev = useCallback(() => {
-		emblaApi?.scrollPrev();
-	}, [emblaApi]);
-
-	const setViewportRef = useCallback(
-		(node: HTMLDivElement | null) => {
-			viewportNode.current = node;
-			emblaRef(node);
-		},
-		[emblaRef],
-	);
-
-	const setContainerRef = useCallback((node: HTMLDivElement | null) => {
-		containerNode.current = node;
-	}, []);
-
-	const handleWheel = useCallback(
-		(event: WheelEvent) => {
-			if (!emblaApi || !hasOverflow) {
-				return;
-			}
-
-			const absDeltaX = Math.abs(event.deltaX);
-			const absDeltaY = Math.abs(event.deltaY);
-			const hasStrongHorizontalIntent =
-				absDeltaX > MIN_HORIZONTAL_DELTA &&
-				absDeltaX > absDeltaY * HORIZONTAL_GESTURE_RATIO;
-			const isHorizontalGesture = hasStrongHorizontalIntent || event.shiftKey;
-			const rawDelta = isHorizontalGesture
-				? absDeltaX > 0
-					? event.deltaX
-					: event.deltaY
-				: 0;
-			const deltaModeMultiplier = event.deltaMode === 1 ? 16 : 1;
-			const scrollDelta = rawDelta * deltaModeMultiplier;
-
-			if (scrollDelta === 0) {
-				return;
-			}
-
-			event.preventDefault();
-
-			const engine = emblaApi.internalEngine();
-			const wheelForce = scrollDelta * WHEEL_SENSITIVITY;
-			const currentTarget = engine.target.get();
-			const nextTarget = engine.limit.constrain(currentTarget + wheelForce);
-			const constrainedForce = nextTarget - currentTarget;
-
-			if (Math.abs(constrainedForce) < 0.2) {
-				return;
-			}
-
-			engine.scrollBody
-				.useDuration(EMBLA_WHEEL_DURATION)
-				.useFriction(EMBLA_WHEEL_FRICTION);
-			engine.scrollTo.distance(constrainedForce, false);
-			window.requestAnimationFrame(() => updateControls(emblaApi));
-		},
-		[emblaApi, hasOverflow, updateControls],
-	);
-
-	useEffect(() => {
-		const node = viewportNode.current;
-
-		if (!node) {
-			return;
-		}
-
-		node.addEventListener("wheel", handleWheel, { passive: false });
-
-		return () => {
-			node.removeEventListener("wheel", handleWheel);
-		};
-	}, [handleWheel]);
-
-	useEffect(() => {
-		if (!emblaApi) {
-			return;
-		}
-
-		emblaApi.on("select", updateControls);
-		emblaApi.on("scroll", updateControls);
-		emblaApi.on("reInit", updateControls);
-		emblaApi.on("settle", updateControls);
-		const frame = window.requestAnimationFrame(() => updateControls(emblaApi));
-		const resizeObserver =
-			typeof ResizeObserver === "undefined"
-				? null
-				: new ResizeObserver(() => {
-						updateControls(emblaApi);
-					});
-
-		if (viewportNode.current) {
-			resizeObserver?.observe(viewportNode.current);
-		}
-
-		if (containerNode.current) {
-			resizeObserver?.observe(containerNode.current);
-		}
-
-		return () => {
-			window.cancelAnimationFrame(frame);
-			resizeObserver?.disconnect();
-			emblaApi.off("select", updateControls);
-			emblaApi.off("scroll", updateControls);
-			emblaApi.off("reInit", updateControls);
-			emblaApi.off("settle", updateControls);
-		};
-	}, [emblaApi, updateControls]);
-
-	return {
-		canScrollNext,
-		canScrollPrev,
-		emblaApi,
-		setContainerRef,
-		setViewportRef,
-		scrollNext,
-		scrollPrev,
-	};
 };
 
 const AuthorCarousel = ({
@@ -382,7 +222,7 @@ const AuthorCarousel = ({
 	onControlsChange,
 }: {
 	authors: IAuthorPreview[];
-	onControlsChange: (controls: ICarouselControls) => void;
+	onControlsChange: (controls: IHorizontalCarouselControls) => void;
 }) => {
 	const {
 		canScrollNext,
@@ -427,7 +267,7 @@ const CollectionCarousel = ({
 	onControlsChange,
 }: {
 	collections: ICollectionPreview[];
-	onControlsChange: (controls: ICarouselControls) => void;
+	onControlsChange: (controls: IHorizontalCarouselControls) => void;
 }) => {
 	const {
 		canScrollNext,
@@ -473,7 +313,7 @@ const SeriesCarousel = ({
 	onControlsChange,
 }: {
 	series: ISeriesPreview[];
-	onControlsChange: (controls: ICarouselControls) => void;
+	onControlsChange: (controls: IHorizontalCarouselControls) => void;
 }) => {
 	const {
 		canScrollNext,
@@ -534,6 +374,9 @@ const SectionTitle = styled.h2`
 	font-size: 2rem;
 	font-weight: 600;
 	line-height: 1.1;
+	@media (max-width: ${theme.rubberSize.tablet}) {
+		font-size: 1.5rem;
+	}
 `;
 
 const ShowMoreButton = styled(Button)`
@@ -541,65 +384,49 @@ const ShowMoreButton = styled(Button)`
 		flex: 0 0 auto;
 		padding: 0.25rem 0.85rem;
 		font-size: 0.8125rem;
+		@media (max-width: ${theme.rubberSize.tablet}) {
+			font-size: 0.75rem;
+		}
 	}
 `;
 
-const Controls = styled.div<{ $isVisible: boolean }>`
-	display: ${({ $isVisible }) => ($isVisible ? "flex" : "none")};
-	flex: 0 0 auto;
-	gap: 0.625rem;
-`;
+const StateMessage = styled(CarouselStateMessage)``;
 
-const ControlButton = styled.button`
-	display: inline-flex;
+const TreasureCardBase = styled(Link)`
+	display: grid;
 	align-items: center;
-	justify-content: center;
-	width: 1.875rem;
-	height: 1.875rem;
-	border: 0.0625rem solid ${theme.colors.orangeDark};
-	border-radius: 62.4375rem;
-	background: ${theme.colors.transparent};
-	color: ${theme.colors.orangeDark};
-	cursor: pointer;
-	font-family: ${theme.fonts.serif};
-	font-size: 2rem;
-	line-height: 1;
+	gap: 1rem;
+	grid-template-columns: 5rem minmax(0, 1fr);
+	min-width: 16.5rem;
+	border: 0.0625rem solid rgb(211 202 196 / 0.72);
+	border-radius: 0.75rem;
+	background: rgb(255 255 255 / 0.58);
+	padding: 0.95rem 1rem;
+	color: inherit;
+	text-decoration: none;
 	transition:
-		background 180ms ease,
 		border-color 180ms ease,
-		color 180ms ease,
-		opacity 180ms ease,
+		background 180ms ease,
 		transform 180ms ease;
 
-	&:not(:disabled):hover {
-		background: ${theme.colors.orangeLight};
+	&:hover,
+	&:focus-visible {
 		border-color: ${theme.colors.orangeLight};
-		color: ${theme.colors.invertedText};
+		background: rgb(255 255 255 / 0.76);
+		outline: none;
 		transform: translateY(-0.0625rem);
 	}
-
-	&:disabled {
-		cursor: default;
-		opacity: 0.38;
-	}
 `;
 
-const CarouselViewport = styled.div`
-	overflow: hidden;
-`;
+const AuthorTreasureCard = styled(TreasureCardBase)``;
 
-const CarouselContainer = styled.div`
+const CollectionTreasureCard = styled(TreasureCardBase)``;
+
+const TreasureResourceMeta = styled.div`
+	min-width: 0;
 	display: flex;
-	gap: 0.75rem;
-`;
-
-const CarouselSlide = styled.div`
-	min-width: 0;
-	flex: 0 0 auto;
-`;
-
-export const TreasureResourceMeta = styled.div`
-	min-width: 0;
+	flex-direction: column;
+	gap: 0.35rem;
 `;
 
 const TreasureResourceTitle = styled.h3`
@@ -620,60 +447,18 @@ const TreasureResourceText = styled.p`
 	overflow: hidden;
 	-webkit-box-orient: vertical;
 	-webkit-line-clamp: 2;
-	margin: 0.28rem 0 0;
+	margin: 0;
 	color: ${theme.colors.softForeground};
 	font-size: 0.8rem;
 	line-height: 1.3;
 `;
 
-const treasureCardStyles = `
-	display: grid;
-	align-items: center;
-	grid-template-columns: 3.9rem minmax(0, 1fr);
-	gap: 0.75rem;
-	min-width: 0;
-	min-width: 16.5rem;
-	border: 0.0625rem solid rgb(211 202 196 / 0.72);
-	border-radius: 0.75rem;
-	background: rgb(255 255 255 / 0.58);
-	padding: 0.55rem;
-	color: inherit;
-	text-decoration: none;
-	transition:
-		border-color 180ms ease,
-		background 180ms ease,
-		transform 180ms ease;
-
-	&:hover,
-	&:focus-visible {
-		border-color: ${theme.colors.orangeLight};
-		background: rgb(255 255 255 / 0.76);
-		outline: none;
-		transform: translateY(-0.0625rem);
-	}
-`;
-
-const AuthorTreasureCard = styled(Link)`
-	${treasureCardStyles}
-`;
-
-const CollectionTreasureCard = styled(Link)`
-	${treasureCardStyles}
-`;
-
 const CollectionCover = styled.div<{ $coverUrl?: string }>`
-	width: 3.9rem;
+	width: 5rem;
 	aspect-ratio: 1 / 1;
 	border-radius: 0.6rem;
 	background:
 		linear-gradient(rgb(4 18 26 / 0.08), rgb(4 18 26 / 0.08)),
 		url("${({ $coverUrl }) => $coverUrl || "/images/book-placeholder.svg"}")
 			center / cover;
-`;
-
-const StateMessage = styled.p`
-	margin: 0;
-	color: ${theme.colors.softForeground};
-	font-size: 1rem;
-	line-height: 1.5;
 `;

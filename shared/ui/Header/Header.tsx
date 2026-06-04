@@ -11,12 +11,12 @@ import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import CategoryRoundedIcon from "@mui/icons-material/CategoryRounded";
 import CollectionsBookmarkRoundedIcon from "@mui/icons-material/CollectionsBookmarkRounded";
 import PeopleRoundedIcon from "@mui/icons-material/PeopleRounded";
-import BookmarkBorderOutlinedIcon from "@mui/icons-material/BookmarkBorderOutlined";
 import ConfirmationNumberRoundedIcon from "@mui/icons-material/ConfirmationNumberRounded";
 import Toolbar from "@mui/material/Toolbar";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import type { ComponentType } from "react";
 import styled from "styled-components";
 
 import AuthModal, { type IAuthModalMode } from "@/components/pages/AuthModal";
@@ -111,11 +111,16 @@ const Header = () => {
 					match: (currentPathname: string) =>
 						currentPathname.startsWith("/treasures"),
 				},
-		]
+			]
 		: [];
 	const visibleNavItems = [...navItems, ...userNavItems];
-	const mobileNavItems = user
-		? [
+	const mobileNavItems: Array<{
+		href: string;
+		icon: MobileNavIcon;
+		label: string;
+		match: (currentPathname: string) => boolean;
+	}> = user
+	? [
 				{
 					href: "/",
 					icon: HomeRoundedIcon,
@@ -131,7 +136,7 @@ const Header = () => {
 				},
 				{
 					href: "/treasures",
-					icon: BookmarkBorderOutlinedIcon,
+					icon: "/icons/logoSvg.svg",
 					label: "My Treasures",
 					match: (currentPathname: string) =>
 						currentPathname.startsWith("/treasures"),
@@ -152,6 +157,7 @@ const Header = () => {
 						currentPathname.startsWith("/search"),
 				},
 			];
+type MobileNavIcon = string | ComponentType<{ "aria-hidden"?: boolean }>;
 
 	const closeProfileMenu = () => setIsProfileMenuOpen(false);
 	const closeMobileMenu = () => setIsMobileMenuOpen(false);
@@ -378,7 +384,11 @@ const Header = () => {
 							title={item.label}
 							onClick={closeMobileMenu}
 						>
-							<Icon aria-hidden="true" />
+							{typeof Icon === "string" ? (
+								<MobileMenuIcon src={Icon} alt="" aria-hidden />
+							) : (
+								<Icon aria-hidden />
+							)}
 						</MobileNavLink>
 					);
 				})}
@@ -418,7 +428,7 @@ const Header = () => {
 										<span>Collections</span>
 									</MobileMenuLink>
 									<MobileMenuLink href="/treasures" onClick={closeMobileMenu}>
-										<BookmarkBorderOutlinedIcon aria-hidden="true" />
+										<LogoIcon aria-hidden="true" />
 										<span>My Treasures</span>
 									</MobileMenuLink>
 									<MobileMenuLink
@@ -566,6 +576,13 @@ const MobileNavLink = styled(Link)<{ $isActive: boolean }>`
 		height: 1.48rem;
 	}
 
+	& img {
+		width: 1.48rem;
+		height: 1.48rem;
+		display: block;
+		object-fit: contain;
+	}
+
 	${finePointer} {
 		&:hover,
 		&:focus-visible {
@@ -580,6 +597,13 @@ const MobileNavLink = styled(Link)<{ $isActive: boolean }>`
 		background: rgb(242 239 237 / 0.08);
 		box-shadow: inset 0 0 0 0.0625rem rgb(242 239 237 / 0.12);
 	}
+`;
+
+const MobileMenuIcon = styled.img`
+	width: 1.48rem;
+	height: 1.48rem;
+	display: block;
+	object-fit: contain;
 `;
 
 const MobileMenuContainer = styled.div`

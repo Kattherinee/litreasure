@@ -90,7 +90,6 @@ export const GoalStep = ({
 					</GoalStartField>
 					<GoalInputRow>
 						<GoalInputColumn>
-							<GoalInputLabel>Enter your yearly book goal</GoalInputLabel>
 							<GoalCounter>
 								<GoalNumberInput
 									aria-label="Number of books per year"
@@ -112,7 +111,7 @@ export const GoalStep = ({
 							) : (
 								<>
 									<AverageValue>
-										{roundedAverageTarget} books per year
+										{roundedAverageTarget} books / year
 									</AverageValue>
 								</>
 							)}
@@ -175,10 +174,10 @@ const GoalCounter = styled.div`
 `;
 
 const GoalInputRow = styled.div`
-	display: grid;
+	display: flex;
 	width: min(100%, 35rem);
-	grid-template-columns: minmax(8.5rem, 0.8fr) minmax(13rem, 1fr);
 	align-items: center;
+	flex-direction: column;
 	gap: 1rem;
 
 	@media (max-width: 38rem) {
@@ -190,13 +189,6 @@ const GoalInputColumn = styled.div`
 	display: grid;
 	justify-items: center;
 	gap: 0.45rem;
-`;
-
-const GoalInputLabel = styled.span`
-	color: ${theme.colors.foreground};
-	font-size: 0.86rem;
-	font-weight: 700;
-	text-align: center;
 `;
 
 const GoalNumberInput = styled.input<{ $isEmpty: boolean }>`
@@ -313,13 +305,14 @@ const GoalHint = styled.p`
 `;
 
 const AverageComparison = styled.div`
-	display: grid;
-	width: 100%;
+	display: flex;
+	flex-direction: column;
+	width: fit-content;
 	gap: 0.35rem;
-	border: 0.0625rem solid rgb(218 142 91 / 0.24);
+
 	border-radius: 0.75rem;
-	background: rgb(242 239 237 / 0.48);
-	padding: 0.85rem 1rem;
+
+	padding: 0.25rem 0rem;
 `;
 
 const AverageLabel = styled.span`

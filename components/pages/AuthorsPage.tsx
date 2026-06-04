@@ -148,7 +148,7 @@ const Page = styled.div`
 `;
 
 const Content = styled.section`
-	width: min(95vw, ${theme.layout.contentMaxWidth});
+	width: 70vw;
 	margin: 0 auto;
 `;
 

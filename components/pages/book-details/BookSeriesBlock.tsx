@@ -1,6 +1,7 @@
 "use client";
 
 import BookmarkIcon from "@mui/icons-material/Bookmark";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import styled from "styled-components";
 
@@ -13,12 +14,14 @@ import {
 import { useAuthStore } from "@/shared/store/auth-store";
 import { theme } from "@/shared/theme";
 import BookCarousel from "@/shared/ui/BookCarousel/BookCarousel";
+import { PlusIcon } from "@/shared/ui/PlusIcon";
 
 interface IBookSeriesBlockProps {
 	book: IBook;
 }
 
 const BookSeriesBlock = ({ book }: IBookSeriesBlockProps) => {
+	const router = useRouter();
 	const [authModalMode, setAuthModalMode] = useState<IAuthModalMode | null>(
 		null,
 	);
@@ -88,7 +91,33 @@ const BookSeriesBlock = ({ book }: IBookSeriesBlockProps) => {
 	return (
 		<SeriesSection>
 			{sortedMainSeriesBooks.length > 0 ? (
-				<SeriesGroup>
+				<SeriesGroup
+					role="link"
+					tabIndex={0}
+					onClick={(event) => {
+						if (event.target !== event.currentTarget) {
+							return;
+						}
+
+						if (seriesId) {
+							router.push(`/series/${seriesId}`);
+						}
+					}}
+					onKeyDown={(event) => {
+						if (event.target !== event.currentTarget) {
+							return;
+						}
+
+						if (!seriesId) {
+							return;
+						}
+
+						if (event.key === "Enter" || event.key === " ") {
+							event.preventDefault();
+							router.push(`/series/${seriesId}`);
+						}
+					}}
+				>
 					<SeriesHeader>
 						<Title>{book.series.title ?? "Series books"}</Title>
 						{seriesId ? (
@@ -98,18 +127,28 @@ const BookSeriesBlock = ({ book }: IBookSeriesBlockProps) => {
 									disabled={isSeriesSavePending}
 									title="Remove from saved"
 									type="button"
-									onClick={() => void handleToggleSeriesSave()}
+									onClick={(event) => {
+										event.stopPropagation();
+										void handleToggleSeriesSave();
+									}}
 								>
 									<BookmarkIcon aria-hidden="true" />
 								</SavedSeriesButton>
 							) : (
-								<SaveSeriesButton
+								<SavedSeriesButton
 									disabled={isSeriesSavePending}
 									type="button"
-									onClick={() => void handleToggleSeriesSave()}
+									onClick={(event) => {
+										event.stopPropagation();
+										void handleToggleSeriesSave();
+									}}
 								>
-									{isSeriesSavePending ? "Saving..." : "Save series"}
-								</SaveSeriesButton>
+									{isSeriesSavePending ? (
+										"Saving..."
+									) : (
+										<PlusIcon aria-hidden="true" />
+									)}
+								</SavedSeriesButton>
 							)
 						) : null}
 					</SeriesHeader>
@@ -156,6 +195,12 @@ const SeriesSection = styled.section`
 
 const SeriesGroup = styled.div`
 	min-width: 0;
+	cursor: pointer;
+
+	&:focus-visible {
+		outline: 0.16rem solid ${theme.colors.orangeLight};
+		outline-offset: 0.22rem;
+	}
 `;
 
 const SeriesHeader = styled.div`
@@ -173,34 +218,8 @@ const Title = styled.h2`
 	font-size: 1.75rem;
 	font-weight: 500;
 	line-height: 1.2;
-`;
-
-const SaveSeriesButton = styled.button`
-	flex: 0 0 auto;
-	border: 0;
-	border-radius: 999rem;
-	background: ${theme.colors.white};
-	padding: 0.52rem 0.95rem;
-	color: ${theme.colors.bluePrimary};
-	cursor: pointer;
-	font-family: ${theme.fonts.sans};
-	font-size: 0.86rem;
-	font-weight: 700;
-	line-height: 1.2;
-	transition:
-		background 180ms ease,
-		color 180ms ease;
-
-	&:hover,
-	&:focus-visible {
-		background: ${theme.colors.bluePrimary};
-		color: ${theme.colors.invertedText};
-		outline: none;
-	}
-
-	&:disabled {
-		cursor: progress;
-		opacity: 0.72;
+	@media (max-width: 768px) {
+		font-size: 1.5rem;
 	}
 `;
 

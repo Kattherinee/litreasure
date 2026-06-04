@@ -47,6 +47,7 @@ const CollectionPage = ({ id }: ICollectionPageProps) => {
 		isError,
 		isLoading,
 	} = useCollectionQuery(id);
+	const visibleBooks = collection?.books.slice(0, 27) ?? [];
 	const isMyCollection =
 		collection?.source === "user" &&
 		((sessionUser?.id && collection.owner.id === sessionUser.id) ||
@@ -118,7 +119,7 @@ const CollectionPage = ({ id }: ICollectionPageProps) => {
 						<BookGrid aria-label="Loading collection books">
 							{Array.from({ length: 10 }, (_, index) => (
 								<BookItem key={index}>
-									<BookCardSkeleton />
+									<BookCardSkeleton size="compact" />
 								</BookItem>
 							))}
 						</BookGrid>
@@ -194,13 +195,13 @@ const CollectionPage = ({ id }: ICollectionPageProps) => {
 							<ActionMessage role="status">{actionMessage}</ActionMessage>
 						) : null}
 
-						{collection.books.length === 0 ? (
+						{visibleBooks.length === 0 ? (
 							<StateMessage>No books in this collection yet.</StateMessage>
 						) : (
 							<BookGrid>
-								{collection.books.map((book) => (
+								{visibleBooks.map((book) => (
 									<BookItem key={book.id}>
-										<BookCard book={book} />
+										<BookCard book={book} size="compact" />
 										{isMyCollection ? (
 											<RemoveBookButton
 												type="button"
@@ -244,6 +245,7 @@ export default CollectionPage;
 
 const Page = styled.div`
 	min-height: 100dvh;
+	background: ${theme.colors.background};
 	padding: clamp(1rem, 3vw, 2.5rem) clamp(1.5rem, 2.78vw, 2.5rem);
 `;
 
@@ -406,8 +408,9 @@ const StateMessage = styled.p`
 const BookGrid = styled.div`
 	display: flex;
 	flex-wrap: wrap;
-	justify-content: center;
 	gap: 1rem;
+	justify-content: center;
+	align-items: flex-start;
 	margin-top: clamp(1.75rem, 3.5vw, 3rem);
 `;
 

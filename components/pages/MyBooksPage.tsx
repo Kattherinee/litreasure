@@ -14,8 +14,8 @@ import { useAuthStore } from "@/shared/store/auth-store";
 import { theme } from "@/shared/theme";
 import { AppPagination } from "@/shared/ui/AppPagination";
 import { BookCard } from "@/shared/ui/BookCard";
-import { Button } from "@/shared/ui/Button";
 import { ChipTabs } from "@/shared/ui/ChipTabs";
+import { PageHero } from "@/shared/ui/PageHero";
 
 const statusTabs: Array<{ id: IUserBookStatus | "all"; label: string }> = [
 	{ id: "all", label: "All books" },
@@ -41,37 +41,37 @@ const MyBooksPage = () => {
 
 	const allBooksQuery = useUserBooksQuery(
 		{
-			limit: 30,
+			limit: 27,
 			page,
 		},
 		{ enabled: Boolean(session) },
 	);
 	const readingBooksQuery = useUserBooksQuery(
-		{ limit: 30, page, status: "reading" },
+		{ limit: 27, page, status: "reading" },
 		{ enabled: Boolean(session) },
 	);
 	const plannedBooksQuery = useUserBooksQuery(
-		{ limit: 30, page, status: "planned" },
+		{ limit: 27, page, status: "planned" },
 		{ enabled: Boolean(session) },
 	);
 	const finishedBooksQuery = useUserBooksQuery(
-		{ limit: 30, page, status: "finished" },
+		{ limit: 27, page, status: "finished" },
 		{ enabled: Boolean(session) },
 	);
 	const pausedBooksQuery = useUserBooksQuery(
-		{ limit: 30, page, status: "paused" },
+		{ limit: 27, page, status: "paused" },
 		{ enabled: Boolean(session) },
 	);
 	const rereadingBooksQuery = useUserBooksQuery(
-		{ limit: 30, page, status: "rereading" },
+		{ limit: 27, page, status: "rereading" },
 		{ enabled: Boolean(session) },
 	);
 	const droppedBooksQuery = useUserBooksQuery(
-		{ limit: 30, page, status: "dropped" },
+		{ limit: 27, page, status: "dropped" },
 		{ enabled: Boolean(session) },
 	);
 	const createdBooksQuery = useBookCardsQuery(
-		{ limit: 30, onlyMine: true, page },
+		{ limit: 27, onlyMine: true, page },
 		{ enabled: Boolean(session) },
 	);
 	const queriesByStatus = {
@@ -123,21 +123,15 @@ const MyBooksPage = () => {
 
 	return (
 		<Page>
-			<Content>
-				<Hero>
-					<HeroCopy>
-						<Title>My books</Title>
-						<Lead>All books you have added to your treasures.</Lead>
-					</HeroCopy>
-					<Button
-						buttonType="containedInverted"
-						type="button"
-						onClick={() => setIsCreateBookOpen(true)}
-					>
-						Add book
-					</Button>
-				</Hero>
+			<PageHero
+				actionLabel="Add book"
+				copyWidth="60vw"
+				text="All books you have added to your treasures."
+				title="My books"
+				onAction={() => setIsCreateBookOpen(true)}
+			/>
 
+			<Content>
 				<StatusRow>
 					<StatusTabs
 						activeId={activeStatus}
@@ -178,12 +172,13 @@ const MyBooksPage = () => {
 							{activeStatus === "created"
 								? createdBooks.map((book) => (
 										<BookItem key={book.id}>
-											<BookCard book={book} />
+											<BookCard book={book} size="compact" />
 										</BookItem>
 									))
 								: trackedBooks.map((item) => (
 										<BookItem key={item.id}>
 											<BookCard
+												size="compact"
 												book={{
 													...item.book,
 													isTracked: true,
@@ -220,45 +215,12 @@ export default MyBooksPage;
 const Page = styled.div`
 	min-height: 100dvh;
 	background: ${theme.colors.background};
-	padding: 4rem 0 6rem;
+	padding-bottom: 6rem;
 `;
 
 const Content = styled.div`
-	width: min(calc(100% - (${theme.layout.contentGutter} * 2)), ${theme.layout.contentMaxWidth});
+	width: 60vw;
 	margin: 0 auto;
-`;
-
-const Hero = styled.section`
-	display: flex;
-	align-items: flex-end;
-	justify-content: space-between;
-	gap: 1rem;
-	margin-bottom: 1.5rem;
-
-	@media (max-width: 42rem) {
-		align-items: flex-start;
-		flex-direction: column;
-	}
-`;
-
-const HeroCopy = styled.div`
-	min-width: 0;
-`;
-
-const Title = styled.h1`
-	margin: 0;
-	color: ${theme.colors.foreground};
-	font-family: ${theme.fonts.serif};
-	font-size: clamp(3rem, 8vw, 5.5rem);
-	line-height: 0.95;
-`;
-
-const Lead = styled.p`
-	max-width: 36rem;
-	margin: 1rem 0 0;
-	color: ${theme.colors.softForeground};
-	font-size: 1.05rem;
-	line-height: 1.5;
 `;
 
 const StatusTabs = styled(ChipTabs)``;
@@ -314,27 +276,16 @@ const CreatedCount = styled.span`
 `;
 
 const BookGrid = styled.div`
-	--book-card-column: 7.25rem;
-
-	display: grid;
+	display: flex;
+	flex-wrap: wrap;
 	gap: 1rem;
-	grid-template-columns: repeat(auto-fill, var(--book-card-column));
 	justify-content: center;
-	justify-items: center;
+	align-items: flex-start;
 	margin-top: clamp(2.5rem, 5vw, 4rem);
-
-	@media (max-width: ${theme.rubberSize.tablet}) {
-		--book-card-column: 7rem;
-		gap: 0.75rem;
-		margin-top: 1.5rem;
-		grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
-	}
 `;
 
 const BookItem = styled.div`
-	display: flex;
-	justify-content: center;
-	width: 100%;
+	width: fit-content;
 `;
 
 const StateMessage = styled.p`

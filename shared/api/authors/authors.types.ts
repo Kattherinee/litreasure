@@ -29,6 +29,7 @@ export interface IAuthorPreview {
 	name: string;
 	bio?: string;
 	photoUrl?: string;
+	isOwned?: boolean;
 	isPublic: boolean;
 	isSaved?: boolean;
 	bookCount: number;

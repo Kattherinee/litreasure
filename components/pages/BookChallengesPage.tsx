@@ -152,6 +152,17 @@ const getInclusiveDays = (startDate: Date, endDate: Date) =>
 		Math.round((endDate.getTime() - startDate.getTime()) / 86_400_000) + 1,
 	);
 
+const getOverlapDays = (startA: Date, endA: Date, startB: Date, endB: Date) => {
+	const overlapStart = startA > startB ? startA : startB;
+	const overlapEnd = endA < endB ? endA : endB;
+
+	if (overlapEnd < overlapStart) {
+		return 0;
+	}
+
+	return getInclusiveDays(overlapStart, overlapEnd);
+};
+
 interface IChallengeTimelinePoint {
 	actual: number | null;
 	actualSegment: number | null;
@@ -288,40 +299,54 @@ const getChallengeTimelinePoints = (
 	const currentValue = challenge.progress?.value.current ?? 0;
 	const rangeStartDate = range?.startDate ?? startDate;
 	const rangeEndDate = range?.endDate ?? endDate;
+	const rangeTotalDays = getInclusiveDays(rangeStartDate, rangeEndDate);
+	const rangeElapsedDays = Math.min(
+		rangeTotalDays,
+		getOverlapDays(
+			rangeStartDate,
+			rangeEndDate,
+			startDate,
+			addDays(startDate, Math.max(0, elapsedDays - 1)),
+		),
+	);
 	const segments = createPlanSegments(
 		rangeStartDate,
 		rangeEndDate,
 		granularity,
 	);
+	let remainingTarget = targetValue;
+	let remainingSegments = Math.max(1, segments.length);
 
 	return segments.map((segment) => {
 		const daysBeforeSegment = Math.max(
 			0,
-			getInclusiveDays(startDate, segment.startDate) - 1,
+			getInclusiveDays(rangeStartDate, segment.startDate) - 1,
 		);
 		const daysThroughSegment = Math.min(
-			totalDays,
-			getInclusiveDays(startDate, segment.endDate),
+			rangeTotalDays,
+			getInclusiveDays(rangeStartDate, segment.endDate),
 		);
-		const targetStart = (targetValue * daysBeforeSegment) / totalDays;
-		const target = (targetValue * daysThroughSegment) / totalDays;
+		const targetSegment = remainingTarget / remainingSegments;
 		const actualStart =
-			elapsedDays <= 0
+			rangeElapsedDays <= 0
 				? null
 				: Math.round(
-						(currentValue * Math.min(daysBeforeSegment, elapsedDays)) /
-							elapsedDays,
+						(currentValue * Math.min(daysBeforeSegment, rangeElapsedDays)) /
+							rangeElapsedDays,
 					);
 		const actual =
-			elapsedDays <= 0 || daysBeforeSegment >= elapsedDays
+			rangeElapsedDays <= 0 || daysBeforeSegment >= rangeElapsedDays
 				? null
 				: Math.round(
-						(currentValue * Math.min(daysThroughSegment, elapsedDays)) /
-							elapsedDays,
+						(currentValue * Math.min(daysThroughSegment, rangeElapsedDays)) /
+							rangeElapsedDays,
 					);
-		const targetSegment = Math.max(0, target - targetStart);
 		const actualSegment =
-			actual === null ? null : Math.max(0, actual - (actualStart ?? 0));
+			actual === null ? 0 : Math.max(0, actual - (actualStart ?? 0));
+		const remainingAfterActual = Math.max(0, remainingTarget - actualSegment);
+
+		remainingTarget = remainingAfterActual;
+		remainingSegments = Math.max(1, remainingSegments - 1);
 
 		return {
 			actual,
@@ -329,8 +354,8 @@ const getChallengeTimelinePoints = (
 			endDate: segment.endDate,
 			label: segment.label,
 			startDate: segment.startDate,
+			target: targetValue,
 			targetSegment,
-			target,
 		};
 	});
 };
@@ -768,7 +793,6 @@ const ChallengeTimelineChart = ({
 	return (
 		<TimelinePanel>
 			<TimelineHeader>
-				<TimelineTitle>Pace by segments</TimelineTitle>
 				<TimelineLegend>
 					<TimelineLegendItem $color={theme.colors.orangeLight}>
 						plan
@@ -941,7 +965,6 @@ const ChallengePlanBreakdown = ({
 
 const ChallengeDetails = ({ challenge }: { challenge: IBookChallenge }) => {
 	const progress = challenge.progress;
-	const [isTimelineOpen, setIsTimelineOpen] = useState(false);
 
 	if (!progress) {
 		return (
@@ -951,24 +974,7 @@ const ChallengeDetails = ({ challenge }: { challenge: IBookChallenge }) => {
 		);
 	}
 
-	return (
-		<>
-			<ChallengePlanBreakdown key={challenge.id} challenge={challenge} />
-			<TimelineDisclosure>
-				<TimelineToggle
-					type="button"
-					aria-expanded={isTimelineOpen}
-					onClick={() => setIsTimelineOpen((current) => !current)}
-				>
-					<span>Pace by segments</span>
-					<span>{isTimelineOpen ? "Hide" : "Show"}</span>
-				</TimelineToggle>
-				{isTimelineOpen ? (
-					<ChallengeTimelineChart challenge={challenge} />
-				) : null}
-			</TimelineDisclosure>
-		</>
-	);
+	return <ChallengePlanBreakdown key={challenge.id} challenge={challenge} />;
 };
 
 interface IChallengeModalProps {
@@ -1168,8 +1174,11 @@ const Page = styled.div`
 `;
 
 const Content = styled.section`
-	width: min(calc(100% - (${theme.layout.contentGutter} * 2)), ${theme.layout.contentMaxWidth});
+	width: 70vw;
 	margin: 0 auto;
+	@media (max-width: 720px) {
+		width: min(95vw, ${theme.layout.contentMaxWidth});
+	}
 `;
 
 const Hero = styled.header`
@@ -1219,7 +1228,7 @@ const Title = styled.h1`
 	margin: 0.45rem 0 0;
 	color: ${theme.colors.foreground};
 	font-family: ${theme.fonts.serif};
-	font-size: clamp(2.2rem, 4.6vw, 3.8rem);
+	font-size: clamp(2.2rem, 3.6vw, 3.8rem);
 	line-height: 1;
 `;
 
@@ -1340,13 +1349,16 @@ const PlanLine = styled.div`
 	display: flex;
 	align-items: center;
 	width: 100%;
-	overflow-x: auto;
-	overflow-y: visible;
-	padding: 1.25rem 0 1rem;
+	overflow: visible;
+	padding: 1.25rem 0.6rem 1rem 0.25rem;
 	scrollbar-width: none;
 
 	&::-webkit-scrollbar {
 		display: none;
+	}
+
+	@media (max-width: 48rem) {
+		overflow-x: auto;
 	}
 `;
 
@@ -1405,12 +1417,13 @@ const PlanRail = styled.div<{
 	$granularity: IPlanGranularity;
 }>`
 	height: 3px;
-	flex: 1 0 ${({ $granularity }) =>
-		$granularity === "month"
-			? "6.875rem"
-			: $granularity === "week"
-				? "clamp(3.75rem, 6vw, 5.5rem)"
-				: "clamp(2.75rem, 4.5vw, 4rem)"};
+	flex: 1 0
+		${({ $granularity }) =>
+			$granularity === "month"
+				? "5.95rem"
+				: $granularity === "week"
+					? "clamp(3.15rem, 5vw, 4.6rem)"
+					: "clamp(2.35rem, 4vw, 3.35rem)"};
 	border-radius: 2px;
 	background: ${({ $done }) =>
 		$done ? theme.colors.bluePrimary : "rgb(35 61 77 / 0.16)"};
@@ -1612,12 +1625,18 @@ const ActionButton = styled.button`
 `;
 
 const GraphsPanel = styled.section`
-	width: min(calc(100% - (${theme.layout.contentGutter} * 2)), ${theme.layout.contentMaxWidth});
-	margin: 0.7rem auto 0;
+	width: 100vw;
+	margin: 0.7rem 0 0 calc(50% - 50vw);
+	padding-inline: clamp(0.75rem, 3vw, 1.5rem);
+	box-sizing: border-box;
+
+	@media (max-width: 720px) {
+		display: none;
+	}
 `;
 
 const TimelineDisclosure = styled.section`
-	width: 100%;
+	width: min(100%, 54rem);
 	margin: 1rem auto 0;
 `;
 
@@ -1755,16 +1774,20 @@ const TimelineSvg = styled.svg`
 `;
 
 const PlanPanel = styled.section`
-	width: 100%;
+	width: min(80vw, ${theme.layout.contentMaxWidth});
 	margin: 0 auto 1.1rem;
 	border-radius: 1rem;
 	background: transparent;
 	padding: 0.35rem 0 1rem;
-	overflow-x: auto;
-	scrollbar-width: none;
+	overflow: visible;
 
-	&::-webkit-scrollbar {
-		display: none;
+	@media (max-width: 48rem) {
+		overflow-x: auto;
+		scrollbar-width: none;
+
+		&::-webkit-scrollbar {
+			display: none;
+		}
 	}
 `;
 

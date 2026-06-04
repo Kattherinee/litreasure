@@ -85,4 +85,10 @@ const PillLink = styled(Link)<{
 		outline: none;
 		transform: translateY(-0.0625rem);
 	}
+
+	@media (max-width: ${theme.rubberSize.tablet}) {
+		padding: 0.4rem 0.9rem;
+		font-size: 0.875rem;
+		min-height: 2rem;
+	}
 `;

@@ -40,7 +40,7 @@ export const theme = {
 		mono: '"JetBrains Mono", "Cascadia Code", Consolas, monospace',
 	},
 	layout: {
-		contentMaxWidth: "85.5vw",
+		contentMaxWidth: "80.5vw",
 		collectionsPageMaxWidth: "70vw",
 		contentGutter: "clamp(1rem, 4vw, 3.75rem)",
 	},

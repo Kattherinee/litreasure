@@ -47,6 +47,7 @@ interface ITreasuresTabsBlockProps {
 	onChangeTab: (tab: ITreasureTab) => void;
 	onCreateAuthor: () => void;
 	onCreateCollection: () => void;
+	onCreateSeries: () => void;
 	onOpenCollection: (id: string) => void;
 	onScrollCollections: (direction: "next" | "prev") => void;
 }
@@ -69,6 +70,7 @@ export const TreasuresTabsBlock = ({
 	onChangeTab,
 	onCreateAuthor,
 	onCreateCollection,
+	onCreateSeries,
 	onOpenCollection,
 	onScrollCollections,
 }: ITreasuresTabsBlockProps) => (
@@ -88,7 +90,9 @@ export const TreasuresTabsBlock = ({
 					onCreateAuthor={onCreateAuthor}
 				/>
 			) : null}
-			{activeTreasureTab === "series" ? <MySeriesTab mySeries={mySeries} /> : null}
+			{activeTreasureTab === "series" ? (
+				<MySeriesTab mySeries={mySeries} onCreateSeries={onCreateSeries} />
+			) : null}
 			{activeTreasureTab === "genres" ? (
 				<MyGenresTab isMyGenresLoading={isMyGenresLoading} myGenres={myGenres} />
 			) : null}

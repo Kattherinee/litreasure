@@ -10,6 +10,8 @@ export interface ISeriesPreview {
 	authorId?: string;
 	authorName?: string;
 	authorPhotoUrl?: string;
+	isOwned?: boolean;
+	isPublic?: boolean;
 	isSaved: boolean;
 }
 
@@ -52,6 +54,15 @@ export interface ISeriesListResponse {
 	limit: number;
 }
 
+export interface ICreateSeriesPayload {
+	authorIds: string[];
+	bookIds: string[];
+	coverUrl?: string;
+	title: string;
+}
+
+export type IUpdateSeriesPayload = Partial<ICreateSeriesPayload>;
+
 const getSeriesQuery = (params: ISeriesListParams = {}) => {
 	const query = new URLSearchParams();
 
@@ -78,6 +89,26 @@ export const getPublicSeries = (
 
 export const getSeriesDetails = (id: string): Promise<ISeriesDetails> =>
 	requestOptionalAuth<ISeriesDetails>(`/series/${id}`);
+
+export const createSeries = (
+	payload: ICreateSeriesPayload,
+): Promise<ISeriesDetails> =>
+	requestAuth<ISeriesDetails>("/series", {
+		body: JSON.stringify(payload),
+		method: "POST",
+	});
+
+export const updateSeries = (
+	id: string,
+	payload: IUpdateSeriesPayload,
+): Promise<ISeriesDetails> =>
+	requestAuth<ISeriesDetails>(`/series/${id}`, {
+		body: JSON.stringify(payload),
+		method: "PATCH",
+	});
+
+export const deleteSeries = (id: string): Promise<ISeriesDetails> =>
+	requestAuth<ISeriesDetails>(`/series/${id}`, { method: "DELETE" });
 
 export const saveSeries = (id: string): Promise<unknown> =>
 	requestAuth(`/series/${id}/save`, { method: "POST" });

@@ -37,7 +37,10 @@ const CatalogPage = ({ slug }: ICatalogPageProps) => {
 		error,
 		isError,
 		isLoading,
-	} = useBookCardsQuery({ page, sort }, { enabled: !isForYouCatalog });
+	} = useBookCardsQuery(
+		{ limit: 27, page, sort },
+		{ enabled: !isForYouCatalog },
+	);
 
 	const {
 		data: forYouBooksResponse,
@@ -57,21 +60,24 @@ const CatalogPage = ({ slug }: ICatalogPageProps) => {
 	return (
 		<Page>
 			<Content>
-				<BackLink href="/">Back to home</BackLink>
-				<Title>
-					{isForYouCatalog ? FOR_YOU_CATALOG_TITLE : catalogTitle[sort]}
-				</Title>
-				<Lead>
-					{isForYouCatalog
-						? "Personalized selection based on your preferences."
-						: `Book list filtered by ${sort}.`}
-				</Lead>
+				<Hero>
+					<HeroInner>
+						<Title>
+							{isForYouCatalog ? FOR_YOU_CATALOG_TITLE : catalogTitle[sort]}
+						</Title>
+						<Lead>
+							{isForYouCatalog
+								? "Personalized selection based on your preferences."
+								: `Book list filtered by ${sort}.`}
+						</Lead>
+					</HeroInner>
+				</Hero>
 
 				{currentIsLoading ? (
 					<BookGrid aria-label="Loading books">
 						{Array.from({ length: 12 }, (_, index) => (
 							<BookItem key={index}>
-								<BookCardSkeleton />
+								<BookCardSkeleton size="compact" />
 							</BookItem>
 						))}
 					</BookGrid>
@@ -86,7 +92,7 @@ const CatalogPage = ({ slug }: ICatalogPageProps) => {
 						<BookGrid>
 							{books.map((book) => (
 								<BookItem key={book.id}>
-									<BookCard book={book} />
+									<BookCard book={book} size="compact" />
 								</BookItem>
 							))}
 						</BookGrid>
@@ -104,12 +110,21 @@ export default CatalogPage;
 
 const Page = styled.div`
 	min-height: 100dvh;
-	padding: clamp(3rem, 5vw, 4.5rem) clamp(1.5rem, 2.78vw, 2.5rem);
+	background: ${theme.colors.background};
+	padding-bottom: clamp(3rem, 5vw, 4.5rem);
 `;
 
 const Content = styled.section`
 	margin: 0 auto;
-	max-width: 77.5rem;
+	max-width: ${theme.layout.collectionsPageMaxWidth};
+`;
+
+const Hero = styled.section``;
+
+const HeroInner = styled.div`
+	width: min(95vw, ${theme.layout.collectionsPageMaxWidth});
+	margin: 0 auto;
+	padding: 4vw 0 0;
 `;
 
 const BackLink = styled(Link)`
@@ -126,18 +141,19 @@ const BackLink = styled(Link)`
 
 const Title = styled.h1`
 	margin: 0;
+	color: ${theme.colors.foreground};
 	font-family: ${theme.fonts.serif};
-	font-size: clamp(2.75rem, 6vw, 5rem);
+	font-size: clamp(1.9rem, 2.8vw, 2.6rem);
 	font-weight: 600;
-	line-height: 1;
+	line-height: 0.98;
 `;
 
 const Lead = styled.p`
-	max-width: 40rem;
+	max-width: 43rem;
 	margin: 1rem 0 0;
 	color: ${theme.colors.softForeground};
-	font-size: 1.125rem;
-	line-height: 1.55;
+	font-size: 1.05rem;
+	line-height: 1.6;
 `;
 
 const StateMessage = styled.p`
@@ -148,13 +164,11 @@ const StateMessage = styled.p`
 `;
 
 const BookGrid = styled.div`
-	--book-card-column: 11rem;
-
-	display: grid;
+	display: flex;
+	flex-wrap: wrap;
 	gap: 1rem;
-	grid-template-columns: repeat(auto-fill, var(--book-card-column));
 	justify-content: center;
-	justify-items: center;
+	align-items: flex-start;
 	margin-top: clamp(2.5rem, 5vw, 4rem);
 `;
 

@@ -83,7 +83,7 @@ const BookDetailHero = ({ book, onAuthRequired }: IBookDetailHeroProps) => {
 	>();
 	const [paperBookOverride, setPaperBookOverride] = useState<
 		IBook["myPaperBook"] | undefined
-	>();
+	>(() => book.myPaperBook ?? undefined);
 	const [collectionIdsOverride, setCollectionIdsOverride] = useState<
 		Set<string> | undefined
 	>();
@@ -101,6 +101,11 @@ const BookDetailHero = ({ book, onAuthRequired }: IBookDetailHeroProps) => {
 	const closeMoreMenuTimer = useRef<number | null>(null);
 	const noteTextRef = useRef<HTMLParagraphElement | null>(null);
 	const seriesTag = getSeriesTag(book);
+	const seriesHref = book.series?.id
+		? `/series/${book.series.id}`
+		: book.series?.seriesId
+			? `/series/${book.series.seriesId}`
+			: undefined;
 	const primaryAuthor = book.authors?.[0];
 	const authorName = primaryAuthor?.name ?? book.author;
 	const authorPhotoUrl = primaryAuthor?.photoUrl;
@@ -223,6 +228,7 @@ const BookDetailHero = ({ book, onAuthRequired }: IBookDetailHeroProps) => {
 
 	const handleRemoveFromLibrary = async () => {
 		setTrackingStatus("");
+		setIsStatusMenuOpen(false);
 
 		if (!isAuthenticated) {
 			onAuthRequired?.();
@@ -389,7 +395,13 @@ const BookDetailHero = ({ book, onAuthRequired }: IBookDetailHeroProps) => {
 
 	return (
 		<HeaderBlock>
-			{seriesTag ? <SeriesTag>{seriesTag}</SeriesTag> : null}
+			{seriesTag && seriesHref ? (
+				<DesktopSeriesTag>
+					<SeriesTagLink href={seriesHref}>
+						<SeriesTag>{seriesTag}</SeriesTag>
+					</SeriesTagLink>
+				</DesktopSeriesTag>
+			) : null}
 			<Title>
 				<TitleText>{book.title}</TitleText>
 				{canEditBook ? (
@@ -601,10 +613,14 @@ const BookDetailHero = ({ book, onAuthRequired }: IBookDetailHeroProps) => {
 							hasNote={hasPaperBookNote}
 							isActionPending={isActionPending}
 							isExpanded={isNoteExpanded}
-							isInlineEditing={isNoteEditorOpen && Boolean(paperBookState?.status)}
+							isInlineEditing={
+								isNoteEditorOpen && Boolean(paperBookState?.status)
+							}
 							noteText={paperBookNote}
 							noteTextRef={noteTextRef}
-							showClearAction={hasPaperBookNote && Boolean(paperBookState?.status)}
+							showClearAction={
+								hasPaperBookNote && Boolean(paperBookState?.status)
+							}
 							value={noteDraft}
 							onCancelInlineEdit={() => {
 								setNoteDraft(paperBookState?.note ?? "");
@@ -702,10 +718,17 @@ const HeaderBlock = styled.section`
 		padding-top: 0;
 		padding-bottom: 0;
 		text-align: center;
+		height: auto;
 	}
 `;
 
-const SeriesTag = styled.div`
+const DesktopSeriesTag = styled.div`
+	@media (max-width: 47.9375rem) {
+		display: none;
+	}
+`;
+
+export const SeriesTag = styled.div`
 	display: inline-flex;
 	align-items: center;
 	width: fit-content;
@@ -724,7 +747,18 @@ const SeriesTag = styled.div`
 	white-space: nowrap;
 
 	@media (max-width: 74.9375rem) {
-		font-size: 0.72rem;
+		font-size: 0.82rem;
+	}
+`;
+
+const SeriesTagLink = styled(Link)`
+	display: inline-flex;
+	color: inherit;
+	text-decoration: none;
+
+	&:hover,
+	&:focus-visible {
+		outline: none;
 	}
 `;
 
@@ -746,7 +780,6 @@ const Title = styled.h1`
 	}
 
 	@media (max-width: 47.9375rem) {
-		font-size: 2rem;
 		color: ${theme.colors.bluePrimary};
 	}
 `;
@@ -754,9 +787,7 @@ const Title = styled.h1`
 const TitleText = styled.span`
 	display: -webkit-box;
 	min-width: 0;
-	overflow: hidden;
-	-webkit-box-orient: vertical;
-	-webkit-line-clamp: 2;
+	max-width: 42rem;
 `;
 
 const TitleEditButton = styled.button`
@@ -854,6 +885,7 @@ const AuthorLink = styled(Link)`
 	font-family: ${theme.fonts.sans};
 	font-size: 1.1vw;
 	line-height: 1.4;
+
 	text-decoration: none;
 	text-overflow: ellipsis;
 	white-space: nowrap;
@@ -866,6 +898,7 @@ const AuthorLink = styled(Link)`
 
 	@media (max-width: 74.9375rem) {
 		font-size: 0.95rem;
+		margin-top: 0.55rem;
 	}
 
 	@media (max-width: 47.9375rem) {
@@ -900,7 +933,7 @@ const ActionRow = styled.div`
 
 	@media (max-width: 47.9375rem) {
 		justify-content: center;
-		padding-top: 0.65rem;
+		padding-top: 0.9rem;
 	}
 
 	@media (max-width: 32rem) {
@@ -964,7 +997,7 @@ const PaperNoteToggleAction = styled.button`
 const PaperNoteDock = styled.div`
 	position: absolute;
 	right: 0;
-	top: 50%;
+	top: 32%;
 	transform: translateY(-50%);
 	width: min(22rem, 42vw);
 	z-index: 12;
@@ -1204,7 +1237,6 @@ const PaperSubmenu = styled.div`
 	box-shadow: 0 1rem 2rem rgb(4 18 26 / 0.16);
 	padding: 0.35rem;
 `;
-
 
 const RoundAction = styled.button`
 	display: inline-flex;

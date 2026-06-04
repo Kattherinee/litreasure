@@ -4,8 +4,7 @@ import EditNoteOutlinedIcon from "@mui/icons-material/EditNoteOutlined";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
-import type { MouseEvent, SyntheticEvent } from "react";
-import { createPortal } from "react-dom";
+import type { SyntheticEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import useEmblaCarousel from "embla-carousel-react";
 import styled from "styled-components";
@@ -34,9 +33,9 @@ const noteBubbleGap = 12;
 type IPaperBooksFilter = IPaperBookStatus | typeof combinedStatus;
 
 const statusTabs: Array<{ id: IPaperBooksFilter; label: string }> = [
-	{ id: combinedStatus, label: "All mine" },
+	{ id: combinedStatus, label: "Mine" },
 	{ id: "owned", label: "Owned" },
-	{ id: "wanted_to_buy", label: "Want to buy" },
+	{ id: "wanted_to_buy", label: "Wanted" },
 	{ id: "given_away", label: "Gifted away" },
 ];
 
@@ -45,6 +44,9 @@ type INotePlacementDirection =
 	| "up-left"
 	| "down-right"
 	| "down-left";
+
+type INotePopoverMode = "preview" | "expanded";
+type INoteBadgeMode = "icon" | INotePopoverMode;
 
 interface INotePlacement {
 	direction: INotePlacementDirection;
@@ -67,12 +69,8 @@ export const PaperBooksSection = ({
 	const [openNote, setOpenNote] = useState<{
 		id: string;
 		note: string;
+		mode: INotePopoverMode;
 	} | null>(null);
-	const [notePlacement, setNotePlacement] = useState<INotePlacement | null>(
-		null,
-	);
-	const noteAnchorRef = useRef<HTMLButtonElement | null>(null);
-	const noteBubbleRef = useRef<HTMLDivElement | null>(null);
 	const isSessionReady = Boolean(session);
 	const [previewViewportRef, previewEmblaApi] = useEmblaCarousel({
 		align: "start",
@@ -134,68 +132,7 @@ export const PaperBooksSection = ({
 
 	const closeNote = useCallback(() => {
 		setOpenNote(null);
-		setNotePlacement(null);
-		noteAnchorRef.current = null;
 	}, []);
-
-	const updateNotePlacement = useCallback(() => {
-		const anchor = noteAnchorRef.current;
-
-		if (!anchor) {
-			return;
-		}
-
-		setNotePlacement(getNotePlacement(anchor.getBoundingClientRect()));
-	}, []);
-
-	const toggleNote = useCallback(
-		(id: string, note: string, anchor: HTMLButtonElement) => {
-			if (openNote?.id === id) {
-				closeNote();
-				return;
-			}
-
-			noteAnchorRef.current = anchor;
-			setOpenNote({ id, note });
-			setNotePlacement(getNotePlacement(anchor.getBoundingClientRect()));
-		},
-		[closeNote, openNote?.id],
-	);
-
-	useEffect(() => {
-		if (!openNote) {
-			return;
-		}
-
-		const handlePointerDown = (event: PointerEvent) => {
-			const target = event.target;
-
-			if (!(target instanceof Node)) {
-				return;
-			}
-
-			if (
-				noteAnchorRef.current?.contains(target) ||
-				noteBubbleRef.current?.contains(target)
-			) {
-				return;
-			}
-
-			closeNote();
-		};
-
-		const handleViewportChange = () => updateNotePlacement();
-
-		document.addEventListener("pointerdown", handlePointerDown);
-		window.addEventListener("resize", handleViewportChange);
-		window.addEventListener("scroll", handleViewportChange, true);
-
-		return () => {
-			document.removeEventListener("pointerdown", handlePointerDown);
-			window.removeEventListener("resize", handleViewportChange);
-			window.removeEventListener("scroll", handleViewportChange, true);
-		};
-	}, [closeNote, openNote, updateNotePlacement]);
 
 	if (!session) {
 		return null;
@@ -204,31 +141,27 @@ export const PaperBooksSection = ({
 	return (
 		<>
 			<Panel $variant={variant}>
-				<Header>
-					<HeaderTop>
-						<TitleGroup>
-							<Title>
-								{variant === "page" ? "My paper books" : "Paper books"}
-							</Title>
-							{variant === "preview" ? (
-								<ViewAllLink href="/treasures/paper-books">
-									<span>View all</span>
-									<KeyboardArrowRightIcon aria-hidden="true" />
-								</ViewAllLink>
-							) : null}
-						</TitleGroup>
-						<CountBadge aria-label={`Paper books: ${total}`}>
-							<CountValue>{total}</CountValue>
-							<CountLabel>total</CountLabel>
-						</CountBadge>
-					</HeaderTop>
-					{variant === "page" ? (
-						<Lead>
-							Owned copies, books you want to buy, and books you have given
-							away. Notes open right from the card.
-						</Lead>
-					) : null}
-				</Header>
+				{variant === "preview" && (
+					<Header>
+						<HeaderTop>
+							<TitleGroup>
+								<Title>Paper books</Title>
+								{variant === "preview" ? (
+									<ViewAllLink href="/treasures/paper-books">
+										<span>View all</span>
+										<KeyboardArrowRightIcon aria-hidden="true" />
+									</ViewAllLink>
+								) : null}
+							</TitleGroup>
+							<HeaderMeta>
+								<CountBadge aria-label={`Paper books: ${total}`}>
+									<CountValue>{total}</CountValue>
+									<CountLabel>total</CountLabel>
+								</CountBadge>
+							</HeaderMeta>
+						</HeaderTop>
+					</Header>
+				)}
 
 				<FiltersRow>
 					<ChipTabs
@@ -271,11 +204,18 @@ export const PaperBooksSection = ({
 						<PreviewTrack>
 							{previewItems.map((item) => (
 								<PreviewSlide key={item.id}>
-									<PaperBookCard
+								<PaperBookCard
 										item={item}
-										onToggleNote={(event) => {
-											event.stopPropagation();
-											toggleNote(item.id, item.note ?? "", event.currentTarget);
+										isNoteExpanded={
+											openNote?.id === item.id && Boolean(item.note?.trim())
+										}
+										onCloseNote={closeNote}
+										onToggleNote={() => {
+											setOpenNote((current) =>
+												current?.id === item.id && current.mode === "expanded"
+													? null
+													: { id: item.id, mode: "expanded", note: item.note ?? "" },
+											);
 										}}
 										showStatusChip={activeStatus === combinedStatus}
 										onOpen={() => router.push(`/books/${item.book.id}`)}
@@ -291,9 +231,16 @@ export const PaperBooksSection = ({
 								<PaperBookCard
 									key={item.id}
 									item={item}
-									onToggleNote={(event) => {
-										event.stopPropagation();
-										toggleNote(item.id, item.note ?? "", event.currentTarget);
+									isNoteExpanded={
+										openNote?.id === item.id && Boolean(item.note?.trim())
+									}
+									onCloseNote={closeNote}
+									onToggleNote={() => {
+										setOpenNote((current) =>
+											current?.id === item.id && current.mode === "expanded"
+												? null
+												: { id: item.id, mode: "expanded", note: item.note ?? "" },
+										);
 									}}
 									showStatusChip={activeStatus === combinedStatus}
 									onOpen={() => router.push(`/books/${item.book.id}`)}
@@ -315,27 +262,14 @@ export const PaperBooksSection = ({
 					</>
 				)}
 			</Panel>
-			{openNote && notePlacement
-				? createPortal(
-						<NoteBubble
-							ref={noteBubbleRef}
-							$direction={notePlacement.direction}
-							$left={notePlacement.left}
-							$top={notePlacement.top}
-							role="dialog"
-							onClick={(event) => event.stopPropagation()}
-						>
-							{openNote.note}
-						</NoteBubble>,
-						document.body,
-					)
-				: null}
 		</>
 	);
 };
 
 const PaperBookCard = ({
 	item,
+	isNoteExpanded,
+	onCloseNote,
 	onOpen,
 	onToggleNote,
 	showStatusChip,
@@ -346,13 +280,16 @@ const PaperBookCard = ({
 		status: IPaperBookStatus;
 		updatedAt: string;
 	};
+	isNoteExpanded: boolean;
+	onCloseNote: () => void;
 	onOpen: () => void;
-	onToggleNote: (event: MouseEvent<HTMLButtonElement>) => void;
+	onToggleNote: () => void;
 	showStatusChip: boolean;
 }) => {
 	const hasNote = Boolean(item.note?.trim());
 	const [coverWidth, setCoverWidth] = useState<number | null>(null);
 	const [isCoverLoaded, setIsCoverLoaded] = useState(false);
+	const cardRef = useRef<HTMLDivElement | null>(null);
 	const coverSrc = item.book.coverUrl?.trim()
 		? item.book.coverUrl
 		: "/images/book-placeholder.svg";
@@ -370,8 +307,28 @@ const PaperBookCard = ({
 		setIsCoverLoaded(true);
 	};
 
+	useEffect(() => {
+		if (!isNoteExpanded) {
+			return;
+		}
+
+		const handlePointerDown = (event: PointerEvent) => {
+			const target = event.target as Node | null;
+			if (cardRef.current && target && !cardRef.current.contains(target)) {
+				onCloseNote();
+			}
+		};
+
+		document.addEventListener("pointerdown", handlePointerDown);
+
+		return () => {
+			document.removeEventListener("pointerdown", handlePointerDown);
+		};
+	}, [isNoteExpanded, onCloseNote]);
+
 	return (
 		<Card
+			ref={cardRef}
 			role="link"
 			tabIndex={0}
 			onClick={onOpen}
@@ -397,10 +354,33 @@ const PaperBookCard = ({
 					{hasNote ? (
 						<NoteBadge
 							aria-label="Open paper note"
+							$expanded={isNoteExpanded}
+							$mode="icon"
 							type="button"
-							onClick={onToggleNote}
+							style={
+								isNoteExpanded
+									? {
+											background: "rgb(242 239 237 / 0.98)",
+											borderRadius: "0.85rem",
+											color: theme.colors.orangeDark,
+											maxWidth: "min(14rem, calc(100vw - 1rem))",
+											padding: "0.42rem 0.7rem",
+											width: "fit-content",
+										}
+									: undefined
+							}
+							onClick={(event) => {
+								event.stopPropagation();
+								onToggleNote();
+							}}
 						>
-							<EditNoteOutlinedIcon aria-hidden="true" />
+							<NoteBadgeInner $expanded={isNoteExpanded}>
+								{isNoteExpanded ? (
+									<NoteBadgeText>{item.note}</NoteBadgeText>
+								) : (
+									<EditNoteOutlinedIcon aria-hidden="true" />
+								)}
+							</NoteBadgeInner>
 						</NoteBadge>
 					) : null}
 				</CoverShell>
@@ -565,14 +545,6 @@ const Title = styled.h2`
 	line-height: 1.1;
 `;
 
-const Lead = styled.p`
-	max-width: 42rem;
-	margin: 0;
-	color: ${theme.colors.softForeground};
-	font-size: 0.95rem;
-	line-height: 1.45;
-`;
-
 const ViewAllLink = styled(Link)`
 	display: inline-flex;
 	align-items: center;
@@ -609,7 +581,6 @@ const CountBadge = styled.span`
 	border-radius: 62.4375rem;
 	background: rgb(242 239 237 / 0.72);
 	padding: 0.4rem 0.75rem;
-	white-space: nowrap;
 `;
 
 const CountValue = styled.span`
@@ -624,6 +595,14 @@ const CountLabel = styled.span`
 	color: ${theme.colors.softForeground};
 	font-size: 0.8rem;
 	line-height: 1;
+`;
+
+const HeaderMeta = styled.div`
+	display: flex;
+	flex-direction: column;
+	align-items: flex-end;
+	gap: 0.45rem;
+	min-width: 0;
 `;
 
 const FiltersRow = styled.div`
@@ -664,14 +643,11 @@ const PreviewSlide = styled.div`
 `;
 
 const Grid = styled.div`
-	display: grid;
+	display: flex;
+	flex-wrap: wrap;
 	gap: 0.85rem;
-	grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
 	align-items: start;
-
-	@media (max-width: ${theme.rubberSize.tablet}) {
-		grid-template-columns: repeat(auto-fill, minmax(11.75rem, 1fr));
-	}
+	justify-content: center;
 `;
 
 const PaginationWrap = styled.div`
@@ -742,6 +718,7 @@ const CardDate = styled.span`
 	font-size: 0.72rem;
 	line-height: 1;
 	text-align: center;
+	white-space: nowrap;
 `;
 
 const CoverFrame = styled.div<{ $coverWidth: number | null }>`
@@ -823,118 +800,77 @@ const StatusChip = styled.span<{ $status: IPaperBookStatus }>`
 	white-space: nowrap;
 `;
 
-const NoteBadge = styled.button`
-	position: absolute;
+const NoteBadge = styled.button<{ $expanded: boolean; $mode?: INoteBadgeMode }>`
+	position: ${({ $mode }) => ($mode === "icon" ? "absolute" : "fixed")};
 	top: -0.75rem;
 	right: -0.75rem;
+	z-index: 20;
 	display: inline-flex;
 	align-items: center;
-	justify-content: center;
-	width: 1.8rem;
-	height: 1.8rem;
-	border: 0;
-	border-radius: 999px 999px 999px 0;
-	background: ${theme.colors.orangeLight};
-	color: ${theme.colors.invertedText};
+	justify-content: flex-start;
+	gap: 0.35rem;
+	width: ${({ $mode }) =>
+		$mode === "expanded"
+			? "fit-content"
+			: $mode === "preview"
+				? "max-content"
+				: "1.8rem"};
+	max-width: ${({ $mode }) =>
+		$mode === "expanded"
+			? "min(20rem, calc(100vw - 1rem))"
+			: "min(14rem, calc(100vw - 1rem))"};
+	min-height: ${({ $mode }) => ($mode === "icon" ? "1.8rem" : "auto")};
+	border: 0.0625rem solid rgb(218 142 91 / 0.34);
+	border-radius: ${({ $mode }) =>
+		$mode === "expanded"
+			? "0.75rem"
+			: $mode === "preview"
+				? "999px"
+				: "999px 999px 999px 0"};
+	background: rgb(242 239 237 / 0.98);
+	padding: ${({ $mode }) =>
+		$mode === "expanded"
+			? "0.6rem 0.7rem"
+			: $mode === "preview"
+				? "0.4rem 0.6rem"
+				: "0"};
+	color: ${theme.colors.orangeDark};
 	cursor: pointer;
-	box-shadow: 0 0.45rem 0.9rem rgb(4 18 26 / 0.16);
-	font-size: 0.88rem;
-	line-height: 1;
+	box-shadow: 0 0.9rem 1.8rem rgb(4 18 26 / 0.14);
+	font-size: ${({ $mode }) =>
+		$mode === "expanded"
+			? "0.82rem"
+			: $mode === "preview"
+				? "0.72rem"
+				: "0.88rem"};
+	line-height: 1.45;
+	text-align: left;
+	overflow: hidden;
+	opacity: 1;
 
-	svg {
-		width: 1.2rem;
-		height: 1.2rem;
-	}
-
-	&:focus-visible {
-		background: ${theme.colors.orangeDark};
-		outline: none;
+	& svg {
+		width: ${({ $mode }) => ($mode === "expanded" ? "1rem" : "1.2rem")};
+		height: ${({ $mode }) => ($mode === "expanded" ? "1rem" : "1.2rem")};
+		flex: 0 0 auto;
 	}
 `;
 
-const NoteBubble = styled.div<{
-	$direction: INotePlacementDirection;
-	$left: number;
-	$top: number;
-}>`
-	position: fixed;
-	left: ${({ $left }) => $left}px;
-	top: ${({ $top }) => $top}px;
-	z-index: 2;
-	width: min(14rem, calc(100vw - 1rem));
-	max-height: min(12rem, calc(100vh - 1rem));
-	overflow: auto;
-	border: 0.0625rem solid rgb(218 142 91 / 0.34);
-	border-radius: 0.75rem;
-	background: rgb(242 239 237 / 0.98);
-	padding: 0.6rem 0.7rem;
-	color: ${theme.colors.foreground};
+const NoteBadgeInner = styled.span<{ $expanded: boolean }>`
+	display: flex;
+	align-items: center;
+	gap: 0.28rem;
+	width: ${({ $expanded }) => ($expanded ? "100%" : "auto")};
+	min-width: 0;
+	max-width: ${({ $expanded }) => ($expanded ? "14rem" : "none")};
+`;
+
+const NoteBadgeText = styled.span`
+	display: block;
+	width: 100%;
+	overflow: hidden;
 	font-size: 0.82rem;
 	line-height: 1.45;
-	box-shadow: 0 0.9rem 1.8rem rgb(4 18 26 / 0.14);
-	white-space: pre-wrap;
 	overflow-wrap: anywhere;
-	${({ $direction }) =>
-		$direction === "up-right"
-			? `
-				transform-origin: left bottom;
-			`
-			: $direction === "up-left"
-				? `
-				transform-origin: right bottom;
-			`
-				: $direction === "down-right"
-					? `
-				transform-origin: left top;
-			`
-					: `
-				transform-origin: right top;
-			`}
-
-	&::before {
-		content: "";
-		position: absolute;
-		width: 0.72rem;
-		height: 0.72rem;
-		border: 0.0625rem solid rgb(218 142 91 / 0.34);
-		background: rgb(242 239 237 / 0.98);
-		transform: rotate(45deg);
-	}
-
-	${({ $direction }) =>
-		$direction === "up-right"
-			? `
-				&::before {
-					left: 1rem;
-					bottom: -0.36rem;
-					border-left: 0;
-					border-top: 0;
-				}
-			`
-			: $direction === "up-left"
-				? `
-				&::before {
-					right: 1rem;
-					bottom: -0.36rem;
-					border-right: 0;
-					border-top: 0;
-				}
-			`
-				: $direction === "down-right"
-					? `
-				&::before {
-					left: 1rem;
-					top: -0.36rem;
-					border-right: 0;
-					border-bottom: 0;
-				}
-			`
-					: `
-				&::before {
-					right: 1rem;
-					top: -0.36rem;
-					border-left: 0;
-					border-bottom: 0;
-				}
-			`}
+	white-space: normal;
+	text-align: left;
 `;

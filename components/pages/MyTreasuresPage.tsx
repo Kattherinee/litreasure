@@ -9,10 +9,14 @@ import styled from "styled-components";
 import { CreateAuthorModal } from "@/components/pages/author/CreateAuthorModal";
 import { CreateCollectionModal } from "@/components/pages/book-details/CreateCollectionModal";
 import { CreateBookModal } from "@/components/pages/my-books/CreateBookModal";
+import { CreateSeriesModal } from "@/components/pages/series/CreateSeriesModal";
 import { MyBooksBlock } from "@/components/pages/my-treasures/MyBooksBlock";
 import { ReadingSummaryBlock } from "@/components/pages/my-treasures/ReadingSummaryBlock";
 import { TreasuresTabsBlock } from "@/components/pages/my-treasures/tabs/TreasuresTabsBlock";
-import type { ICollectionTreasureFilter, ITreasureTab } from "@/components/pages/my-treasures/types";
+import type {
+	ICollectionTreasureFilter,
+	ITreasureTab,
+} from "@/components/pages/my-treasures/types";
 import { useMyAuthorsQuery } from "@/shared/api/authors";
 import { useBookCardsQuery } from "@/shared/api/books";
 import { useChallengesQuery } from "@/shared/api/book-challenge";
@@ -54,6 +58,7 @@ const MyTreasuresPage = () => {
 	const [isCreateBookOpen, setIsCreateBookOpen] = useState(false);
 	const [isCreateCollectionOpen, setIsCreateCollectionOpen] = useState(false);
 	const [isCreateAuthorOpen, setIsCreateAuthorOpen] = useState(false);
+	const [isCreateSeriesOpen, setIsCreateSeriesOpen] = useState(false);
 	const [isAuthHydrated, setIsAuthHydrated] = useState(
 		() => useAuthStore.persist?.hasHydrated?.() ?? false,
 	);
@@ -95,11 +100,14 @@ const MyTreasuresPage = () => {
 		activeStatus === "all" || activeStatus === "created"
 			? undefined
 			: activeStatus;
-	const { data: challenges = [] } = useChallengesQuery({ enabled: isSessionReady });
-	const { data: readingBooksData, isLoading: isReadingBooksLoading } = useUserBooksQuery(
-		{ limit: 8, status: "reading" },
-		{ enabled: isSessionReady },
-	);
+	const { data: challenges = [] } = useChallengesQuery({
+		enabled: isSessionReady,
+	});
+	const { data: readingBooksData, isLoading: isReadingBooksLoading } =
+		useUserBooksQuery(
+			{ limit: 8, status: "reading" },
+			{ enabled: isSessionReady },
+		);
 	const {
 		data: userBooksData,
 		isError: isUserBooksError,
@@ -116,31 +124,31 @@ const MyTreasuresPage = () => {
 		{ limit: 20, onlyMine: true },
 		{ enabled: isSessionReady },
 	);
-	const { data: statusCounts } = useUserBookStatusCountsQuery({ enabled: isSessionReady });
+	const { data: statusCounts } = useUserBookStatusCountsQuery({
+		enabled: isSessionReady,
+	});
 	const { data: paperBookCounts } = usePaperBookStatusCountsQuery({
 		enabled: isSessionReady,
 	});
-	const { data: myCollectionsData, isLoading: isMyCollectionsLoading } = useMyCollectionsQuery(
-		{ limit: 5 },
-		{ enabled: isSessionReady },
-	);
-	const { data: subscribedCollectionsData, isLoading: isSubscribedCollectionsLoading } =
-		useSubscribedCollectionsQuery({ limit: 5 }, { enabled: isSessionReady });
-	const { data: myAuthorsData, isLoading: isMyAuthorsLoading } = useMyAuthorsQuery(
+	const { data: myCollectionsData, isLoading: isMyCollectionsLoading } =
+		useMyCollectionsQuery({ limit: 5 }, { enabled: isSessionReady });
+	const {
+		data: subscribedCollectionsData,
+		isLoading: isSubscribedCollectionsLoading,
+	} = useSubscribedCollectionsQuery({ limit: 5 }, { enabled: isSessionReady });
+	const { data: myAuthorsData, isLoading: isMyAuthorsLoading } =
+		useMyAuthorsQuery({ limit: 8 }, { enabled: isSessionReady });
+	const { data: mySeriesData } = useMySeriesQuery(
 		{ limit: 8 },
 		{ enabled: isSessionReady },
 	);
-	const { data: mySeriesData } = useMySeriesQuery({ limit: 8 }, { enabled: isSessionReady });
-	const { data: myGenres = [], isLoading: isMyGenresLoading } = useUserGenresQuery(
-		session?.user.id,
-		{ enabled: isSessionReady },
-	);
+	const { data: myGenres = [], isLoading: isMyGenresLoading } =
+		useUserGenresQuery(session?.user.id, { enabled: isSessionReady });
 
 	const activeChallenges = challenges
 		.filter((challenge) => challenge.isActive)
 		.sort(
-			(a, b) =>
-				new Date(a.endDate).getTime() - new Date(b.endDate).getTime(),
+			(a, b) => new Date(a.endDate).getTime() - new Date(b.endDate).getTime(),
 		);
 	const activeChallengeIndex = activeChallenges.length
 		? Math.min(selectedChallengeIndex, activeChallenges.length - 1)
@@ -172,21 +180,39 @@ const MyTreasuresPage = () => {
 			: activeCollectionFilter === "subscribed"
 				? subscribedCollectionsTotal
 				: myCollectionsTotal + subscribedCollectionsTotal;
-	const isCollectionsLoading = isMyCollectionsLoading || isSubscribedCollectionsLoading;
+	const isCollectionsLoading =
+		isMyCollectionsLoading || isSubscribedCollectionsLoading;
 	const myAuthors = myAuthorsData?.items ?? [];
 	const mySeries = mySeriesData?.items ?? [];
 	const resourceTabs = [
-		{ id: "authors" as const, label: "My authors", count: myAuthorsData?.total ?? 0 },
-		{ id: "series" as const, label: "My series", count: mySeriesData?.total ?? 0 },
+		{
+			id: "authors" as const,
+			label: "My authors",
+			count: myAuthorsData?.total ?? 0,
+		},
+		{
+			id: "series" as const,
+			label: "My series",
+			count: mySeriesData?.total ?? 0,
+		},
 		{ id: "genres" as const, label: "My genres", count: myGenres.length },
-		{ id: "collections" as const, label: "My collections", count: visibleCollectionsTotal },
-		{ id: "paper-books" as const, label: "Paper books", count: paperBookCounts?.total ?? 0 },
+		{
+			id: "collections" as const,
+			label: "My collections",
+			count: visibleCollectionsTotal,
+		},
+		{
+			id: "paper-books" as const,
+			label: "Paper books",
+			count: paperBookCounts?.total ?? 0,
+		},
 	];
 	const shouldShowAllBooksLink =
 		(activeStatus === "created"
 			? (createdBooksData?.total ?? 0) > createdBooks.length
 			: (userBooksData?.total ?? 0) > trackedBooks.length) ||
-		(activeStatus === "created" ? createdBooks.length : trackedBooks.length) > 6;
+		(activeStatus === "created" ? createdBooks.length : trackedBooks.length) >
+			6;
 	const bookCarouselItems =
 		activeStatus === "created"
 			? createdBooks
@@ -237,7 +263,11 @@ const MyTreasuresPage = () => {
 	const updateCollectionRailControls = () => {
 		const rail = collectionsRailRef.current;
 		if (!rail) {
-			setCollectionRailControls({ canScrollNext: false, canScrollPrev: false, hasOverflow: false });
+			setCollectionRailControls({
+				canScrollNext: false,
+				canScrollPrev: false,
+				hasOverflow: false,
+			});
 			return;
 		}
 		const maxScrollLeft = rail.scrollWidth - rail.clientWidth;
@@ -253,7 +283,10 @@ const MyTreasuresPage = () => {
 		if (!rail) return;
 		rail.scrollBy({
 			behavior: "smooth",
-			left: direction === "next" ? rail.clientWidth * 0.82 : -rail.clientWidth * 0.82,
+			left:
+				direction === "next"
+					? rail.clientWidth * 0.82
+					: -rail.clientWidth * 0.82,
 		});
 		window.requestAnimationFrame(updateCollectionRailControls);
 		window.setTimeout(updateCollectionRailControls, 260);
@@ -267,7 +300,9 @@ const MyTreasuresPage = () => {
 			return () => window.cancelAnimationFrame(frame);
 		}
 		const unsubHydrate = persistApi.onHydrate(() => setIsAuthHydrated(false));
-		const unsubFinish = persistApi.onFinishHydration(() => setIsAuthHydrated(true));
+		const unsubFinish = persistApi.onFinishHydration(() =>
+			setIsAuthHydrated(true),
+		);
 		return () => {
 			unsubHydrate();
 			unsubFinish();
@@ -279,7 +314,9 @@ const MyTreasuresPage = () => {
 		try {
 			const raw = window.localStorage.getItem(AUTH_STORAGE_KEY);
 			if (raw) {
-				const parsed = JSON.parse(raw) as { state?: { session?: IAuthSession | null } };
+				const parsed = JSON.parse(raw) as {
+					state?: { session?: IAuthSession | null };
+				};
 				const persistedSession = parsed.state?.session;
 				if (persistedSession?.user?.email) {
 					useAuthStore.getState().setSession(persistedSession);
@@ -294,7 +331,9 @@ const MyTreasuresPage = () => {
 		if (!challengeSliderApi) return;
 		challengeSliderApi.on("select", updateChallengeSliderIndex);
 		challengeSliderApi.on("reInit", updateChallengeSliderIndex);
-		const frame = window.requestAnimationFrame(() => updateChallengeSliderIndex(challengeSliderApi));
+		const frame = window.requestAnimationFrame(() =>
+			updateChallengeSliderIndex(challengeSliderApi),
+		);
 		return () => {
 			window.cancelAnimationFrame(frame);
 			challengeSliderApi.off("select", updateChallengeSliderIndex);
@@ -306,7 +345,9 @@ const MyTreasuresPage = () => {
 		if (!readingSliderApi) return;
 		readingSliderApi.on("select", updateReadingSliderIndex);
 		readingSliderApi.on("reInit", updateReadingSliderIndex);
-		const frame = window.requestAnimationFrame(() => updateReadingSliderIndex(readingSliderApi));
+		const frame = window.requestAnimationFrame(() =>
+			updateReadingSliderIndex(readingSliderApi),
+		);
 		return () => {
 			window.cancelAnimationFrame(frame);
 			readingSliderApi.off("select", updateReadingSliderIndex);
@@ -328,12 +369,19 @@ const MyTreasuresPage = () => {
 		const rail = collectionsRailRef.current;
 		if (!rail || activeTreasureTab !== "collections") return;
 		const frame = window.requestAnimationFrame(updateCollectionRailControls);
-		rail.addEventListener("scroll", updateCollectionRailControls, { passive: true });
+		rail.addEventListener("scroll", updateCollectionRailControls, {
+			passive: true,
+		});
 		return () => {
 			window.cancelAnimationFrame(frame);
 			rail.removeEventListener("scroll", updateCollectionRailControls);
 		};
-	}, [activeTreasureTab, isCollectionsLoading, visibleCollections.length, visibleCollectionsTotal]);
+	}, [
+		activeTreasureTab,
+		isCollectionsLoading,
+		visibleCollections.length,
+		visibleCollectionsTotal,
+	]);
 
 	if (!isAuthHydrated || !hasAuth || !session) return null;
 
@@ -363,8 +411,14 @@ const MyTreasuresPage = () => {
 					createdBooksCount={createdBooksData?.total ?? 0}
 					getStatusCount={getStatusCount}
 					hasBookCarouselControls={hasBookCarouselControls}
-					isUserBooksError={activeStatus === "created" ? isCreatedBooksError : isUserBooksError}
-					isUserBooksLoading={activeStatus === "created" ? isCreatedBooksLoading : isUserBooksLoading}
+					isUserBooksError={
+						activeStatus === "created" ? isCreatedBooksError : isUserBooksError
+					}
+					isUserBooksLoading={
+						activeStatus === "created"
+							? isCreatedBooksLoading
+							: isUserBooksLoading
+					}
 					shouldShowAllBooksLink={shouldShowAllBooksLink}
 					onChangeStatus={setActiveStatus}
 					onCreateBook={() => setIsCreateBookOpen(true)}
@@ -388,12 +442,15 @@ const MyTreasuresPage = () => {
 					onChangeTab={setActiveTreasureTab}
 					onCreateAuthor={() => setIsCreateAuthorOpen(true)}
 					onCreateCollection={() => setIsCreateCollectionOpen(true)}
+					onCreateSeries={() => setIsCreateSeriesOpen(true)}
 					onOpenCollection={(id) => router.push(`/collections/${id}`)}
 					onScrollCollections={scrollCollectionsRail}
 				/>
 
 				{isCreateCollectionOpen ? (
-					<CreateCollectionModal onClose={() => setIsCreateCollectionOpen(false)} />
+					<CreateCollectionModal
+						onClose={() => setIsCreateCollectionOpen(false)}
+					/>
 				) : null}
 				{isCreateBookOpen ? (
 					<CreateBookModal
@@ -414,11 +471,16 @@ const MyTreasuresPage = () => {
 				{isCreateAuthorOpen ? (
 					<CreateAuthorModal onClose={() => setIsCreateAuthorOpen(false)} />
 				) : null}
+				{isCreateSeriesOpen ? (
+					<CreateSeriesModal onClose={() => setIsCreateSeriesOpen(false)} />
+				) : null}
 				<AppNotification
 					message={notification.message}
 					open={notification.open}
 					severity={notification.severity}
-					onClose={() => setNotification((current) => ({ ...current, open: false }))}
+					onClose={() =>
+						setNotification((current) => ({ ...current, open: false }))
+					}
 				/>
 			</Content>
 		</Page>
@@ -433,6 +495,10 @@ const Page = styled.div`
 	padding: 4rem 0 6rem;
 `;
 const Content = styled.div`
-	width: min(calc(100% - (${theme.layout.contentGutter} * 2)), ${theme.layout.contentMaxWidth});
+	width: 70vw;
 	margin: 0 auto;
+
+	@media (max-width: ${theme.rubberSize.tablet}) {
+		width: 95vw;
+	}
 `;

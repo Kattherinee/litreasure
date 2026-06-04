@@ -56,7 +56,7 @@ const Root = styled.div<{ $variant: "pill" | "block" }>`
 	flex-wrap: wrap;
 	${({ $variant }) =>
 		$variant === "block"
-				? css`
+			? css`
 					display: grid;
 					gap: 0.5rem;
 					grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
@@ -100,7 +100,10 @@ const Root = styled.div<{ $variant: "pill" | "block" }>`
 				`};
 `;
 
-const TabButton = styled.button<{ $isActive: boolean; $variant: "pill" | "block" }>`
+const TabButton = styled.button<{
+	$isActive: boolean;
+	$variant: "pill" | "block";
+}>`
 	cursor: pointer;
 	font: inherit;
 	outline: none;
@@ -116,7 +119,9 @@ const TabButton = styled.button<{ $isActive: boolean; $variant: "pill" | "block"
 					border-radius: 0.75rem;
 					background: ${$isActive ? "var(--tabs-content-bg)" : "transparent"};
 					padding: 0.7rem 0.8rem;
-					color: ${$isActive ? theme.colors.orangeDark : theme.colors.foreground};
+					color: ${$isActive
+						? theme.colors.orangeDark
+						: theme.colors.foreground};
 					font-size: 1.05rem;
 					font-weight: 500;
 					line-height: 1.2;
@@ -132,22 +137,22 @@ const TabButton = styled.button<{ $isActive: boolean; $variant: "pill" | "block"
 					align-items: center;
 					gap: 0.45rem;
 					border: 0.0625rem solid
-						${$isActive
-							? theme.colors.orangeLight
-							: "rgb(211 202 196 / 0.82)"};
+						${$isActive ? theme.colors.orangeLight : "rgb(211 202 196 / 0.82)"};
 					border-radius: 999px;
 					background: ${$isActive
 						? "rgb(218 142 91 / 0.14)"
 						: theme.colors.surface};
 					padding: 0.45rem 0.85rem;
-					color: ${$isActive ? theme.colors.orangeDark : theme.colors.foreground};
+					color: ${$isActive
+						? theme.colors.orangeDark
+						: theme.colors.foreground};
 					font-size: 0.9rem;
 					font-weight: ${$isActive ? 700 : 400};
 					line-height: 1.2;
 
 					@media (max-width: ${theme.rubberSize.tablet}) {
 						flex: 0 0 auto;
-						min-width: 11rem;
+						width: fit-content;
 						padding: 0.4rem 0.75rem;
 						font-size: 0.86rem;
 						scroll-snap-align: start;

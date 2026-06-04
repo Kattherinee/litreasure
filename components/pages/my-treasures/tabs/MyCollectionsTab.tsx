@@ -8,15 +8,14 @@ import { ResultSeries } from "@/shared/ui/BookSearch/SearchResultCard.styles";
 import { ChipTabs } from "@/shared/ui/ChipTabs";
 import {
 	HeaderActionButton,
-	NextIcon,
-	PrevIcon,
-	RailControlButton,
-	RailControls,
 	ViewAllLink,
 } from "@/components/pages/my-treasures/ui";
 import type { ICollectionTreasureFilter } from "../types";
 
-const collectionFilterTabs: Array<{ id: ICollectionTreasureFilter; label: string }> = [
+const collectionFilterTabs: Array<{
+	id: ICollectionTreasureFilter;
+	label: string;
+}> = [
 	{ id: "all", label: "All" },
 	{ id: "created", label: "Created" },
 	{ id: "subscribed", label: "Subscribed" },
@@ -31,7 +30,12 @@ interface IMyCollectionsTabProps {
 	};
 	collectionsRailRef: { current: HTMLDivElement | null };
 	isCollectionsLoading: boolean;
-	visibleCollections: Array<{ bookCount: number; coverUrl?: string; id: string; title: string }>;
+	visibleCollections: Array<{
+		bookCount: number;
+		coverUrl?: string;
+		id: string;
+		title: string;
+	}>;
 	visibleCollectionsTotal: number;
 	onChangeCollectionFilter: (filter: ICollectionTreasureFilter) => void;
 	onCreateCollection: () => void;
@@ -41,7 +45,6 @@ interface IMyCollectionsTabProps {
 
 export const MyCollectionsTab = ({
 	activeCollectionFilter,
-	collectionRailControls,
 	collectionsRailRef,
 	isCollectionsLoading,
 	visibleCollections,
@@ -49,7 +52,6 @@ export const MyCollectionsTab = ({
 	onChangeCollectionFilter,
 	onCreateCollection,
 	onOpenCollection,
-	onScrollCollections,
 }: IMyCollectionsTabProps) => (
 	<Panel>
 		<Header>
@@ -69,40 +71,22 @@ export const MyCollectionsTab = ({
 				activeId={activeCollectionFilter}
 				ariaLabel="Collection filters"
 				items={collectionFilterTabs}
-				onChange={(id) => onChangeCollectionFilter(id as ICollectionTreasureFilter)}
+				onChange={(id) =>
+					onChangeCollectionFilter(id as ICollectionTreasureFilter)
+				}
 			/>
 			<RightMeta>
 				<Total>
 					<TotalLabel>Total</TotalLabel>
 					<TotalValue>{visibleCollectionsTotal}</TotalValue>
 				</Total>
-				{collectionRailControls.hasOverflow ? (
-					<RailControls aria-label="Collection carousel controls">
-						<RailControlButton
-							aria-label="Previous collections"
-							disabled={!collectionRailControls.canScrollPrev}
-							type="button"
-							onClick={() => onScrollCollections("prev")}
-						>
-							<PrevIcon aria-hidden="true" />
-						</RailControlButton>
-						<RailControlButton
-							aria-label="Next collections"
-							disabled={!collectionRailControls.canScrollNext}
-							type="button"
-							onClick={() => onScrollCollections("next")}
-						>
-							<NextIcon aria-hidden="true" />
-						</RailControlButton>
-					</RailControls>
-				) : null}
 			</RightMeta>
 		</FilterRow>
 		{isCollectionsLoading ? (
 			<Text>Loading your collections...</Text>
 		) : visibleCollections.length > 0 ? (
-			<Rail ref={collectionsRailRef}>
-				{visibleCollections.map((collection) => (
+			<List ref={collectionsRailRef}>
+				{visibleCollections.slice(0, 10).map((collection) => (
 					<Chip
 						key={collection.id}
 						role="link"
@@ -121,10 +105,11 @@ export const MyCollectionsTab = ({
 						</Meta>
 					</Chip>
 				))}
-			</Rail>
+			</List>
 		) : (
 			<Text>
-				Create your first collection for favorite books, moods, and future shelves.
+				Create your first collection for favorite books, moods, and future
+				shelves.
 			</Text>
 		)}
 	</Panel>
@@ -178,19 +163,40 @@ const RightMeta = styled.div`
 		justify-content: space-between;
 	}
 `;
-const Total = styled.span`display:inline-flex;align-items:baseline;gap:.3rem;`;
-const TotalLabel = styled.span`color:${theme.colors.softForeground};font-size:.78rem;text-transform:uppercase;letter-spacing:.03em;`;
-const TotalValue = styled.span`color:${theme.colors.orangeDark};font-family:${theme.fonts.serif};font-size:1.25rem;font-weight:600;line-height:1;`;
-const Rail = styled.div`
-	display:flex;
-	gap:.75rem;
-	overflow-x:auto;
-	padding:.1rem 0 .25rem;
+const Total = styled.span`
+	display: inline-flex;
+	align-items: baseline;
+	gap: 0.3rem;
+`;
+const TotalLabel = styled.span`
+	color: ${theme.colors.softForeground};
+	font-size: 0.78rem;
+	text-transform: uppercase;
+	letter-spacing: 0.03em;
+`;
+const TotalValue = styled.span`
+	color: ${theme.colors.orangeDark};
+	font-family: ${theme.fonts.serif};
+	font-size: 1.25rem;
+	font-weight: 600;
+	line-height: 1;
+`;
+const List = styled.div`
+	display: flex;
+	gap: 0.75rem;
+	overflow-x: auto;
+	padding: 0.1rem 0 0.25rem;
 	scrollbar-width: none;
 	-ms-overflow-style: none;
-	&::-webkit-scrollbar { display: none; }
+
+	&::-webkit-scrollbar {
+		display: none;
+	}
+
 	@media (max-width: ${theme.rubberSize.tablet}) {
-		padding-bottom: 0.35rem;
+		flex-direction: column;
+		overflow: visible;
+		padding-bottom: 0;
 	}
 `;
 const Chip = styled.article`
@@ -207,7 +213,8 @@ const Chip = styled.article`
 	height: fit-content;
 
 	@media (max-width: ${theme.rubberSize.tablet}) {
-		min-width: 13rem;
+		width: 100%;
+		min-width: 0;
 		align-items: start;
 		gap: 0.6rem;
 	}
@@ -218,7 +225,8 @@ const Cover = styled.div<{ $coverUrl?: string }>`
 	border-radius: 0.6rem;
 	background:
 		linear-gradient(rgb(4 18 26 / 0.08), rgb(4 18 26 / 0.08)),
-		url("${({ $coverUrl }) => $coverUrl || "/images/book-placeholder.svg"}") center / cover;
+		url("${({ $coverUrl }) => $coverUrl || "/images/book-placeholder.svg"}")
+			center / cover;
 `;
 const Meta = styled.div`
 	min-width: 0;
@@ -242,5 +250,12 @@ const Name = styled.h3`
 		overflow-wrap: anywhere;
 	}
 `;
-const BookCount = styled(ResultSeries)`margin-top:.3rem;`;
-const Text = styled.p`margin:0;color:${theme.colors.softForeground};font-size:.95rem;line-height:1.45;`;
+const BookCount = styled(ResultSeries)`
+	margin-top: 0.3rem;
+`;
+const Text = styled.p`
+	margin: 0;
+	color: ${theme.colors.softForeground};
+	font-size: 0.95rem;
+	line-height: 1.45;
+`;

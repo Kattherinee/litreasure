@@ -5,14 +5,19 @@ import { useRouter } from "next/navigation";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import styled from "styled-components";
 
+import { CreateAuthorModal } from "@/components/pages/author/CreateAuthorModal";
+import { MyCreatorsTabs } from "@/components/pages/my-treasures/tabs/MyCreatorsTabs";
+import type { IMyCreatorsTab } from "@/components/pages/my-treasures/tabs/MyCreatorsTabs";
 import type { IAuthorsSort } from "@/shared/api/authors";
 import { useMyAuthorsQuery } from "@/shared/api/authors";
 import { useAuthStore } from "@/shared/store/auth-store";
 import { theme } from "@/shared/theme";
 import { AppPagination } from "@/shared/ui/AppPagination";
 import { AuthorCard } from "@/shared/ui/AuthorCard";
+import { PageHero } from "@/shared/ui/PageHero";
 
 const AUTHORS_LIMIT = 27;
+const LOADER_LIMIT = 27;
 
 const sortOptions: Array<{ label: string; value: IAuthorsSort }> = [
 	{ label: "Popular", value: "popular" },
@@ -28,23 +33,46 @@ const MyAuthorsPage = () => {
 	const [page, setPage] = useState(1);
 	const [sort, setSort] = useState<IAuthorsSort>("popular");
 	const [isSortOpen, setIsSortOpen] = useState(false);
+	const [isCreateAuthorOpen, setIsCreateAuthorOpen] = useState(false);
+	const [activeTab, setActiveTab] = useState<IMyCreatorsTab>("all");
 	const params = useMemo(
 		() => ({
-			limit: AUTHORS_LIMIT,
-			page,
 			sort,
 		}),
-		[page, sort],
+		[sort],
 	);
 	const {
 		data: authorsResponse,
 		error,
 		isError,
 		isLoading,
-	} = useMyAuthorsQuery(params, { enabled: Boolean(session) });
-	const authors = authorsResponse?.items ?? [];
-	const pages = authorsResponse?.pages ?? 1;
-	const total = authorsResponse?.total ?? 0;
+	} = useMyAuthorsQuery(
+		{ ...params, limit: LOADER_LIMIT },
+		{ enabled: Boolean(session) },
+	);
+	const mineAuthors = useMemo(
+		() => authorsResponse?.items ?? [],
+		[authorsResponse?.items],
+	);
+	const authors = useMemo(() => {
+		if (activeTab === "mine") {
+			return mineAuthors.filter((author) => author.isOwned);
+		}
+
+		if (activeTab === "public") {
+			return mineAuthors.filter((author) => author.isPublic);
+		}
+
+		return mineAuthors;
+	}, [activeTab, mineAuthors]);
+	const visibleAuthors = useMemo(() => {
+		const startIndex = (page - 1) * AUTHORS_LIMIT;
+		return authors.slice(startIndex, startIndex + AUTHORS_LIMIT);
+	}, [authors, page]);
+	const pages = Math.max(1, Math.ceil(authors.length / AUTHORS_LIMIT));
+	const total = authors.length;
+	const publicTotal = mineAuthors.filter((author) => author.isPublic).length;
+	const mineTotal = mineAuthors.filter((author) => author.isOwned).length;
 	const selectedSortOption =
 		sortOptions.find((option) => option.value === sort) ?? sortOptions[0];
 
@@ -60,61 +88,84 @@ const MyAuthorsPage = () => {
 
 	return (
 		<Page>
+			<PageHero
+				actionLabel="Create author"
+				copyWidth="min(72rem, 100%)"
+				text="All saved authors in your personal treasury."
+				title="My authors"
+				onAction={() => setIsCreateAuthorOpen(true)}
+			/>
+
 			<Content>
-				<Title>My Authors</Title>
-				<Lead>All saved authors in your personal treasury.</Lead>
+				<ControlsRow>
+					<MyCreatorsTabs
+						activeTab={activeTab}
+						allCount={total}
+						className="creators-tabs"
+						mineCount={mineTotal}
+						publicCount={publicTotal}
+						onChange={(tab) => {
+							setActiveTab(tab);
+							setPage(1);
+						}}
+					/>
 
-				<FiltersBar
-					onBlur={(event) => {
-						if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
-							setIsSortOpen(false);
-						}
-					}}
-				>
-					<DropdownField>
-						<FilterLabel>Search type</FilterLabel>
-						<DropdownButton
-							aria-expanded={isSortOpen}
-							type="button"
-							onClick={() => setIsSortOpen((current) => !current)}
-						>
-							<DropdownValue>{selectedSortOption.label}</DropdownValue>
-							<ChevronIcon $isOpen={isSortOpen} aria-hidden="true" />
-						</DropdownButton>
-						<DropdownMenu $isOpen={isSortOpen}>
-							{sortOptions.map((option) => (
-								<DropdownMenuItem
-									key={option.value}
-									$isSelected={option.value === sort}
-									type="button"
-									onClick={() => {
-										setSort(option.value);
-										setPage(1);
-										setIsSortOpen(false);
-									}}
-								>
-									{option.label}
-								</DropdownMenuItem>
-							))}
-						</DropdownMenu>
-					</DropdownField>
+					<FiltersBar
+						onBlur={(event) => {
+							if (
+								!event.currentTarget.contains(
+									event.relatedTarget as Node | null,
+								)
+							) {
+								setIsSortOpen(false);
+							}
+						}}
+					>
+						<DropdownField>
+							<FilterLabel>Search type</FilterLabel>
+							<DropdownButton
+								aria-expanded={isSortOpen}
+								type="button"
+								onClick={() => setIsSortOpen((current) => !current)}
+							>
+								<DropdownValue>{selectedSortOption.label}</DropdownValue>
+								<ChevronIcon $isOpen={isSortOpen} aria-hidden="true" />
+							</DropdownButton>
+							<DropdownMenu $isOpen={isSortOpen}>
+								{sortOptions.map((option) => (
+									<DropdownMenuItem
+										key={option.value}
+										$isSelected={option.value === sort}
+										type="button"
+										onClick={() => {
+											setSort(option.value);
+											setPage(1);
+											setIsSortOpen(false);
+										}}
+									>
+										{option.label}
+									</DropdownMenuItem>
+								))}
+							</DropdownMenu>
+						</DropdownField>
 
-					<ResultsBadge aria-label={`Authors found: ${total}`}>
-						<ResultsNumber>{total}</ResultsNumber>
-						<ResultsText>authors</ResultsText>
-					</ResultsBadge>
-				</FiltersBar>
+						<ResultsBadge aria-label={`Authors found: ${total}`}>
+							<ResultsNumber>{total}</ResultsNumber>
+							<ResultsText>authors</ResultsText>
+						</ResultsBadge>
+					</FiltersBar>
+				</ControlsRow>
 
 				{isLoading ? (
 					<StateMessage>Loading your authors...</StateMessage>
 				) : isError ? (
 					<StateMessage>Could not load authors: {error.message}</StateMessage>
-				) : authors.length === 0 ? (
+				) : visibleAuthors.length === 0 ? (
 					<StateMessage>No saved authors yet.</StateMessage>
 				) : (
 					<>
 						<AuthorGrid>
-							{authors.map((author) => (
+							{visibleAuthors.map((author) => (
 								<AuthorCard key={author.id} author={author} />
 							))}
 						</AuthorGrid>
@@ -124,6 +175,10 @@ const MyAuthorsPage = () => {
 					</>
 				)}
 			</Content>
+
+			{isCreateAuthorOpen ? (
+				<CreateAuthorModal onClose={() => setIsCreateAuthorOpen(false)} />
+			) : null}
 		</Page>
 	);
 };
@@ -133,7 +188,7 @@ export default MyAuthorsPage;
 const Page = styled.div`
 	min-height: 100dvh;
 	background: ${theme.colors.background};
-	padding: clamp(3rem, 5vw, 4.5rem) clamp(1.5rem, 2.78vw, 2.5rem);
+	padding: 0 clamp(1.5rem, 2.78vw, 2.5rem) clamp(3rem, 5vw, 4.5rem);
 `;
 
 const Content = styled.section`
@@ -141,21 +196,17 @@ const Content = styled.section`
 	margin: 0 auto;
 `;
 
-const Title = styled.h1`
-	margin: 0;
-	color: ${theme.colors.foreground};
-	font-family: ${theme.fonts.serif};
-	font-size: clamp(2.4rem, 5vw, 3.6rem);
-	font-weight: 600;
-	line-height: 1;
-`;
+const ControlsRow = styled.div`
+	display: flex;
+	align-items: flex-end;
+	justify-content: space-between;
+	gap: 1rem;
+	margin-top: 1.25rem;
 
-const Lead = styled.p`
-	max-width: 40rem;
-	margin: 0.9rem 0 0;
-	color: ${theme.colors.softForeground};
-	font-size: 1.02rem;
-	line-height: 1.5;
+	@media (max-width: ${theme.rubberSize.tablet}) {
+		flex-direction: column;
+		align-items: stretch;
+	}
 `;
 
 const FiltersBar = styled.div`
@@ -163,7 +214,8 @@ const FiltersBar = styled.div`
 	align-items: end;
 	justify-content: space-between;
 	gap: 0.8rem;
-	margin-top: 1.25rem;
+	min-width: 0;
+	flex: 0 0 auto;
 `;
 
 const DropdownField = styled.div`

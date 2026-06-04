@@ -73,6 +73,10 @@ const Carousel = styled.nav`
 	width: 100vw;
 	margin-top: 1.85rem;
 	margin-left: calc(50% - 50vw);
+
+	@media (max-width: ${theme.rubberSize.tablet}) {
+		margin-top: 1.05rem;
+	}
 `;
 
 const Viewport = styled.div`

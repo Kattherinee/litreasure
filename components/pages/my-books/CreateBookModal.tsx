@@ -26,6 +26,8 @@ import { ImageUploadField } from "@/shared/ui/ImageUploadField";
 import { Button } from "@/shared/ui/Button";
 
 interface ICreateBookModalProps {
+	initialAuthors?: ISelectedAuthorOption[];
+	initialTitle?: string;
 	bookId?: string;
 	onClose: () => void;
 	onCreated?: (book: IBook) => void;
@@ -71,6 +73,8 @@ const createDefaultBookForm = (): ICreateBookFormState => ({
 });
 
 export const CreateBookModal = ({
+	initialAuthors = [],
+	initialTitle = "",
 	bookId,
 	onClose,
 	onCreated,
@@ -127,6 +131,24 @@ export const CreateBookModal = ({
 			})),
 		);
 	}, [editingBook, isEditMode]);
+
+	useEffect(() => {
+		if (isEditMode) {
+			return;
+		}
+
+		if (initialTitle.trim()) {
+			setForm((current) =>
+				current.title.trim() ? current : { ...current, title: initialTitle },
+			);
+		}
+
+		if (initialAuthors.length > 0) {
+			setSelectedAuthors((current) =>
+				current.length > 0 ? current : initialAuthors,
+			);
+		}
+	}, [initialAuthors, initialTitle, isEditMode]);
 
 	const closeModal = () => {
 		if (

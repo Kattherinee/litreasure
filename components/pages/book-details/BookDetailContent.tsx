@@ -5,6 +5,7 @@ import Rating from "@mui/material/Rating";
 import AutoStoriesOutlinedIcon from "@mui/icons-material/AutoStoriesOutlined";
 import BookmarkBorderOutlinedIcon from "@mui/icons-material/BookmarkBorderOutlined";
 import CheckCircleOutlineOutlinedIcon from "@mui/icons-material/CheckCircleOutlineOutlined";
+import Link from "next/link";
 import styled from "styled-components";
 
 import AuthModal, { type IAuthModalMode } from "@/components/pages/AuthModal";
@@ -17,6 +18,7 @@ import { CoverPlaceholder } from "@/shared/ui/Skeleton";
 import InfoChip, { InfoChipLabel, InfoChipValue } from "@/shared/ui/InfoChip";
 
 import BookDetailHero from "./BookDetailHero";
+import { SeriesTag } from "./BookDetailHero";
 import BookDetailTabs, { type ITabId } from "./BookDetailTabs";
 import BookSeriesBlock from "./BookSeriesBlock";
 
@@ -24,22 +26,26 @@ interface IBookDetailContentProps {
 	book: IBook;
 }
 
-const getPaperCopyLabel = (status?: IBook["myPaperBook"] extends infer T
-	? T extends { status?: infer S }
-		? S
-		: never
-	: never) => {
+const getPaperCopyLabel = (
+	status?: IBook["myPaperBook"] extends infer T
+		? T extends { status?: infer S }
+			? S
+			: never
+		: never,
+) => {
 	if (status === "owned") return "Owned copy";
 	if (status === "wanted_to_buy") return "Want to buy";
 	if (status === "given_away") return "Given away";
 	return null;
 };
 
-const getPaperBadgeTone = (status?: IBook["myPaperBook"] extends infer T
-	? T extends { status?: infer S }
-		? S
-		: never
-	: never) => {
+const getPaperBadgeTone = (
+	status?: IBook["myPaperBook"] extends infer T
+		? T extends { status?: infer S }
+			? S
+			: never
+		: never,
+) => {
 	if (status === "owned") {
 		return {
 			background: "rgb(162 198 172 / 0.35)",
@@ -96,10 +102,52 @@ const getBookFacts = (book: IBook) => {
 
 const ratingLabels = [5, 4, 3, 2, 1];
 
+const getSeriesTag = (book: IBook) => {
+	const series = book.series;
+	const seriesTitle = series?.title;
+
+	if (!series || !seriesTitle) {
+		return null;
+	}
+
+	const orderInSeries = series.orderInSeries ?? book.orderInSeries;
+	const relationType = series.relationType ?? book.relationType;
+	const mainBooksCount =
+		series.books?.filter(
+			(seriesBook) =>
+				(seriesBook.relationType === "main" ||
+					!seriesBook.relationType ||
+					seriesBook.relationType === "unknown") &&
+				(seriesBook.orderInSeries ?? 0) > 0,
+		).length ?? 0;
+
+	if (relationType === "spin_off") {
+		return `Spin-off in ${seriesTitle}`;
+	}
+
+	if (relationType === "collection" || relationType === "omnibus") {
+		return `${series.seriesLabel ?? book.seriesLabel ?? "Collection"} in ${seriesTitle}`;
+	}
+
+	if (orderInSeries && orderInSeries > 0) {
+		return mainBooksCount > 0
+			? `Book ${orderInSeries} of ${mainBooksCount} in ${seriesTitle}`
+			: `Book ${orderInSeries} in ${seriesTitle}`;
+	}
+
+	return `Part of ${seriesTitle}`;
+};
+
 const BookDetailContent = ({ book }: IBookDetailContentProps) => {
 	const coverSrc = book.coverUrl?.trim()
 		? book.coverUrl
 		: "/images/book-placeholder.svg";
+	const seriesTag = getSeriesTag(book);
+	const seriesHref = book.series?.id
+		? `/series/${book.series.id}`
+		: book.series?.seriesId
+			? `/series/${book.series.seriesId}`
+			: undefined;
 	const [loadedCoverSrc, setLoadedCoverSrc] = useState("");
 	const isCoverLoaded = loadedCoverSrc === coverSrc;
 	const normalizedRating = book.ratingAvg ?? book.rating ?? 0;
@@ -184,11 +232,6 @@ const BookDetailContent = ({ book }: IBookDetailContentProps) => {
 			<QuickRatingBlock>
 				<QuickRatingHeader>
 					<QuickRatingTitle>Your rating</QuickRatingTitle>
-					<Votes>
-						{book.ratingsCount
-							? `${book.ratingsCount.toLocaleString("en-US")} votes`
-							: "No votes yet"}
-					</Votes>
 				</QuickRatingHeader>
 				<QuickMuiRating
 					name="quick-book-rating"
@@ -199,9 +242,6 @@ const BookDetailContent = ({ book }: IBookDetailContentProps) => {
 				{quickRatingMessage ? (
 					<QuickRatingMessage>{quickRatingMessage}</QuickRatingMessage>
 				) : null}
-				<QuickReviewLink type="button" onClick={() => setActiveTab("reviews")}>
-					Write a review
-				</QuickReviewLink>
 			</QuickRatingBlock>
 		</>
 	);
@@ -228,11 +268,6 @@ const BookDetailContent = ({ book }: IBookDetailContentProps) => {
 				<QuickRatingBlock $compact>
 					<QuickRatingHeader>
 						<QuickRatingTitle>Your rating</QuickRatingTitle>
-						<Votes>
-							{book.ratingsCount
-								? `${book.ratingsCount.toLocaleString("en-US")} votes`
-								: "No votes yet"}
-						</Votes>
 					</QuickRatingHeader>
 					<QuickMuiRating
 						name="quick-book-rating"
@@ -243,9 +278,6 @@ const BookDetailContent = ({ book }: IBookDetailContentProps) => {
 					{quickRatingMessage ? (
 						<QuickRatingMessage>{quickRatingMessage}</QuickRatingMessage>
 					) : null}
-					<QuickReviewLink type="button" onClick={() => setActiveTab("reviews")}>
-						Write a review
-					</QuickReviewLink>
 				</QuickRatingBlock>
 			</MobileRatingHeader>
 			{hasRatingBars ? (
@@ -274,6 +306,13 @@ const BookDetailContent = ({ book }: IBookDetailContentProps) => {
 
 			<ContentGrid>
 				<LeftColumn>
+					{seriesTag && seriesHref ? (
+						<MobileSeriesTag>
+							<SeriesTagLink href={seriesHref}>
+								<SeriesTag>{seriesTag}</SeriesTag>
+							</SeriesTagLink>
+						</MobileSeriesTag>
+					) : null}
 					<CoverWrap>
 						{isCoverLoaded ? null : <CoverPlaceholder aria-hidden="true" />}
 						<CoverImage
@@ -361,7 +400,7 @@ const BookDetailContent = ({ book }: IBookDetailContentProps) => {
 export default BookDetailContent;
 
 const ContentWrap = styled.section`
-	--detail-backdrop-height: max(18rem, calc(100vw * 356 / 1979));
+	--detail-backdrop-height: max(20rem, calc(100vw * 356 / 1979));
 	--detail-cover-offset: 5rem;
 	--detail-cover-max-height: 21rem;
 	--detail-cover-max-width: 16rem;
@@ -457,12 +496,13 @@ const LeftColumn = styled.aside`
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	gap: 0.5rem;
+	gap: 0.8rem;
 	padding-top: var(--detail-cover-offset);
 
 	@media (max-width: 47.9375rem) {
 		margin: 0 auto;
 		align-items: center;
+		gap: 0.95rem;
 	}
 `;
 
@@ -473,6 +513,27 @@ const DesktopAsideRating = styled.section`
 
 	@media (max-width: 47.9375rem) {
 		display: none;
+	}
+`;
+
+const MobileSeriesTag = styled.div`
+	display: none;
+
+	@media (max-width: 47.9375rem) {
+		display: inline-flex;
+		align-self: center;
+		margin-bottom: 0.15rem;
+	}
+`;
+
+const SeriesTagLink = styled(Link)`
+	display: inline-flex;
+	color: inherit;
+	text-decoration: none;
+
+	&:hover,
+	&:focus-visible {
+		outline: none;
 	}
 `;
 
@@ -541,6 +602,9 @@ const BookFactsGrid = styled.div`
 
 const BookFactsSection = styled.section`
 	min-width: 0;
+	@media (max-width: 768px) {
+		margin-bottom: 1.1rem;
+	}
 `;
 
 const BookFactsTitle = styled.h2`
@@ -605,10 +669,11 @@ const MobileRatingHeader = styled.div`
 	display: none;
 
 	@media (max-width: 47.9375rem) {
-		display: grid;
-		grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+		display: flex;
 		gap: 0.85rem;
-		align-items: start;
+		align-items: center;
+		justify-content: space-around;
+		margin-bottom: 1.25rem;
 	}
 `;
 
@@ -616,6 +681,7 @@ const RatingTop = styled.div`
 	display: flex;
 	align-items: center;
 	justify-content: space-around;
+	gap: 0.75rem;
 `;
 
 const RatingScore = styled.div`
@@ -663,7 +729,8 @@ const QuickRatingBlock = styled.div<{ $compact?: boolean }>`
 	@media (max-width: 47.9375rem) {
 		margin-top: ${({ $compact }) => ($compact ? "0" : "1rem")};
 		padding-top: ${({ $compact }) => ($compact ? "0" : "0.95rem")};
-		border-top: ${({ $compact }) => ($compact ? "0" : "0.0625rem solid rgb(242 239 237 / 0.72)")};
+		border-top: ${({ $compact }) =>
+			$compact ? "0" : "0.0625rem solid rgb(242 239 237 / 0.72)"};
 	}
 `;
 
@@ -767,6 +834,6 @@ const RightColumn = styled.div`
 	padding-bottom: 2rem;
 
 	@media (max-width: 47.9375rem) {
-		padding-top: 2rem;
+		padding-top: 0.5rem;
 	}
 `;

@@ -48,9 +48,18 @@ export const BookResultCard = ({
 	const [currentStatus, setCurrentStatus] = useState<IUserBookStatus | null>(
 		book.myStatus ?? null,
 	);
+	const seriesProgress =
+		typeof book.orderInSeries === "number" && book.orderInSeries > 0
+			? typeof book.bookCountInSeries === "number" &&
+				book.bookCountInSeries > 0
+				? `${book.orderInSeries}/${book.bookCountInSeries}`
+				: String(book.orderInSeries)
+			: "";
 	const seriesLine = book.seriesTitle
-		? `${book.orderInSeries}/${book.bookCountInSeries} of  ${book.seriesTitle}`
-		: null;
+		? seriesProgress
+			? `${seriesProgress} of ${book.seriesTitle}`
+			: book.seriesTitle
+		: seriesProgress || null;
 	const titleMatches = lineHasMatch(book.title, book.searchMatches, query, [
 		"book",
 		"title",

@@ -874,8 +874,12 @@ const PageWrap = styled.div`
 	display: flex;
 	min-height: 100dvh;
 	flex-direction: column;
-	width: min(95vw, ${theme.layout.contentMaxWidth});
+	width: 60vw;
 	margin: 0 auto;
+
+	@media (max-width: 720px) {
+		width: 95vw;
+	}
 `;
 
 const SearchHeader = styled.div`
@@ -890,7 +894,7 @@ const SearchHeader = styled.div`
 	padding: 2rem 1rem 1rem;
 
 	@media (max-width: 720px) {
-		padding: 1rem;
+		padding: 3.3rem 1rem 1rem;
 	}
 `;
 

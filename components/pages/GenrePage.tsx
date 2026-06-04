@@ -1,6 +1,5 @@
 ﻿"use client";
 
-import Link from "next/link";
 import { useState } from "react";
 import styled from "styled-components";
 
@@ -10,6 +9,7 @@ import { theme } from "@/shared/theme";
 import { BookCard } from "@/shared/ui/BookCard";
 import { AppPagination } from "@/shared/ui/AppPagination";
 import { BookCardSkeleton } from "@/shared/ui/Skeleton";
+import { PageHero } from "@/shared/ui/PageHero";
 
 interface IGenrePageProps {
 	slug: string;
@@ -23,22 +23,27 @@ const GenrePage = ({ slug, sort }: IGenrePageProps) => {
 		error,
 		isError,
 		isLoading,
-	} = useBookCardsQuery({ genre: slug, page, sort });
+	} = useBookCardsQuery({ genre: slug, limit: 27, page, sort });
 	const books = booksResponse?.items ?? [];
 	const pages = booksResponse?.pages ?? 1;
+	const title = slug
+		.replace(/[-_]+/g, " ")
+		.replace(/\b\w/g, (character) => character.toUpperCase());
 
 	return (
 		<Page>
 			<Content>
-				<BackLink href="/">Back to home</BackLink>
-				<Title>{slug}</Title>
-				<Lead>A collection of books in the {slug} genre.</Lead>
+				<PageHero
+					copyWidth="70vw"
+					text={`A collection of books in the ${title} genre.`}
+					title={title}
+				/>
 
 				{isLoading ? (
 					<BookGrid aria-label="Loading books">
 						{Array.from({ length: 12 }, (_, index) => (
 							<BookItem key={index}>
-								<BookCardSkeleton />
+								<BookCardSkeleton size="compact" />
 							</BookItem>
 						))}
 					</BookGrid>
@@ -51,7 +56,7 @@ const GenrePage = ({ slug, sort }: IGenrePageProps) => {
 						<BookGrid>
 							{books.map((book) => (
 								<BookItem key={book.id}>
-									<BookCard book={book} />
+									<BookCard book={book} size="compact" />
 								</BookItem>
 							))}
 						</BookGrid>
@@ -69,40 +74,16 @@ export default GenrePage;
 
 const Page = styled.div`
 	min-height: 100dvh;
-	padding: clamp(3rem, 5vw, 4.5rem) clamp(1.5rem, 2.78vw, 2.5rem);
+	background: ${theme.colors.background};
+	padding-bottom: clamp(3rem, 5vw, 4.5rem);
 `;
 
 const Content = styled.section`
 	margin: 0 auto;
-	max-width: 77.5rem;
-`;
-
-const BackLink = styled(Link)`
-	display: inline-flex;
-	margin-bottom: 1.5rem;
-	color: ${theme.colors.orangeDark};
-	font-size: 0.9375rem;
-	text-decoration: none;
-
-	&:hover {
-		text-decoration: underline;
+	max-width: 70vw;
+	@media (max-width: 768px) {
+		max-width: 95vw;
 	}
-`;
-
-const Title = styled.h1`
-	margin: 0;
-	font-family: ${theme.fonts.serif};
-	font-size: 3vw;
-	font-weight: 600;
-	line-height: 1;
-`;
-
-const Lead = styled.p`
-	max-width: 40rem;
-	margin: 1rem 0 0;
-	color: ${theme.colors.softForeground};
-	font-size: 1.125rem;
-	line-height: 1.55;
 `;
 
 const StateMessage = styled.p`
@@ -113,14 +94,12 @@ const StateMessage = styled.p`
 `;
 
 const BookGrid = styled.div`
-	--book-card-column: 7.25rem;
-
-	display: grid;
+	display: flex;
+	flex-wrap: wrap;
 	gap: 1rem;
-	grid-template-columns: repeat(auto-fill, var(--book-card-column));
 	justify-content: center;
-	justify-items: center;
-	margin-top: clamp(2.5rem, 5vw, 4rem);
+	align-items: flex-start;
+	margin-top: 2rem;
 `;
 
 const BookItem = styled.div`

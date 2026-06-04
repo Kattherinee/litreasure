@@ -314,8 +314,9 @@ const CatalogHeroInner = styled.div`
 
 	@media (max-width: 48rem) {
 		grid-template-columns: 1fr;
-		gap: 1.25rem;
+		gap: 1.05rem;
 		padding-bottom: 3.5rem;
+		padding: clamp(2.25rem, 4.5vw, 4rem) 0 clamp(2rem, 3.5vw, 2.5rem);
 	}
 `;
 
@@ -332,15 +333,21 @@ const PageKicker = styled.p`
 	letter-spacing: 0.08em;
 	line-height: 1.2;
 	text-transform: uppercase;
+	@media (max-width: 48rem) {
+		margin: 0;
+	}
 `;
 
 const PageTitle = styled.h1`
 	margin: 0;
 	color: ${theme.colors.invertedText};
 	font-family: ${theme.fonts.serif};
-	font-size: clamp(3rem, 5vw, 4.5rem);
+	font-size: clamp(3rem, 4vw, 3.5rem);
 	font-weight: 600;
 	line-height: 0.96;
+	@media (max-width: 48rem) {
+		display: none;
+	}
 `;
 
 const HeroText = styled.p`

@@ -1,7 +1,6 @@
 "use client";
 
 import BookmarkIcon from "@mui/icons-material/Bookmark";
-import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -16,6 +15,7 @@ import {
 } from "@/components/pages/AuthorsFilters";
 import {
 	type IAuthorBookSort,
+	type IAuthorSeries,
 	useDeleteAuthorMutation,
 	useAuthorQuery,
 	useSaveAuthorMutation,
@@ -31,6 +31,14 @@ import { theme } from "@/shared/theme";
 import { AuthorAvatar } from "@/shared/ui/AuthorAvatar";
 import { BookCard } from "@/shared/ui/BookCard";
 import { ConfirmModal } from "@/shared/ui/ConfirmModal";
+import {
+	CarouselContainer,
+	CarouselControlButton,
+	CarouselControls,
+	CarouselSlide,
+	CarouselViewport,
+} from "@/shared/ui/Carousel/Carousel.styles";
+import { useHorizontalCarousel } from "@/shared/ui/Carousel/useHorizontalCarousel";
 import { GenrePill } from "@/shared/ui/GenrePill";
 import { BookCardSkeleton, SkeletonBlock } from "@/shared/ui/Skeleton";
 
@@ -58,9 +66,6 @@ const AuthorPage = ({ id }: IAuthorPageProps) => {
 	>({});
 	const [isBioExpanded, setIsBioExpanded] = useState(false);
 	const [canExpandBio, setCanExpandBio] = useState(false);
-	const [expandedSeries, setExpandedSeries] = useState<Record<string, boolean>>(
-		{},
-	);
 	const [isEditOpen, setIsEditOpen] = useState(false);
 	const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
 	const [editName, setEditName] = useState("");
@@ -77,6 +82,7 @@ const AuthorPage = ({ id }: IAuthorPageProps) => {
 	} = useAuthorQuery(id, {
 		bookSort,
 	});
+	const visibleBooks = author?.books.slice(0, 27) ?? [];
 	const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 	const saveAuthorMutation = useSaveAuthorMutation();
 	const unsaveAuthorMutation = useUnsaveAuthorMutation();
@@ -132,16 +138,8 @@ const AuthorPage = ({ id }: IAuthorPageProps) => {
 		setIsEditOpen(true);
 	};
 
-	const toggleSeriesExpanded = (seriesId: string) => {
-		setExpandedSeries((currentState) => ({
-			...currentState,
-			[seriesId]: !currentState[seriesId],
-		}));
-	};
-
 	const handleBookSortChange = (nextSort: IAuthorBookSort) => {
 		setBookSort(nextSort);
-		setExpandedSeries({});
 	};
 
 	const handleToggleAuthorSave = async () => {
@@ -255,7 +253,7 @@ const AuthorPage = ({ id }: IAuthorPageProps) => {
 					</Hero>
 					<BookGrid>
 						{Array.from({ length: 6 }, (_, index) => (
-							<BookCardSkeleton key={index} />
+							<BookCardSkeleton key={index} size="compact" />
 						))}
 					</BookGrid>
 				</Content>
@@ -286,7 +284,6 @@ const AuthorPage = ({ id }: IAuthorPageProps) => {
 	return (
 		<Page>
 			<Content>
-				<BackLink href="/authors">Back to authors</BackLink>
 				<Hero>
 					<AuthorAvatar
 						fontSize="2.5rem"
@@ -297,43 +294,45 @@ const AuthorPage = ({ id }: IAuthorPageProps) => {
 					<HeroCopy>
 						<TitleRow>
 							<Title>{author.name}</Title>
-							{isAuthorSaved ? (
-								<SavedActionButton
-									aria-label="Remove author from saved"
-									disabled={isAuthorSavePending}
-									title="Remove from saved"
-									type="button"
-									onClick={() => void handleToggleAuthorSave()}
-								>
-									<BookmarkIcon aria-hidden="true" />
-									<span>
-										{isAuthorSavePending ? "Saving..." : "Subscribed"}
-									</span>
-								</SavedActionButton>
-							) : (
-								<SaveActionButton
-									disabled={isAuthorSavePending}
-									type="button"
-									onClick={() => void handleToggleAuthorSave()}
-								>
-									{isAuthorSavePending ? "Saving..." : "Subscribe"}
-								</SaveActionButton>
-							)}
+							<TitleActions>
+								{isAuthorSaved ? (
+									<SavedActionButton
+										aria-label="Remove author from saved"
+										disabled={isAuthorSavePending}
+										title="Remove from saved"
+										type="button"
+										onClick={() => void handleToggleAuthorSave()}
+									>
+										<BookmarkIcon aria-hidden="true" />
+										<span>
+											{isAuthorSavePending ? "Saving..." : "Subscribed"}
+										</span>
+									</SavedActionButton>
+								) : (
+									<SaveActionButton
+										disabled={isAuthorSavePending}
+										type="button"
+										onClick={() => void handleToggleAuthorSave()}
+									>
+										{isAuthorSavePending ? "Saving..." : "Subscribe"}
+									</SaveActionButton>
+								)}
+								{isMyAuthor ? (
+									<OwnerActions aria-label="Actions for your author">
+										<OwnerActionButton type="button" onClick={openEditAuthor}>
+											Edit
+										</OwnerActionButton>
+										<DangerActionButton
+											type="button"
+											disabled={deleteAuthorMutation.isPending}
+											onClick={() => setIsDeleteConfirmOpen(true)}
+										>
+											Delete
+										</DangerActionButton>
+									</OwnerActions>
+								) : null}
+							</TitleActions>
 						</TitleRow>
-						{isMyAuthor ? (
-							<OwnerActions aria-label="Actions for your author">
-								<OwnerActionButton type="button" onClick={openEditAuthor}>
-									Edit
-								</OwnerActionButton>
-								<DangerActionButton
-									type="button"
-									disabled={deleteAuthorMutation.isPending}
-									onClick={() => setIsDeleteConfirmOpen(true)}
-								>
-									Delete
-								</DangerActionButton>
-							</OwnerActions>
-						) : null}
 						{actionMessage ? (
 							<ActionMessage role="status">{actionMessage}</ActionMessage>
 						) : null}
@@ -408,94 +407,24 @@ const AuthorPage = ({ id }: IAuthorPageProps) => {
 									<TotalNumber>{author.series.length}</TotalNumber>
 									<TotalText>total</TotalText>
 								</TotalBadge>
-								<SectionHint>books can be scrolled horizontally</SectionHint>
 							</SectionStats>
 						</SectionHeader>
 						<SeriesList>
-							{author.series.map((series) => {
-								const isExpanded = expandedSeries[series.id] ?? false;
-								const canExpandSeries = series.books.length > 8;
-								const visibleBooks = isExpanded
-									? series.books
-									: series.books.slice(0, 8);
-
-								return (
-									<SeriesCard key={series.id}>
-										<SeriesHeader>
-											<SeriesCopy>
-												<SeriesTitle>{series.title}</SeriesTitle>
-												<SeriesMeta
-													aria-label={`Total books in series: ${series.books.length}`}
-												>
-													<TotalNumber>{series.books.length}</TotalNumber>
-													<TotalText>total</TotalText>
-												</SeriesMeta>
-											</SeriesCopy>
-											{getIsSeriesSaved(series.id, series.isSaved) ? (
-												<SavedActionButton
-													aria-label="Remove series from saved"
-													disabled={isSeriesSavePending}
-													title="Remove from saved"
-													type="button"
-													onClick={() =>
-														void handleToggleSeriesSave(
-															series.id,
-															series.isSaved,
-														)
-													}
-												>
-													<BookmarkIcon aria-hidden="true" />
-												</SavedActionButton>
-											) : (
-												<SaveActionButton
-													disabled={isSeriesSavePending}
-													type="button"
-													onClick={() =>
-														void handleToggleSeriesSave(
-															series.id,
-															series.isSaved,
-														)
-													}
-												>
-													{isSeriesSavePending ? "Saving..." : "Subscribe"}
-												</SaveActionButton>
-											)}
-										</SeriesHeader>
-										<SeriesBooksRail $isExpanded={isExpanded}>
-											{visibleBooks.map((book) => (
-												<BookCard
-													key={book.id}
-													book={{
-														...book,
-														author: author.name,
-														relationType: book.seriesRelationType,
-														seriesTotal: series.books.length,
-													}}
-												/>
-											))}
-										</SeriesBooksRail>
-										{canExpandSeries ? (
-											<SeriesExpandButton
-												$isExpanded={isExpanded}
-												type="button"
-												onClick={() => toggleSeriesExpanded(series.id)}
-											>
-												<span>
-													{isExpanded
-														? "Collapse series"
-														: `Show full series (+${series.books.length - visibleBooks.length})`}
-												</span>
-												<KeyboardArrowDownIcon aria-hidden="true" />
-											</SeriesExpandButton>
-										) : null}
-									</SeriesCard>
-								);
-							})}
+							{author.series.map((series) => (
+								<AuthorSeriesCard
+									key={series.id}
+									authorName={author.name}
+									isSeriesSavePending={isSeriesSavePending}
+									series={series}
+									onToggleSeriesSave={handleToggleSeriesSave}
+									getIsSeriesSaved={getIsSeriesSaved}
+								/>
+							))}
 						</SeriesList>
 					</Section>
 				) : null}
 
-				{author.books.length > 0 ? (
+				{visibleBooks.length > 0 ? (
 					<Section>
 						<SectionHeader>
 							<SectionTitle>Books</SectionTitle>
@@ -505,9 +434,10 @@ const AuthorPage = ({ id }: IAuthorPageProps) => {
 							</TotalBadge>
 						</SectionHeader>
 						<BookGrid>
-							{author.books.map((book) => (
+							{visibleBooks.map((book) => (
 								<BookCard
 									key={book.id}
+									size="compact"
 									book={{
 										...book,
 										author: author.name,
@@ -521,6 +451,7 @@ const AuthorPage = ({ id }: IAuthorPageProps) => {
 				{isEditOpen ? (
 					<AuthorEditModal
 						bio={editBio}
+						books={author.books}
 						isSaving={updateAuthorMutation.isPending}
 						name={editName}
 						photoUrl={editPhotoUrl}
@@ -557,6 +488,178 @@ const AuthorPage = ({ id }: IAuthorPageProps) => {
 	);
 };
 
+const AuthorSeriesCard = ({
+	authorName,
+	getIsSeriesSaved,
+	isSeriesSavePending,
+	onToggleSeriesSave,
+	series,
+}: {
+	authorName: string;
+	getIsSeriesSaved: (seriesId: string, initialValue?: boolean) => boolean;
+	isSeriesSavePending: boolean;
+	onToggleSeriesSave: (
+		seriesId: string,
+		initialValue?: boolean,
+	) => Promise<void>;
+	series: IAuthorSeries;
+}) => {
+	const measureRef = useRef<HTMLDivElement | null>(null);
+	const [isSlider, setIsSlider] = useState(false);
+	const {
+		canScrollNext,
+		canScrollPrev,
+		setContainerRef,
+		setViewportRef,
+		scrollNext,
+		scrollPrev,
+	} = useHorizontalCarousel();
+
+	useEffect(() => {
+		const measureNode = measureRef.current;
+
+		if (!measureNode) {
+			return undefined;
+		}
+
+		const updateLayout = () => {
+			const computedStyle = window.getComputedStyle(measureNode);
+			const gapValue = Number.parseFloat(computedStyle.gap || "0") || 0;
+			const itemWidth = measureNode.firstElementChild?.getBoundingClientRect().width;
+
+			if (!itemWidth || !measureNode.parentElement) {
+				setIsSlider(false);
+				return;
+			}
+
+			const availableWidth = measureNode.parentElement.clientWidth;
+			const totalWidth = measureNode.children.length * itemWidth;
+			const fullWidth =
+				totalWidth + Math.max(0, measureNode.children.length - 1) * gapValue;
+
+			setIsSlider(fullWidth > availableWidth + 4);
+		};
+
+		updateLayout();
+
+		const resizeObserver = new ResizeObserver(updateLayout);
+		resizeObserver.observe(measureNode);
+		if (measureNode.parentElement) {
+			resizeObserver.observe(measureNode.parentElement);
+		}
+
+		return () => resizeObserver.disconnect();
+	}, [series.books.length, series.id, series.title]);
+
+	const cardProps = (book: (typeof series.books)[number]) => ({
+		...book,
+		author: authorName,
+		relationType: book.seriesRelationType,
+		seriesTotal: series.books.length,
+	});
+
+	return (
+		<SeriesCard>
+			<SeriesHeader>
+				<SeriesCopy>
+					<SeriesTitleRow>
+						<SeriesTitleLink href={`/series/${series.id}`}>
+							<SeriesTitle>{series.title}</SeriesTitle>
+						</SeriesTitleLink>
+						<SeriesMeta
+							aria-label={`Total books in series: ${series.books.length}`}
+						>
+							<TotalNumber>{series.books.length}</TotalNumber>
+							<TotalText>total</TotalText>
+						</SeriesMeta>
+					</SeriesTitleRow>
+				</SeriesCopy>
+				<SeriesHeaderActions>
+					{isSlider ? (
+						<SeriesBooksCarouselControls $isVisible>
+							<SeriesBooksCarouselControl
+								aria-label="Previous series books"
+								disabled={!canScrollPrev}
+								type="button"
+								onClick={scrollPrev}
+							>
+								{"\u2039"}
+							</SeriesBooksCarouselControl>
+							<SeriesBooksCarouselControl
+								aria-label="Next series books"
+								disabled={!canScrollNext}
+								type="button"
+								onClick={scrollNext}
+							>
+								{"\u203A"}
+							</SeriesBooksCarouselControl>
+						</SeriesBooksCarouselControls>
+					) : null}
+					{getIsSeriesSaved(series.id, series.isSaved) ? (
+						<SavedActionButton
+							aria-label="Remove series from saved"
+							disabled={isSeriesSavePending}
+							title="Remove from saved"
+							type="button"
+							onClick={() =>
+								void onToggleSeriesSave(series.id, series.isSaved)
+							}
+						>
+							<BookmarkIcon aria-hidden="true" />
+						</SavedActionButton>
+					) : (
+						<SaveActionButton
+							disabled={isSeriesSavePending}
+							type="button"
+							onClick={() =>
+								void onToggleSeriesSave(series.id, series.isSaved)
+							}
+						>
+							{isSeriesSavePending ? "Saving..." : "Subscribe"}
+						</SaveActionButton>
+					)}
+				</SeriesHeaderActions>
+			</SeriesHeader>
+			{isSlider ? (
+				<SeriesBooksFrame>
+					<SeriesBooksMeasure ref={measureRef} aria-hidden="true">
+						{series.books.map((book) => (
+							<BookCard key={book.id} book={cardProps(book)} />
+						))}
+					</SeriesBooksMeasure>
+					<SeriesBooksCarousel>
+						<SeriesBooksCarouselViewport
+							$hasOverflow
+							ref={setViewportRef}
+						>
+							<SeriesBooksCarouselContainer ref={setContainerRef}>
+								{series.books.map((book) => (
+									<CarouselSlide key={book.id}>
+										<BookCard book={cardProps(book)} />
+									</CarouselSlide>
+								))}
+							</SeriesBooksCarouselContainer>
+						</SeriesBooksCarouselViewport>
+					</SeriesBooksCarousel>
+				</SeriesBooksFrame>
+			) : (
+				<SeriesBooksFrame>
+					<SeriesBooksMeasure ref={measureRef} aria-hidden="true">
+						{series.books.map((book) => (
+							<BookCard key={book.id} book={cardProps(book)} />
+						))}
+					</SeriesBooksMeasure>
+					<SeriesBooksWrap>
+						{series.books.map((book) => (
+							<BookCard key={book.id} book={cardProps(book)} />
+						))}
+					</SeriesBooksWrap>
+				</SeriesBooksFrame>
+			)}
+		</SeriesCard>
+	);
+};
+
 export default AuthorPage;
 
 const Page = styled.div`
@@ -566,19 +669,10 @@ const Page = styled.div`
 `;
 
 const Content = styled.section`
-	width: min(calc(100% - (${theme.layout.contentGutter} * 2)), ${theme.layout.contentMaxWidth});
+	width: 60vw;
 	margin: 0 auto;
-`;
-
-const BackLink = styled(Link)`
-	display: inline-flex;
-	margin-bottom: 1.5rem;
-	color: ${theme.colors.orangeDark};
-	font-size: 0.9375rem;
-	text-decoration: none;
-
-	&:hover {
-		text-decoration: underline;
+	@media (max-width: 48rem) {
+		width: 95vw;
 	}
 `;
 
@@ -602,13 +696,24 @@ const HeroCopy = styled.div`
 
 const TitleRow = styled.div`
 	display: flex;
-	align-items: flex-start;
+	align-items: center;
 	justify-content: space-between;
 	gap: 1rem;
+	flex-wrap: wrap;
 
 	@media (max-width: 38rem) {
 		flex-direction: column;
+		align-items: flex-start;
 	}
+`;
+
+const TitleActions = styled.div`
+	display: flex;
+	flex: 0 0 auto;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 0.65rem;
 `;
 
 const Title = styled.h1`
@@ -700,7 +805,6 @@ const OwnerActions = styled.div`
 	display: flex;
 	flex-wrap: wrap;
 	gap: 0.65rem;
-	margin-top: 0.9rem;
 `;
 
 const OwnerActionButton = styled.button`
@@ -882,14 +986,6 @@ const SectionTitle = styled.h2`
 	line-height: 1.2;
 `;
 
-const SectionHint = styled.p`
-	margin: 0;
-	color: ${theme.colors.softForeground};
-	font-family: ${theme.fonts.sans};
-	font-size: 0.9rem;
-	line-height: 1.35;
-`;
-
 const SectionStats = styled.div`
 	display: inline-flex;
 	align-items: center;
@@ -913,18 +1009,48 @@ const SeriesCard = styled.section`
 	border-radius: 1rem;
 	background: rgb(242 239 237 / 0.58);
 	padding: 1rem;
+	width: fit-content;
+	max-width: 100%;
 `;
 
 const SeriesHeader = styled.div`
 	display: flex;
-	align-items: flex-start;
+	align-items: center;
 	justify-content: space-between;
 	gap: 1rem;
 	margin-bottom: 1rem;
+	flex-wrap: nowrap;
 `;
 
 const SeriesCopy = styled.div`
 	min-width: 0;
+`;
+
+const SeriesTitleRow = styled.div`
+	display: flex;
+	min-width: 0;
+	align-items: center;
+	gap: 0.6rem;
+	flex-wrap: nowrap;
+`;
+
+const SeriesHeaderActions = styled.div`
+	display: flex;
+	flex: 0 0 auto;
+	align-items: center;
+	gap: 0.55rem;
+`;
+
+const SeriesTitleLink = styled(Link)`
+	color: inherit;
+	text-decoration: none;
+
+	&:hover,
+	&:focus-visible {
+		outline: none;
+		text-decoration: underline;
+		text-underline-offset: 0.15rem;
+	}
 `;
 
 const SeriesTitle = styled.h3`
@@ -938,60 +1064,65 @@ const SeriesTitle = styled.h3`
 
 const SeriesMeta = styled(TotalBadge)`
 	width: fit-content;
-	margin: 0.25rem 0 0;
+	margin: 0;
 	min-height: 2rem;
 	padding: 0.36rem 0.7rem;
 `;
 
-const SeriesBooksRail = styled.div<{ $isExpanded: boolean }>`
+const SeriesBooksWrap = styled.div`
 	display: flex;
-	flex-wrap: ${({ $isExpanded }) => ($isExpanded ? "wrap" : "nowrap")};
+	flex-wrap: wrap;
+	align-items: flex-start;
 	gap: 1rem;
-	overflow-x: ${({ $isExpanded }) => ($isExpanded ? "visible" : "auto")};
-	overflow-y: visible;
+	width: fit-content;
+	max-width: 100%;
 	padding: 0.15rem 0 0.55rem;
-	scrollbar-color: ${theme.colors.orangeLight} rgb(242 239 237 / 0.72);
-	scrollbar-width: thin;
-
-	& > * {
-		flex: 0 0 auto;
-	}
 `;
 
-const SeriesExpandButton = styled.button<{ $isExpanded: boolean }>`
-	display: inline-flex;
-	align-items: center;
-	gap: 0.25rem;
-	border: 0.0625rem solid rgb(237 160 108 / 0.42);
-	border-radius: 62.4375rem;
-	background: rgb(242 239 237 / 0.78);
-	margin-top: 0.55rem;
-	padding: 0.42rem 0.78rem;
-	color: ${theme.colors.orangeDark};
-	cursor: pointer;
-	font-family: ${theme.fonts.sans};
-	font-size: 0.86rem;
-	font-weight: 700;
-	line-height: 1;
-
-	svg {
-		width: 1.1rem;
-		height: 1.1rem;
-		transform: rotate(${({ $isExpanded }) => ($isExpanded ? "180deg" : "0")});
-		transition: transform 160ms ease;
-	}
-
-	&:hover,
-	&:focus-visible {
-		background: ${theme.colors.orangeLight};
-		color: ${theme.colors.invertedText};
-		outline: none;
-	}
+const SeriesBooksMeasure = styled.div`
+	position: absolute;
+	left: 0;
+	top: 0;
+	z-index: -1;
+	display: flex;
+	flex-wrap: nowrap;
+	gap: 1rem;
+	width: max-content;
+	visibility: hidden;
+	pointer-events: none;
 `;
+
+const SeriesBooksFrame = styled.div`
+	position: relative;
+	width: 100%;
+	padding: 0 0 0.35rem;
+`;
+
+const SeriesBooksCarousel = styled.div`
+	position: relative;
+	width: 100%;
+`;
+
+const SeriesBooksCarouselViewport = styled(CarouselViewport)`
+	width: 100%;
+	margin-left: 0;
+`;
+
+const SeriesBooksCarouselContainer = styled(CarouselContainer)`
+	padding-left: 0;
+`;
+
+const SeriesBooksCarouselControls = styled(CarouselControls)`
+	justify-content: flex-end;
+	margin: 0;
+`;
+
+const SeriesBooksCarouselControl = styled(CarouselControlButton)``;
 
 const BookGrid = styled.div`
 	display: flex;
 	flex-wrap: wrap;
+	align-items: flex-start;
 	justify-content: center;
 	gap: 1rem;
 `;

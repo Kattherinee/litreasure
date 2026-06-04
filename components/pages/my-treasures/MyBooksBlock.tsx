@@ -21,8 +21,8 @@ import {
 } from "./ui";
 
 const statusTabs: Array<{ id: IUserBookStatus | "all"; label: string }> = [
-	{ id: "all", label: "All books" },
-	{ id: "reading", label: "Currently reading" },
+	{ id: "all", label: "All" },
+	{ id: "reading", label: "Reading" },
 	{ id: "planned", label: "Planned" },
 	{ id: "finished", label: "Finished" },
 	{ id: "paused", label: "Paused" },
@@ -87,7 +87,11 @@ export const MyBooksBlock = ({
 						<SearchIcon aria-hidden="true" />
 						<span>Find a book</span>
 					</HeaderActionLink>
-					<HeaderActionButton title="Create a book" type="button" onClick={onCreateBook}>
+					<HeaderActionButton
+						title="Create a book"
+						type="button"
+						onClick={onCreateBook}
+					>
 						<AddIcon aria-hidden="true" />
 						<span>Create</span>
 					</HeaderActionButton>
@@ -110,7 +114,7 @@ export const MyBooksBlock = ({
 						type="button"
 						onClick={() => onChangeStatus("created")}
 					>
-						Created by me
+						Created
 						<CreatedCount>{createdBooksCount}</CreatedCount>
 					</CreatedTabButton>
 				</TabsRow>

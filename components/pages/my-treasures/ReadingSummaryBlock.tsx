@@ -3,7 +3,10 @@
 import Link from "next/link";
 import KeyboardArrowLeftIcon from "@mui/icons-material/KeyboardArrowLeft";
 import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
-import type { IBookChallenge, IChallengePeriodType } from "@/shared/api/book-challenge";
+import type {
+	IBookChallenge,
+	IChallengePeriodType,
+} from "@/shared/api/book-challenge";
 import type { IUserBookTracking } from "@/shared/api/user-books";
 import { theme } from "@/shared/theme";
 import { Button } from "@/shared/ui/Button";
@@ -117,8 +120,8 @@ export const ReadingSummaryBlock = ({
 				<>
 					<CardTitle>Nothing Here Yet</CardTitle>
 					<CardText>
-						Books with the reading status will be pinned here separately from the
-						main list.
+						Books with the reading status will be pinned here separately from
+						the main list.
 					</CardText>
 					<Button buttonType="oxygenPill" href="/search">
 						Choose a book
@@ -145,14 +148,17 @@ export const ReadingSummaryBlock = ({
 								const challengeTimeProgress = clampPercent(
 									challenge?.progress?.time?.percent,
 								);
-								const challengeCurrentValue = challenge?.progress?.value?.current ?? 0;
+								const challengeCurrentValue =
+									challenge?.progress?.value?.current ?? 0;
 								const challengeRemainingDays =
 									challenge?.progress?.time?.remainingDays ?? 0;
 								const challengeUnit =
 									challenge?.type === "pages" ? "pages" : "books";
 
 								return (
-									<ChallengeSlide key={challenge?.id ?? `challenge-empty-${index}`}>
+									<ChallengeSlide
+										key={challenge?.id ?? `challenge-empty-${index}`}
+									>
 										<ChallengeGraph
 											href="/book-challenge"
 											$timePercent={challengeTimeProgress}
@@ -176,7 +182,9 @@ export const ReadingSummaryBlock = ({
 															{formatChallengeDate(challenge.endDate)}
 														</ChallengeGraphMeta>
 													) : (
-														<ChallengeGraphMeta>Create a reading goal</ChallengeGraphMeta>
+														<ChallengeGraphMeta>
+															Create a reading goal
+														</ChallengeGraphMeta>
 													)}
 												</ChallengeGraphCenter>
 											</ChallengeValueRing>
@@ -217,7 +225,9 @@ export const ReadingSummaryBlock = ({
 
 const HeroCopy = styled.div`
 	min-width: 0;
+	width: fit-content;
 	align-self: center;
+	margin: 0 1vw;
 `;
 const Title = styled.h1`
 	margin: 0;
@@ -227,7 +237,7 @@ const Title = styled.h1`
 	line-height: 1.05;
 `;
 const Lead = styled.p`
-	max-width: 24rem;
+	max-width: 29rem;
 	margin: 0.45rem 0 0;
 	color: ${theme.colors.softForeground};
 	font-size: 0.92rem;
@@ -239,6 +249,8 @@ const ReadingCard = styled.section`
 	grid-template-columns: minmax(0, 1fr) auto auto;
 	gap: 0.65rem;
 	margin: 0 auto 0.8rem;
+	justify-content: center;
+	width: fit-content;
 	@media (max-width: 50rem) {
 		grid-template-columns: 1fr;
 	}
@@ -300,20 +312,25 @@ const ReadingSlide = styled.div`
 	flex: 0 0 46%;
 	padding: 0.2rem 0.1rem;
 	@media (max-width: 40rem) {
-		flex-basis: 58%;
+		flex: 0 0 36%;
 	}
 `;
 const ReadingCoverLink = styled(Link)`
 	text-decoration: none;
 `;
-const ReadingCoverImage = styled.img<{ $isActive: boolean; $isSingle?: boolean }>`
+const ReadingCoverImage = styled.img<{
+	$isActive: boolean;
+	$isSingle?: boolean;
+}>`
 	height: ${({ $isSingle }) => ($isSingle ? "14.2rem" : "12.5rem")};
 	border-radius: 0.55rem;
 	border: 0.0625rem solid rgb(211 202 196 / 0.72);
 	object-fit: cover;
 	opacity: ${({ $isActive }) => ($isActive ? 1 : 0.58)};
 	transform: ${({ $isActive }) => ($isActive ? "scale(1)" : "scale(0.82)")};
-	transition: transform 280ms ease, opacity 240ms ease;
+	transition:
+		transform 280ms ease,
+		opacity 240ms ease;
 `;
 const ReadingNav = styled.div`
 	display: flex;

@@ -132,5 +132,9 @@ const StyledButton = styled(MuiButton)<{
 			if ($buttonType === "oxygenPill") return oxygenPillStyles;
 			return containedStyles;
 		}}
+		@media (max-width: ${theme.rubberSize.tablet}) {
+			font-size: 0.94rem;
+			line-height: 1.25rem;
+		}
 	}
 `;

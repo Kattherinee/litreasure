@@ -44,7 +44,7 @@ const SeriesTreasureCard = styled(Link)`
 	width: fit-content;
 	border: 0.0625rem solid rgb(211 202 196 / 0.72);
 	border-radius: 0.75rem;
-	background: ${theme.colors.backgroundTop};
+
 	padding: 1.25rem 1.5rem 1.25rem 2.15rem;
 	color: inherit;
 	text-decoration: none;

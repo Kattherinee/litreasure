@@ -5,12 +5,17 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { authorsQueryKeys } from "../authors";
 import { booksQueryKeys } from "../books";
 import {
+	deleteSeries,
+	createSeries,
 	getPublicSeries,
 	getMySeries,
 	getSeriesDetails,
 	saveSeries,
 	unsaveSeries,
+	type ICreateSeriesPayload,
 	type ISeriesListParams,
+	type IUpdateSeriesPayload,
+	updateSeries,
 } from "./series.api";
 
 export const seriesQueryKeys = {
@@ -47,6 +52,56 @@ export const useSeriesQuery = (id: string, options?: { enabled?: boolean }) =>
 		queryFn: () => getSeriesDetails(id),
 		queryKey: seriesQueryKeys.byId(id),
 	});
+
+export const useCreateSeriesMutation = () => {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: (payload: ICreateSeriesPayload) => createSeries(payload),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: seriesQueryKeys.all });
+			queryClient.invalidateQueries({ queryKey: ["series", "mine"] });
+			queryClient.invalidateQueries({ queryKey: ["books"] });
+			queryClient.invalidateQueries({ queryKey: ["authors"] });
+		},
+	});
+};
+
+export const useUpdateSeriesMutation = () => {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: ({
+			id,
+			payload,
+		}: {
+			id: string;
+			payload: IUpdateSeriesPayload;
+		}) => updateSeries(id, payload),
+		onSuccess: (_data, { id }) => {
+			queryClient.invalidateQueries({ queryKey: seriesQueryKeys.byId(id) });
+			queryClient.invalidateQueries({ queryKey: seriesQueryKeys.all });
+			queryClient.invalidateQueries({ queryKey: ["series", "mine"] });
+			queryClient.invalidateQueries({ queryKey: booksQueryKeys.all });
+			queryClient.invalidateQueries({ queryKey: authorsQueryKeys.all });
+		},
+	});
+};
+
+export const useDeleteSeriesMutation = () => {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: (id: string) => deleteSeries(id),
+		onSuccess: (_data, id) => {
+			queryClient.invalidateQueries({ queryKey: seriesQueryKeys.byId(id) });
+			queryClient.invalidateQueries({ queryKey: seriesQueryKeys.all });
+			queryClient.invalidateQueries({ queryKey: ["series", "mine"] });
+			queryClient.invalidateQueries({ queryKey: booksQueryKeys.all });
+			queryClient.invalidateQueries({ queryKey: authorsQueryKeys.all });
+		},
+	});
+};
 
 export const useSaveSeriesMutation = () => {
 	const queryClient = useQueryClient();

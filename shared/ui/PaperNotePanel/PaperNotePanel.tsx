@@ -116,10 +116,6 @@ const Panel = styled.div`
 	position: relative;
 	width: 100%;
 	z-index: 12;
-
-	@media (max-width: 62rem) {
-		margin-top: 0;
-	}
 `;
 
 const Actions = styled.div`
@@ -172,6 +168,9 @@ const Block = styled.div`
 	background: rgb(20 34 46 / 0.34);
 	backdrop-filter: blur(0.25rem);
 	padding: 0.62rem 2.6rem 0.72rem 0.72rem;
+	@media (max-width: ${theme.rubberSize.tablet}) {
+		background: rgb(20 34 46 / 0.47);
+	}
 `;
 
 const Title = styled.h3`
@@ -182,6 +181,9 @@ const Title = styled.h3`
 	font-weight: 700;
 	line-height: 1.25;
 	text-transform: uppercase;
+	@media (max-width: ${theme.rubberSize.tablet}) {
+		font-size: 0.82rem;
+	}
 `;
 
 const NoteText = styled.p<{ $isExpanded: boolean }>`
@@ -197,6 +199,9 @@ const NoteText = styled.p<{ $isExpanded: boolean }>`
 	-webkit-box-orient: vertical;
 	-webkit-line-clamp: ${({ $isExpanded }) => ($isExpanded ? "unset" : "2")};
 	overflow: ${({ $isExpanded }) => ($isExpanded ? "visible" : "hidden")};
+	@media (max-width: ${theme.rubberSize.tablet}) {
+		font-size: 0.92rem;
+	}
 `;
 
 const EmptyText = styled.p`

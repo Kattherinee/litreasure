@@ -233,9 +233,7 @@ const StateMessage = styled.p`
 	line-height: 1.5;
 `;
 
-const RelatedSection = styled.section`
-	margin-top: 5rem;
-`;
+const RelatedSection = styled.section``;
 
 const Section = styled.section`
 	width: min(
@@ -251,7 +249,7 @@ const SectionHeader = styled.div`
 	align-items: center;
 	justify-content: space-between;
 	gap: 1.25rem;
-	margin-bottom: 1.75rem;
+	margin-bottom: 0.75rem;
 `;
 
 const SectionTitle = styled.h2`

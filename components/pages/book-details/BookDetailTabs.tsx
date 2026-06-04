@@ -35,7 +35,7 @@ const tabs: Array<{
 }> = [
 	{ id: "description", label: "Description" },
 	{ id: "collections", label: "In collections" },
-	{ id: "reviews", label: "Reviews" },
+	// { id: "reviews", label: "Reviews" },
 ];
 
 const getCollectionOwnerLabel = (collection: IBookCollectionPreview) =>
@@ -63,9 +63,9 @@ const BookDetailTabs = ({
 	const [authModalMode, setAuthModalMode] = useState<IAuthModalMode | null>(
 		null,
 	);
-	const [reviewRating, setReviewRating] = useState(0);
-	const [reviewText, setReviewText] = useState("");
-	const [reviewStatus, setReviewStatus] = useState("");
+	// const [reviewRating, setReviewRating] = useState(0);
+	// const [reviewText, setReviewText] = useState("");
+	// const [reviewStatus, setReviewStatus] = useState("");
 	const [collectionsFilter, setCollectionsFilter] =
 		useState<ICollectionFilter>("all");
 	const [savedCollectionOverrides, setSavedCollectionOverrides] = useState<
@@ -150,33 +150,33 @@ const BookDetailTabs = ({
 		setAuthModalMode("login");
 	};
 
-	const handleRatingSelect = (value: number) => {
-		if (!isAuthenticated) {
-			requestAuth();
-			return;
-		}
+	// const handleRatingSelect = (value: number) => {
+	// 	if (!isAuthenticated) {
+	// 		requestAuth();
+	// 		return;
+	// 	}
 
-		setReviewRating(value);
-		setReviewStatus("");
-	};
+	// 	setReviewRating(value);
+	// 	setReviewStatus("");
+	// };
 
-	const handleReviewSubmit = (event: FormEvent<HTMLFormElement>) => {
-		event.preventDefault();
+	// const handleReviewSubmit = (event: FormEvent<HTMLFormElement>) => {
+	// 	event.preventDefault();
 
-		if (!isAuthenticated) {
-			requestAuth();
-			return;
-		}
+	// 	if (!isAuthenticated) {
+	// 		requestAuth();
+	// 		return;
+	// 	}
 
-		if (!reviewRating || !reviewText.trim()) {
-			setReviewStatus("Set a rating and write a review.");
-			return;
-		}
+	// 	if (!reviewRating || !reviewText.trim()) {
+	// 		setReviewStatus("Set a rating and write a review.");
+	// 		return;
+	// 	}
 
-		setReviewStatus(
-			"Review is ready to submit. API method will be connected later.",
-		);
-	};
+	// 	setReviewStatus(
+	// 		"Review is ready to submit. API method will be connected later.",
+	// 	);
+	// };
 
 	const handleSaveCollection = async (collection: IBookCollectionPreview) => {
 		setCollectionStatus("");
@@ -384,7 +384,7 @@ const BookDetailTabs = ({
 					</CollectionsPanel>
 				) : null}
 
-				{activeTab === "reviews" ? (
+				{/* {activeTab === "reviews" ? (
 					<ReviewsPanel>
 						<PlaceholderText>
 							No reviews have been added for this book yet.
@@ -453,7 +453,7 @@ const BookDetailTabs = ({
 							) : null}
 						</ReviewForm>
 					</ReviewsPanel>
-				) : null}
+				) : null} */}
 			</TabPanel>
 
 			{authModalMode ? (
@@ -487,7 +487,7 @@ const Tabs = styled.div`
 
 	@media (max-width: 56rem) {
 		flex-wrap: wrap;
-		gap: 0.75rem;
+		gap: 1.75rem;
 	}
 `;
 
