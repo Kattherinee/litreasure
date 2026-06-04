@@ -120,7 +120,7 @@ const Header = () => {
 		label: string;
 		match: (currentPathname: string) => boolean;
 	}> = user
-	? [
+		? [
 				{
 					href: "/",
 					icon: HomeRoundedIcon,
@@ -157,7 +157,7 @@ const Header = () => {
 						currentPathname.startsWith("/search"),
 				},
 			];
-type MobileNavIcon = string | ComponentType<{ "aria-hidden"?: boolean }>;
+	type MobileNavIcon = string | ComponentType<{ "aria-hidden"?: boolean }>;
 
 	const closeProfileMenu = () => setIsProfileMenuOpen(false);
 	const closeMobileMenu = () => setIsMobileMenuOpen(false);
@@ -428,7 +428,7 @@ type MobileNavIcon = string | ComponentType<{ "aria-hidden"?: boolean }>;
 										<span>Collections</span>
 									</MobileMenuLink>
 									<MobileMenuLink href="/treasures" onClick={closeMobileMenu}>
-										<LogoIcon aria-hidden="true" />
+										<MobileTreasuresIcon aria-hidden="true" />
 										<span>My Treasures</span>
 									</MobileMenuLink>
 									<MobileMenuLink
@@ -696,6 +696,16 @@ const MobileMenuLink = styled(Link)`
 			color: ${theme.colors.orangeDark};
 			outline: none;
 		}
+	}
+`;
+
+const MobileTreasuresIcon = styled(LogoIcon)`
+	width: 1.15rem;
+	height: 1.15rem;
+	flex: 0 0 auto;
+
+	path {
+		fill: ${theme.colors.orangeDark};
 	}
 `;
 

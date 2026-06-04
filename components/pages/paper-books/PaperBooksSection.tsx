@@ -204,7 +204,7 @@ export const PaperBooksSection = ({
 						<PreviewTrack>
 							{previewItems.map((item) => (
 								<PreviewSlide key={item.id}>
-								<PaperBookCard
+									<PaperBookCard
 										item={item}
 										isNoteExpanded={
 											openNote?.id === item.id && Boolean(item.note?.trim())
@@ -214,7 +214,11 @@ export const PaperBooksSection = ({
 											setOpenNote((current) =>
 												current?.id === item.id && current.mode === "expanded"
 													? null
-													: { id: item.id, mode: "expanded", note: item.note ?? "" },
+													: {
+															id: item.id,
+															mode: "expanded",
+															note: item.note ?? "",
+														},
 											);
 										}}
 										showStatusChip={activeStatus === combinedStatus}
@@ -239,7 +243,11 @@ export const PaperBooksSection = ({
 										setOpenNote((current) =>
 											current?.id === item.id && current.mode === "expanded"
 												? null
-												: { id: item.id, mode: "expanded", note: item.note ?? "" },
+												: {
+														id: item.id,
+														mode: "expanded",
+														note: item.note ?? "",
+													},
 										);
 									}}
 									showStatusChip={activeStatus === combinedStatus}
@@ -637,8 +645,7 @@ const PreviewSlide = styled.div`
 	flex: 0 0 auto;
 
 	@media (max-width: ${theme.rubberSize.tablet}) {
-		flex-basis: min(13.5rem, 74vw);
-		padding-right: 0.65rem;
+		padding-right: 0.35rem;
 	}
 `;
 

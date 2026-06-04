@@ -490,6 +490,11 @@ export const RowCopy = styled.div`
 	flex-direction: column;
 	align-items: flex-start;
 	gap: 0.32vw;
+
+	@media (max-width: 42rem) {
+		flex: 0 0 auto;
+		max-width: 100%;
+	}
 `;
 
 export const PreviewRail = styled.div`

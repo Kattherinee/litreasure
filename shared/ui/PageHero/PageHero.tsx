@@ -51,9 +51,10 @@ const HeroInner = styled.div<{ $copyWidth?: string }>`
 	padding: 4.5vw 0 1.25rem;
 
 	@media (max-width: 42rem) {
-		width: calc(100% - 2rem);
+		width: 92vw;
 		flex-direction: column;
 		align-items: flex-start;
+		padding: 15.5vw 0 1.25rem;
 	}
 `;
 
