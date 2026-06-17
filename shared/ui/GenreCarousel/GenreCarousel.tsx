@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Autoplay from "embla-carousel-autoplay";
 import useEmblaCarousel from "embla-carousel-react";
 import styled from "styled-components";
@@ -12,6 +12,7 @@ import { GenrePillSkeleton } from "@/shared/ui/Skeleton";
 
 const GenreCarousel = () => {
 	const { data: genres = [], isLoading } = useGenresQuery();
+	const [isMounted, setIsMounted] = useState(false);
 	const [emblaRef, emblaApi] = useEmblaCarousel(
 		{
 			align: "start",
@@ -33,7 +34,13 @@ const GenreCarousel = () => {
 		emblaApi?.plugins().autoplay?.play();
 	}, [emblaApi]);
 
-	if (!isLoading && genres.length === 0) {
+	useEffect(() => {
+		setIsMounted(true);
+	}, []);
+
+	const shouldRenderSkeleton = !isMounted || isLoading;
+
+	if (!shouldRenderSkeleton && genres.length === 0) {
 		return null;
 	}
 
@@ -41,7 +48,7 @@ const GenreCarousel = () => {
 		<Carousel aria-label="Genres">
 			<Viewport ref={emblaRef}>
 				<Container>
-					{isLoading
+					{shouldRenderSkeleton
 						? Array.from({ length: 12 }, (_, index) => (
 								<Slide key={index}>
 									<GenrePillSkeleton />

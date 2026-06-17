@@ -8,6 +8,7 @@ import {
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 
+import PwaStatus from "@/shared/pwa/PwaStatus";
 import GlobalStyle from "@/shared/theme/GlobalStyle";
 
 function ScrollToTop() {
@@ -40,6 +41,7 @@ export default function Providers({ children }: { children: ReactNode }) {
 			<GlobalStyle />
 			<ScrollToTop />
 			{children}
+			<PwaStatus />
 		</QueryClientProvider>
 	);
 }

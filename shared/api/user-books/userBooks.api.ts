@@ -1,4 +1,12 @@
 import { requestAuth } from "../base";
+import {
+	applyLocalUserBookTracking,
+	isOfflineError,
+	queueUserBookMutation,
+	readCachedBook,
+	readCachedApiResponse,
+	removeLocalUserBookTracking,
+} from "@/shared/pwa/offlineStorage";
 import type {
 	IUpdateBookTrackingPayload,
 	IUserBooksParams,
@@ -39,9 +47,63 @@ export const updateBookTracking = (
 	requestAuth<IUserBookTracking>(`/user-books/${bookId}`, {
 		body: JSON.stringify(payload),
 		method: "PATCH",
+	}).catch(async (error) => {
+		if (!isOfflineError(error)) throw error;
+
+		const cachedTracking = await readCachedApiResponse<IUserBookTracking>(
+			`/user-books/${bookId}`,
+		);
+		const cachedBook = await readCachedBook(bookId);
+		const book = cachedTracking?.book ??
+			(cachedBook && {
+				author: cachedBook.author,
+				coverUrl: cachedBook.coverUrl,
+				id: cachedBook.id,
+				title: cachedBook.title,
+			});
+
+		if (!book) throw error;
+
+		const optimisticTracking: IUserBookTracking = {
+			currentPage: payload.currentPage ?? cachedTracking?.currentPage,
+			finishedAt: payload.finishedAt ?? cachedTracking?.finishedAt,
+			id: cachedTracking?.id ?? `offline-${bookId}`,
+			isRereading: payload.isRereading ?? cachedTracking?.isRereading ?? false,
+			readCount: payload.readCount ?? cachedTracking?.readCount ?? 0,
+			startedAt: payload.startedAt ?? cachedTracking?.startedAt,
+			status: payload.status,
+			updatedAt: new Date().toISOString(),
+			book,
+		};
+
+		await applyLocalUserBookTracking(bookId, optimisticTracking);
+		await queueUserBookMutation({
+			body: JSON.stringify(payload),
+			method: "PATCH",
+			path: `/user-books/${bookId}`,
+		});
+
+		return optimisticTracking;
 	});
 
-export const deleteBookTracking = (bookId: string): Promise<IUserBookTracking> =>
+export const deleteBookTracking = async (
+	bookId: string,
+): Promise<IUserBookTracking> =>
 	requestAuth<IUserBookTracking>(`/user-books/${bookId}`, {
 		method: "DELETE",
+	}).catch(async (error) => {
+		if (!isOfflineError(error)) throw error;
+
+		const cachedTracking = await readCachedApiResponse<IUserBookTracking>(
+			`/user-books/${bookId}`,
+		);
+		if (!cachedTracking) throw error;
+
+		await removeLocalUserBookTracking(bookId);
+		await queueUserBookMutation({
+			method: "DELETE",
+			path: `/user-books/${bookId}`,
+		});
+
+		return cachedTracking;
 	});

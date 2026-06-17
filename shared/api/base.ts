@@ -1,4 +1,12 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+import {
+	cacheApiResponse,
+	isOfflineError,
+	readCachedApiResponse,
+	shouldCacheApiPath,
+} from "@/shared/pwa/offlineStorage";
+
+const API_BASE_URL =
+	process.env.NEXT_PUBLIC_API_URL ?? "https://litreasure-back.fly.dev";
 const AUTH_STORAGE_KEY = "litreasure-auth";
 
 export { API_BASE_URL };
@@ -63,11 +71,26 @@ export const request = async <T>(
 	path: string,
 	options: RequestInit = {},
 ): Promise<T> => {
-	const response = await fetch(`${API_BASE_URL}${path}`, {
-		...options,
-		headers: buildHeaders(options),
-	});
-	return handleResponse<T>(response);
+	try {
+		const response = await fetch(`${API_BASE_URL}${path}`, {
+			...options,
+			headers: buildHeaders(options),
+		});
+		const data = await handleResponse<T>(response);
+
+		if (!options.method || options.method === "GET") {
+			await cacheApiResponse(path, data);
+		}
+
+		return data;
+	} catch (error) {
+		if (isOfflineError(error) && shouldCacheApiPath(path)) {
+			const cached = await readCachedApiResponse<T>(path);
+			if (cached) return cached;
+		}
+
+		throw error;
+	}
 };
 
 /** Public request that attaches Authorization only when a token exists. */
@@ -76,11 +99,26 @@ export const requestOptionalAuth = async <T>(
 	options: RequestInit = {},
 ): Promise<T> => {
 	const token = getStoredAccessToken();
-	const response = await fetch(`${API_BASE_URL}${path}`, {
-		...options,
-		headers: buildHeaders(options, token ? `Bearer ${token}` : undefined),
-	});
-	return handleResponse<T>(response);
+	try {
+		const response = await fetch(`${API_BASE_URL}${path}`, {
+			...options,
+			headers: buildHeaders(options, token ? `Bearer ${token}` : undefined),
+		});
+		const data = await handleResponse<T>(response);
+
+		if (!options.method || options.method === "GET") {
+			await cacheApiResponse(path, data);
+		}
+
+		return data;
+	} catch (error) {
+		if (isOfflineError(error) && shouldCacheApiPath(path)) {
+			const cached = await readCachedApiResponse<T>(path);
+			if (cached) return cached;
+		}
+
+		throw error;
+	}
 };
 
 /**
@@ -93,9 +131,24 @@ export const requestAuth = async <T>(
 ): Promise<T> => {
 	const token = getStoredAccessToken();
 	if (!token) throw new Error("Authorization is required");
-	const response = await fetch(`${API_BASE_URL}${path}`, {
-		...options,
-		headers: buildHeaders(options, `Bearer ${token}`),
-	});
-	return handleResponse<T>(response);
+	try {
+		const response = await fetch(`${API_BASE_URL}${path}`, {
+			...options,
+			headers: buildHeaders(options, `Bearer ${token}`),
+		});
+		const data = await handleResponse<T>(response);
+
+		if (!options.method || options.method === "GET") {
+			await cacheApiResponse(path, data);
+		}
+
+		return data;
+	} catch (error) {
+		if (isOfflineError(error) && shouldCacheApiPath(path)) {
+			const cached = await readCachedApiResponse<T>(path);
+			if (cached) return cached;
+		}
+
+		throw error;
+	}
 };
